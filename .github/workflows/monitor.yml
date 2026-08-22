@@ -206,30 +206,28 @@ jobs:
   # como fallido por eso. Un panel desactualizado es un problema menor; perder
   # una tanda de cuotas o de predicciones no se arregla después.
   #
-  # `enablement: true` es la lección del 2026-08-13..22: al renombrar el repo
-  # se perdió la config de Pages (GET /repos/.../pages -> 404) y este job
-  # fallaba en silencio NUEVE DÍAS -- el sitio publicado seguía mostrando el
-  # 13 de agosto mientras el ciclo recogía datos sin parar. `enablement`
-  # repara o crea la config solo, sin depender de que alguien abra
-  # Settings > Pages a mano. Necesita `administration: write` en permisos.
+  # NOTA del 2026-08-22: NO usar aquí `enablement: true` de configure-pages
+  # con GITHUB_TOKEN -- la propia acción lo dice en action.yml: exige un
+  # token DISTINTO de GITHUB_TOKEN (PAT con permiso de Pages o App con
+  # administration:write). Y `administration` no existe como scope de
+  # `permissions:` de workflow: ponerlo invalida TODO el archivo y tumba el
+  # pipeline entero al parsearse (corrida sin jobs, sin check-runs). Fue
+  # exactamente el fallo del commit 5b36fc6, revertido aquí.
+  #
+  # Si Pages vuelve a quedar desconfigurado (como tras renombrar el repo,
+  # que dejó el sitio congelado 9 días en el panel viejo): arreglarlo una vez
+  # en Settings > Pages > Build and deployment > Source: "GitHub Actions".
   publicar:
     needs: ciclo
     if: always()
     continue-on-error: true
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-      administration: write
     environment:
       name: github-pages
       url: ${{ steps.despliegue.outputs.page_url }}
     steps:
       - name: Preparar Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Publicar en Pages
         id: despliegue
