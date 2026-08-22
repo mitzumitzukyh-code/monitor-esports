@@ -214,9 +214,10 @@ jobs:
   # pipeline entero al parsearse (corrida sin jobs, sin check-runs). Fue
   # exactamente el fallo del commit 5b36fc6, revertido aquí.
   #
-  # Si Pages vuelve a quedar desconfigurado (como tras renombrar el repo,
-  # que dejó el sitio congelado 9 días en el panel viejo): arreglarlo una vez
-  # en Settings > Pages > Build and deployment > Source: "GitHub Actions".
+  # Autopsia del mismo día: este job estuvo VERDE en todas las corridas
+  # programadas (API de deployments: uno cada ~20 min durante todo el día),
+  # así que si el panel pareciera desactualizado, la causa NO es Pages --
+  # revisar antes qué generó salida/web dentro del artefacto.
   publicar:
     needs: ciclo
     if: always()

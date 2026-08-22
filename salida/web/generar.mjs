@@ -16,6 +16,7 @@
 // a generar. Ver CLAUDE.md, "La interfaz web: un solo diseño, y es este".
 
 import { readFile, writeFile, readdir, unlink, mkdir, copyFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
 import { resumen } from './datos.mjs';
 import { valores, C } from './valores.mjs';
 import { proximasSeries, hayCredenciales } from './vivo.mjs';
@@ -233,6 +234,9 @@ async function main() {
   else console.log(`próximas series: ${proximas.length}`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) await main();
+// El guard de siempre, pero con pathToFileURL: la comparación pelada
+// `file://${argv[1]}` nunca cuadra en Windows (ruta con `\` y sin el
+// triple slash) y el generador se moría callado al correrlo en local.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
 
 export { documento, marcarVistas };
