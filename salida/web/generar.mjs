@@ -163,17 +163,26 @@ function anotarFilas(html, filas) {
   });
 }
 
-// Arte propio para la banda de las tarjetas. Hoy no hay ninguno: el key art
-// del diseño es de los publishers y este sitio se publica. Si algún día se
-// consigue arte con derechos claros, se pone en assets/arte-dota.jpg y esto
-// lo recoge solo.
-async function arteIncrustado() {
-  try {
-    const img = await readFile(new URL('assets/arte-dota.jpg', RAIZ));
-    return 'data:image/jpeg;base64,' + img.toString('base64');
-  } catch {
-    return null;
+// El arte propio del dueño: assets/arte-<juego>.(jpg|jpeg|png|webp). Se
+// copia a salida/web/assets/ y se referencia por URL -- NO se incrusta en
+// base64: cuatro splashes inline multiplicaban el peso de la página por el
+// número de tarjetas. Si un juego no tiene archivo, su banda cae al
+// degradado (valores.mjs).
+const SLUGS_ARTE = { 'DOTA 2': 'dota2', CS2: 'cs2', LOL: 'lol', VALORANT: 'valorant' };
+const EXTENSIONES_ARTE = ['.jpg', '.jpeg', '.png', '.webp'];
+
+async function artePorJuego() {
+  const arte = {};
+  for (const [juego, slug] of Object.entries(SLUGS_ARTE)) {
+    for (const ext of EXTENSIONES_ARTE) {
+      try {
+        await copyFile(new URL(`assets/arte-${slug}${ext}`, RAIZ), new URL(`assets/arte-${slug}${ext}`, AQUI));
+        arte[juego] = `assets/arte-${slug}${ext}`;
+        break;
+      } catch { /* siguiente extensión */ }
+    }
   }
+  return arte;
 }
 
 // El artefacto de Pages es SÓLO salida/web, así que lo que se quede en la
@@ -204,7 +213,7 @@ async function main() {
   const { cuerpo: plantilla, estiloHelmet } = partesDelDisenio(archivo);
 
   const r = await resumen();
-  const [logo, arte, proximas] = await Promise.all([logoIncrustado(), arteIncrustado(), proximasSeries()]);
+  const [logo, arte, proximas] = await Promise.all([logoIncrustado(), artePorJuego(), proximasSeries()]);
 
   // El diseño enlaza ./logo-monitor.png, que no existe en este repo.
   const conLogo = marcarVistas(
@@ -237,7 +246,7 @@ async function main() {
   const g = r.calidad.global;
   console.log(`index.html + ${recientes.length} fichas · ${iconos} iconos`);
   console.log(`${g.cantidad} series · brier ${g.brier.toFixed(4)} vs base ${g.base.toFixed(4)} · acierto ${(g.acierto * 100).toFixed(2)} %`);
-  console.log(`logotipo: ${logo ? 'assets/logo-mark.svg' : 'no encontrado'} · arte: ${arte ? 'assets/arte-dota.jpg' : 'degradado por juego'}`);
+  console.log(`logotipo: ${logo ? 'assets/logo-mark.svg' : 'no encontrado'} · arte: ${Object.keys(arte).length ? Object.keys(arte).join(', ') : 'degradado (falta assets/arte-<juego>.jpg)'}`);
   if (!hayCredenciales()) console.log('próximas series: sin credenciales (corre con --env-file=.env si tienes uno)');
   else if (proximas && proximas.error) console.log(`próximas series: Supabase no respondió (${proximas.error})`);
   else console.log(`próximas series: ${proximas.length}`);

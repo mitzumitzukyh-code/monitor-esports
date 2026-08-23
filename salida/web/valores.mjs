@@ -65,6 +65,17 @@ export const logoDeJuego = (j) => LOGO_JUEGO[j] ?? '';
 // concuerdan, no sólo el sustantivo.
 export const fraseSeriesProximas = (n) => n === 1 ? '1 serie próxima' : `${n} series próximas`;
 
+// El estado de Supabase tiene TRES casos, no dos: sin credenciales, con
+// error, y CON credenciales pero sin series próximas -- que es lo normal
+// cuando el torneo termina. Confundir el tercero con el primero pintaba el
+// panel en rojo ("sin credenciales") con todo funcionando.
+export function estadoSupabase(proximas) {
+  if (proximas == null) return { estado: 'respaldo', detalle: 'sin credenciales' };
+  if (proximas.error) return { estado: 'caido', detalle: 'no respondió' };
+  if (proximas.length === 0) return { estado: 'ok', detalle: 'sin series próximas · torneo cerrado' };
+  return { estado: 'ok', detalle: fraseSeriesProximas(proximas.length) };
+}
+
 // El marcador más probable de una serie FUTURA, derivado de la probabilidad
 // ya guardada: se invierte p de partida (misma matemática que la ficha usa
 // con los ratings congelados) y se saca la distribución. Nada nuevo se
@@ -180,16 +191,18 @@ function serieComoFila(s) {
 
 // La banda superior de cada tarjeta.
 //
-// El diseño trae key art oficial de cada publisher en su carpeta arte/, y su
-// propio README avisa: "verificar derechos de uso antes de publicar". Este
-// sitio SE PUBLICA en GitHub Pages, así que no se usa. En su lugar va un
-// degradado en el color del juego, que mantiene la composición de la tarjeta
-// (chip y torneo sobre la banda, con el fundido al fondo) sin meter una
-// imagen con derechos sin resolver.
+// El diseño trae key art oficial de cada publisher, pero su propio README
+// avisa "verificar derechos antes de publicar" y este sitio SE PUBLICA. El
+// arte que va acá es el que aporta el dueño: archivos assets/arte-<juego>
+// (.jpg/.jpeg/.png/.webp) que generar.mjs copia a salida/web/assets/ y
+// referencia por URL -- NO incrustado en base64, que multiplicaba el peso
+// de la página por el número de tarjetas. Sin archivo para un juego, esa
+// banda cae al degradado del color del juego.
 //
-// Para poner arte propio: pásalo como data URI en `arte` desde generar.mjs.
-function arteStyle(uri, juego, pos) {
+// `artes` es un mapa { 'DOTA 2': 'assets/arte-dota2.jpg', ... }.
+function arteStyle(artes, juego, pos) {
   const c = colorJuego(juego);
+  const uri = artes && typeof artes === 'object' ? (artes[juego] ?? null) : null;
   if (!uri) {
     return {
       position: 'absolute', inset: 0,
@@ -254,6 +267,7 @@ export function valores(r, { vista = 'home', serie = null, cuantasFilas = 150, a
   ];
 
   const filas = r.series.slice(-cuantasFilas).reverse().map(serieComoFila);
+  const supabase = estadoSupabase(proximas);
 
   // Las tres peores del histórico: es el equivalente honesto de «mayor
   // desvío», midiendo contra la base ingenua en vez de contra una cuota que
@@ -277,17 +291,18 @@ export function valores(r, { vista = 'home', serie = null, cuantasFilas = 150, a
     viewMatch: false,
 
     esMock: false, hayError: false, errorMsg: '',
-    cicloTexto: hayProximas
+    cicloTexto: Array.isArray(proximas) && proximas.length > 0
       ? `${fraseSeriesProximas(proximas.length)} · ${miles(g.cantidad)} juzgadas · ${miles(r.partidas.length)} partidas aplicadas`
-      : `Histórico versionado · ${miles(r.partidas.length)} partidas · ${miles(g.cantidad)} series juzgadas`,
+      : Array.isArray(proximas)
+        ? `Torneo cerrado · ${miles(g.cantidad)} series juzgadas · ${miles(r.partidas.length)} partidas aplicadas`
+        : `Histórico versionado · ${miles(r.partidas.length)} partidas · ${miles(g.cantidad)} series juzgadas`,
     mostrarSidebar: true, mostrarSalud: true,
     fuentes: [
       { nombre: 'OpenDota', estado: 'ok', detalle: `${miles(r.partidas.length)} partidas`, dot: dot('ok') },
       {
         nombre: 'Supabase',
-        estado: hayProximas ? 'ok' : 'caido',
-        detalle: hayProximas ? fraseSeriesProximas(proximas.length) : (proximas && proximas.error ? 'no respondió' : 'sin credenciales'),
-        dot: dot(hayProximas ? 'ok' : 'caido'),
+        ...supabase,
+        dot: dot(supabase.estado),
       },
       // Dota no tiene tabla de cuotas: eslo_cuotas es de los juegos de
       // bo3.gg. No es un cable suelto, es que el dato no existe.

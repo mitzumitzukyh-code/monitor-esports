@@ -6,7 +6,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { mejorMarcadorDePrediccion, fraseSeriesProximas, logoDeJuego } from '../salida/web/valores.mjs';
+import { mejorMarcadorDePrediccion, fraseSeriesProximas, logoDeJuego, estadoSupabase } from '../salida/web/valores.mjs';
 import { pulir } from '../salida/web/pulir.mjs';
 import { anotarFilas } from '../salida/web/generar.mjs';
 
@@ -50,6 +50,15 @@ test('logoDeJuego: los cuatro juegos tienen logo y un juego raro no', () => {
     assert.match(logoDeJuego(j), /^logos\/[a-z0-9]+\.png$/);
   }
   assert.equal(logoDeJuego('R6 SIEGE'), '');
+});
+
+test('estadoSupabase: torneo cerrado NO es "sin credenciales"', () => {
+  // El caso que pintaba Supabase en rojo con todo funcionando: la respuesta
+  // llegó bien, simplemente ya no hay series por jugar.
+  assert.deepEqual(estadoSupabase([]), { estado: 'ok', detalle: 'sin series próximas · torneo cerrado' });
+  assert.deepEqual(estadoSupabase(null), { estado: 'respaldo', detalle: 'sin credenciales' });
+  assert.deepEqual(estadoSupabase({ error: 'timeout' }), { estado: 'caido', detalle: 'no respondió' });
+  assert.deepEqual(estadoSupabase([{ seriesId: 'x' }]), { estado: 'ok', detalle: '1 serie próxima' });
 });
 
 // --- transformaciones del chrome ------------------------------------------
