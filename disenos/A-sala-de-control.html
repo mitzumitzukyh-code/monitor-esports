@@ -65,6 +65,9 @@
   .juegos h3 { font-size: 14px; font-weight: 800; letter-spacing: .1em; color: var(--tinta); margin-bottom: 4px; }
   .juego { border: 1px solid var(--lineaM); border-radius: 8px; background: var(--tarjeta); padding: 11px 13px; cursor: pointer; border-left: 4px solid var(--jc); }
   .juego:hover { border-color: var(--lineaF); }
+  .juego.activa { border-color: var(--jc); background: color-mix(in srgb, var(--jc) 8%, var(--tarjeta)); box-shadow: 0 0 18px color-mix(in srgb, var(--jc) 20%, transparent); }
+  .juego .ver-todas { display: none; font-size: 8.5px; color: var(--aviso); letter-spacing: .1em; font-weight: 800; margin-top: 6px; }
+  .juego.activa .ver-todas { display: block; }
   .juego .nom { font-weight: 800; font-size: 14.5px; letter-spacing: .04em; color: var(--jc); }
   .juego .kpi { display: flex; justify-content: space-between; margin-top: 6px; font-size: 10.5px; color: var(--tintaS); }
   .juego .kpi b { color: var(--tinta); font-family: 'JetBrains Mono', monospace; font-weight: 700; }
@@ -152,30 +155,31 @@
 <main>
   <aside class="juegos">
     <h3>JUEGOS</h3>
-    <div class="juego" style="--jc: var(--dota)">
+    <div class="juego" data-filtro="DOTA 2" style="--jc: var(--dota)">
       <div class="nom">DOTA 2</div>
       <div class="kpi"><span>mejora vs moneda</span><b>−17.2%</b></div>
       <div class="kpi"><span>juzgadas</span><b>36</b></div>
       <div class="kpi"><span>próximas</span><b>2</b></div>
     </div>
-    <div class="juego" style="--jc: var(--cs2)">
+    <div class="juego" data-filtro="CS2" style="--jc: var(--cs2)">
       <div class="nom">CS2</div>
       <div class="kpi"><span>mejora vs moneda</span><b>−11.8%</b></div>
       <div class="kpi"><span>juzgadas</span><b>12.447</b></div>
       <div class="kpi"><span>próximas</span><b>5</b></div>
     </div>
-    <div class="juego" style="--jc: var(--lol)">
+    <div class="juego" data-filtro="LOL" style="--jc: var(--lol)">
       <div class="nom">LOL</div>
       <div class="kpi"><span>mejora vs moneda</span><b>−15.0%</b></div>
       <div class="kpi"><span>juzgadas</span><b>2.444</b></div>
       <div class="kpi"><span>próximas</span><b>3</b></div>
     </div>
-    <div class="juego" style="--jc: var(--val)">
+    <div class="juego" data-filtro="VALORANT" style="--jc: var(--val)">
       <div class="nom">VALORANT</div>
       <div class="kpi"><span>mejora vs moneda</span><b>−7.3%</b></div>
       <div class="kpi"><span>juzgadas</span><b>2.350</b></div>
       <div class="kpi"><span>próximas</span><b>1</b></div>
     </div>
+    <div class="ver-todas">CLIC DE NUEVO = VER TODOS LOS JUEGOS</div>
     <div class="casa">
       <b>REGLA DE LA CASA.</b> Los porcentajes salen solo del cálculo. Ningún LLM produce un número que llegue a esta pantalla.
     </div>
@@ -183,14 +187,14 @@
 
   <section class="panel">
     <div class="cabeza">
-      <div class="titulo-seccion">PRÓXIMAS SERIES<small>los 4 juegos · ordenadas por hora</small></div>
+      <div class="titulo-seccion" id="titulo-proximas">PRÓXIMAS SERIES<small>los 4 juegos · ordenadas por hora</small></div>
       <small class="mono" style="color:var(--tintaS)">probabilidades congeladas al publicarse</small>
     </div>
     <table>
       <tr><th>HORA</th><th>JUEGO</th><th>SERIE</th><th>FMT</th><th>MOTOR</th><th>CONFIANZA</th><th>MERCADO</th></tr>
       <tr>
         <td class="mono">6:00 PM</td>
-        <td><span class="chip" style="color:var(--dota); border-color:#9A3CFF66">DOTA 2</span></td>
+        <td data-juego="DOTA 2"><span class="chip" style="color:var(--dota); border-color:#9A3CFF66">DOTA 2</span></td>
         <td class="equipos"><b>Team Falcons</b><span class="vs">VS</span><span>GG</span></td>
         <td class="mono">bo3</td>
         <td><span class="prob">61.2%</span></td>
@@ -199,7 +203,7 @@
       </tr>
       <tr>
         <td class="mono">8:30 PM</td>
-        <td><span class="chip" style="color:var(--cs2); border-color:#F5C40066">CS2</span></td>
+        <td data-juego="CS2"><span class="chip" style="color:var(--cs2); border-color:#F5C40066">CS2</span></td>
         <td class="equipos"><b>NAVI</b><span class="vs">VS</span><span>FaZe</span></td>
         <td class="mono">bo3</td>
         <td><span class="prob">57.4%</span></td>
@@ -208,7 +212,7 @@
       </tr>
       <tr>
         <td class="mono">9:00 PM</td>
-        <td><span class="chip" style="color:var(--lol); border-color:#00CFFF66">LOL</span></td>
+        <td data-juego="LOL"><span class="chip" style="color:var(--lol); border-color:#00CFFF66">LOL</span></td>
         <td class="equipos"><b>T1</b><span class="vs">VS</span><span>Gen.G</span></td>
         <td class="mono">bo3</td>
         <td><span class="prob">54.8%</span> <span class="parejo">MUY PAREJO</span></td>
@@ -217,7 +221,7 @@
       </tr>
       <tr>
         <td class="mono">10:15 PM</td>
-        <td><span class="chip" style="color:var(--val); border-color:#23F28A66">VALORANT</span></td>
+        <td data-juego="VALORANT"><span class="chip" style="color:var(--val); border-color:#23F28A66">VALORANT</span></td>
         <td class="equipos"><b>Sentinels</b><span class="vs">VS</span><span>Fnatic</span></td>
         <td class="mono">bo3</td>
         <td><span class="prob">52.9%</span> <span class="parejo">MUY PAREJO</span></td>
@@ -226,7 +230,7 @@
       </tr>
       <tr>
         <td class="mono">11:00 PM</td>
-        <td><span class="chip" style="color:var(--dota); border-color:#9A3CFF66">DOTA 2</span></td>
+        <td data-juego="DOTA 2"><span class="chip" style="color:var(--dota); border-color:#9A3CFF66">DOTA 2</span></td>
         <td class="equipos"><b>Team Liquid</b><span class="vs">VS</span><span>Tundra</span></td>
         <td class="mono">bo3</td>
         <td><span class="prob">48.7%</span> <span class="parejo">MUY PAREJO</span></td>
@@ -235,7 +239,7 @@
       </tr>
       <tr>
         <td class="mono">12:30 AM</td>
-        <td><span class="chip" style="color:var(--cs2); border-color:#F5C40066">CS2</span></td>
+        <td data-juego="CS2"><span class="chip" style="color:var(--cs2); border-color:#F5C40066">CS2</span></td>
         <td class="equipos"><b>Spirit</b><span class="vs">VS</span><span>MOUZ</span></td>
         <td class="mono">bo3</td>
         <td><span class="prob">63.1%</span></td>
@@ -283,6 +287,27 @@
   }
   tic();
   setInterval(tic, 1000);
+</script>
+
+<script>
+  // Filtro por juego: clic en una tarjeta del rail filtra la tabla;
+  // clic de nuevo devuelve a los 4 juegos. En el panel real esto lo hace
+  // el generador con datos vivos; acá es la maqueta de la interacción.
+  let filtroActivo = null;
+  function filtrar(juego) {
+    filtroActivo = filtroActivo === juego ? null : juego;
+    document.querySelectorAll('.juego[data-filtro]').forEach((tarjeta) => {
+      tarjeta.classList.toggle('activa', tarjeta.dataset.filtro === filtroActivo);
+    });
+    document.querySelectorAll('td[data-juego]').forEach((celda) => {
+      celda.parentElement.style.display = !filtroActivo || celda.dataset.juego === filtroActivo ? '' : 'none';
+    });
+    const titulo = document.getElementById('titulo-proximas');
+    titulo.firstChild.textContent = filtroActivo ? 'PRÓXIMAS SERIES · ' + filtroActivo : 'PRÓXIMAS SERIES';
+  }
+  document.querySelectorAll('.juego[data-filtro]').forEach((tarjeta) => {
+    tarjeta.addEventListener('click', () => filtrar(tarjeta.dataset.filtro));
+  });
 </script>
 </body>
 </html>
