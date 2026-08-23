@@ -173,6 +173,10 @@ const EXTENSIONES_ARTE = ['.jpg', '.jpeg', '.png', '.webp'];
 
 async function artePorJuego() {
   const arte = {};
+  // En un checkout limpio de CI la carpeta no existe (está en .gitignore):
+  // sin este mkdir el copyFile revienta en silencio y la banda queda en
+  // degradado -- exactamente lo que pasó en producción el 2026-08-23.
+  await mkdir(new URL('assets/', AQUI), { recursive: true });
   for (const [juego, slug] of Object.entries(SLUGS_ARTE)) {
     for (const ext of EXTENSIONES_ARTE) {
       try {
