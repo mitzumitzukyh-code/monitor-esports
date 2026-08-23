@@ -204,11 +204,12 @@ test('un juego sin coeficientes calibrados falla explícito, no en silencio', as
   );
 });
 
-test('dota2 está configurado con elo, así que este script lo rechaza', async () => {
-  await assert.rejects(
-    () => predecirProximas('dota2', { fetchImpl: async () => respuesta({ results: [] }) }),
-    /motor 'elo'/,
-  );
+test('dota2 se migró a glicko2 (bo3.gg, 2026-08-23): el ciclo lo acepta', async () => {
+  // Antes dota2 era elo y este script lo rechazaba. Con la migración a
+  // bo3.gg quedó calibrado con glicko2 (tau 0.2, rd 350) y entra como
+  // cualquier otro juego.
+  const r = await predecirProximas('dota2', { fetchImpl: async () => respuesta({ results: [] }) });
+  assert.ok(r);
 });
 
 // ---------------------------------------------------------------------------

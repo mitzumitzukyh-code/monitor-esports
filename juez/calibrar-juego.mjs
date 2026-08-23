@@ -110,22 +110,23 @@ const juego = process.argv[2] ?? 'cs2';
 // porque es donde los dos motores actualizan. La unidad de predicción de Dota
 // en producción es la SERIE, derivada con motor/series.mjs; ese paso es el
 // mismo para los dos motores, así que no cambia cuál gana.
-const ES_DOTA = juego === 'dota2';
-const ruta = ES_DOTA ? '../datos/historico.json' : `../datos/cache/historico-${juego}.json`;
+// Dota 2 se calibraba contra el histórico de OpenDota (datos/historico.json,
+// esquema radiant_*) porque era su fuente en producción. Con la migración a
+// bo3.gg del 2026-08-23 (autorizada en CLAUDE.md justo al cerrar TI2026), la
+// calibración debe correr contra la fuente NUEVA: los números viejos quedaron
+// documentados en CLAUDE.md (Elo 0.23074 / Glicko-2 0.22921, n=2318) y el
+// archivo de OpenDota sigue en el repo por si hay que reproducirlos.
+const ruta = `../datos/cache/historico-${juego}.json`;
 const crudas = JSON.parse(await readFile(new URL(ruta, import.meta.url), 'utf8'));
 
-const partidas = (
-  ES_DOTA
-    ? crudas
-        .filter((p) => p.radiant_team_id && p.dire_team_id && typeof p.radiant_win === 'boolean')
-        .map((p) => ({
-          inicio: p.start_time,
-          equipoA: p.radiant_team_id,
-          equipoB: p.dire_team_id,
-          ganador: p.radiant_win ? p.radiant_team_id : p.dire_team_id,
-        }))
-    : crudas
-).sort((a, b) => a.inicio - b.inicio);
+const partidas = crudas
+  .map((p) => ({
+    inicio: p.inicio,
+    equipoA: p.equipoA,
+    equipoB: p.equipoB,
+    ganador: p.ganador,
+  }))
+  .sort((a, b) => a.inicio - b.inicio);
 
 // Corte cronológico 80/20. El 20% más reciente NO se toca hasta el final.
 const corte = partidas[Math.floor(partidas.length * 0.8)].inicio;

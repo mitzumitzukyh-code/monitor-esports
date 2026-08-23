@@ -144,7 +144,7 @@ falta uno por juego, que era el plan hasta comprobar esto.
 | 1 | csgo | Counter-Strike 2 | 73.165 |
 | 2 | valorant | Valorant | — |
 | 3 | lol | League of Legends | 14.199 |
-| 4 | dota2 | Dota 2 | — |
+| 4 | dota2 | Dota 2 | 11.631 (11.015 utilizables) |
 | 5 / 7 / 8 | deadlock / r6siege / mlbb | — | — |
 
 Lo verificado con llamadas reales, no con documentación:
@@ -174,11 +174,9 @@ de LaLiga; (2) **limita por tasa a la tercera llamada**; y (3) devolvió un
 riesgo de fuga temporal (regla 6) que quedó **sin aclarar** porque el límite
 de tasa cortó la comprobación. bo3.gg no tiene ninguno de los tres problemas.
 
-**Dota 2 sigue en OpenDota, a propósito.** bo3.gg también lo tiene, pero el
-Elo de Dota está calibrado sobre las 16.450 partidas de OpenDota y TI2026
-está en producción. Cambiarle la fuente por debajo a algo que corre rompe la
-regla 3. Migrarlo es una decisión aparte, para después del torneo, y solo si
-se gana el puesto contra el backtest.
+**Dota 2 se migró a bo3.gg el 2026-08-23**, al cerrar TI2026 -- que era la
+condición puesta para no romper la regla 3. El registro completo de la
+migración está en "Hacia dónde va esto", al final.
 
 ### Dos bugs reales del pipeline en vivo, encontrados y corregidos (2026-08-14)
 
@@ -428,7 +426,8 @@ juego no hereda la aprobación de otro. Los coeficientes por juego viven en
 
 ## Orden de fases
 
-Las fases son **por juego**. Dota 2 va en la 4; CS2 arrancó Fase 0 el 15 de
+Las fases son **por juego**. Dota 2 cerró su ciclo OpenDota con TI2026 y se
+migró a bo3.gg el 2026-08-23 (ver "Hacia dónde va esto"); CS2 arrancó Fase 0 el 15 de
 agosto de 2026; LoL no ha arrancado.
 
 ```
@@ -532,30 +531,42 @@ hasta que se cumpla la condición de arriba de cada punto.
 - **Más juegos:** Valorant, R6 Siege, MLBB, Deadlock. Ver "Cómo agregar un
   juego". La fuente ya los cubre; falta el paso 4 de cada uno.
 
-- **Migrar Dota 2 de OpenDota + haglund.dev a bo3.gg.**
-  **Condición: que TI2026 haya terminado (23 de agosto).** Hacerlo antes
-  rompe la regla 3 — es cambiarle la fuente por debajo a algo que está en
-  producción, con predicciones que no se pueden rehacer si se pierden.
+- **~~Migrar Dota 2 de OpenDota + haglund.dev a bo3.gg.~~ HECHA el
+  2026-08-23**, el mismo día que cerró TI2026. Registro completo:
 
-  Por qué vale la pena: `haglund.dev` es el único calendario de Dota, es un
-  proyecto comunitario sin SLA, y es el punto más frágil del pipeline. bo3.gg
-  ya cubre Dota (`discipline_id: 4`) con historial y calendario en el mismo
-  endpoint, `status` explícito y `winner_team_id` directo.
+  1. **Histórico bajado y validado**: 11.631 partidas según la fuente,
+     11.015 utilizables (607 descartadas por el filtro). Cero duplicados por
+     `matchId`, cero fechas futuras, ganador 100% coherente con el marcador,
+     1.037 equipos, rango 2019-10 → 2026-08-23 (incluye la final de TI2026,
+     58 partidas del torneo 5134). Quedó en
+     `datos/cache/historico-dota2.json`.
+  2. **Recalibrado contra la fuente nueva** (no se heredaron los coeficientes
+     de OpenDota). Barrido 80/20, holdout n=1736 que el barrido nunca vio:
+     Glicko-2 (0.2/350) 0.21643 · Elo (48/300) 0.21542 · Elo coefs viejos
+     (24/400) 0.21933 · base 0.25000. Elo ganó por 0.001 -- empate técnico,
+     mismo caso que LoL/Valorant -- y se eligió **glicko2** porque es el
+     motor ya cableado en `juez/vivo-esports.mjs`. Coeficientes nuevos en
+     `COEFICIENTES.dota2`.
+  3. **Comparación de fuentes**: bo3.gg predice MEJOR que OpenDota (0.21643
+     contra 0.22921 del viejo Glicko-2 de Dota en su propio holdout). Ojo:
+     son holdouts distintos (n=1736 vs n=2318), la comparación es indicativa,
+     no pareada. No empeoró: se migra.
+  4. **Ciclo apuntado**: el workflow corre un solo ciclo
+     `node juez/vivo-esports.mjs dota2 cs2 lol valorant` y un solo aviso
+     `node salida/discord-esports.mjs dota2 cs2 lol valorant`. Retirados
+     `datos/fixtures.mjs`, `juez/vivo-motor.mjs` y `juez/vivo-notas.mjs`
+     (con sus pruebas). Las tablas `dota_*` quedan como el registro
+     histórico de TI2026; las predicciones nuevas de Dota viven en `eslo_*`.
 
-  Los cuatro pasos, en orden:
-  1. `node datos/juegos/bajar-historico.mjs dota2` y validarlo (duplicados,
-     fechas futuras, ganador coherente con el marcador).
-  2. `node juez/calibrar-juego.mjs dota2` contra ESE histórico. Los
-     coeficientes actuales (K=24, escala=400) salieron del histórico de
-     OpenDota; con otra fuente hay que recalibrar, no heredar.
-  3. Comparar el Brier nuevo contra el de la fuente vieja. Si empeora, no se
-     migra: la fragilidad de haglund.dev es un problema de disponibilidad, no
-     una excusa para predecir peor.
-  4. Recién ahí, apuntar el ciclo de Dota a `juez/vivo-esports.mjs` (que ya
-     es multijuego) y retirar `datos/fixtures.mjs`.
+  **Pendiente de la migración**: el panel (`salida/web/vivo.mjs`) sigue
+  leyendo `dota_*` -- muestra el registro de TI2026, congelado. Cuando
+  vuelva a haber torneo de Dota, hay que adaptar el panel para leer las
+  próximas series desde `eslo_*` como hace con los otros tres juegos.
 
-  **Lo que NO hay que hacer:** migrar y calibrar en el mismo paso. Si el
-  Brier cambia, no se sabría si fue por la fuente o por los coeficientes.
+  **Lo que NO se hizo a propósito**: migrar y calibrar en el mismo paso
+  contra la fuente vieja. La calibración corrió contra el histórico de
+  bo3.gg y la comparación de fuentes se hizo con cada motor en SU holdout,
+  documentando que no es pareada.
 
 ## Estilo de trabajo
 

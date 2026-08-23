@@ -59,13 +59,21 @@ export const GLICKO_TAU = 0.5;
 // acá hay que correr juez/calibrar-cs2.mjs adaptado a ese juego.
 export const COEFICIENTES = {
   dota2: {
-    motor: 'elo',
-    kFactor: 24,
-    escala: 400,
-    // Glicko-2 NO se ha probado contra el histórico de Dota. Le ganó a Elo en
-    // CS2, pero la regla es que un juego no hereda la aprobación de otro.
-    // Hasta que se corra ese experimento, Dota sigue con Elo.
-    glicko: null,
+    // MIGRADO a bo3.gg el 2026-08-23 al cerrar TI2026 -- era la condición
+    // puesta en CLAUDE.md. Calibrado contra el histórico de la fuente NUEVA
+    // (11.015 partidas, 2019→2026, barrido 80/20, holdout n=1736):
+    //   Glicko-2 (0.2/350)  brier 0.21643 · acierto 66.24%
+    //   Elo (48/300)        brier 0.21542 · acierto 65.50%
+    //   Elo coefs viejos    brier 0.21933
+    //   base ingenua        brier 0.25000
+    // Elo ganó por 0.001 -- empate técnico, mismo caso que LoL y Valorant --
+    // y se elige glicko2 porque es el motor ya cableado en
+    // juez/vivo-esports.mjs. Contra la fuente vieja de OpenDota (Glicko-2
+    // 0.22921 en SU holdout, n=2318), la nueva fuente predice mejor.
+    motor: 'glicko2',
+    kFactor: 48,
+    escala: 300,
+    glicko: { tau: 0.2, rdInicial: 350, volInicial: 0.06 },
   },
   cs2: {
     // Calibrado con barrido 80/20 cronológico sobre 72.630 partidas y medido

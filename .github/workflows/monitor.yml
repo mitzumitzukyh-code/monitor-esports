@@ -130,38 +130,20 @@ jobs:
         if: always()
         run: node datos/juegos/guardar-cuotas.mjs
 
-      # 0.5 Ciclo de CS2 (Glicko-2 calibrado, Fase 1 cerrada el 2026-08-15).
-      #     Independiente del de Dota a propósito: usa bo3.gg, no OpenDota, así
-      #     que una caída de uno no arrastra al otro.
-      - name: Ciclo CS2, LoL y Valorant
+      # 0.5 Ciclo de los CUATRO juegos. Dota 2 se migró a bo3.gg el
+      #     2026-08-23 al cerrar TI2026 (ver CLAUDE.md, "Migrar Dota 2"):
+      #     una sola fuente para todo, un solo ciclo.
+      - name: Ciclo de Dota 2, CS2, LoL y Valorant
         if: always()
-        run: node juez/vivo-esports.mjs cs2 lol valorant
+        run: node juez/vivo-esports.mjs dota2 cs2 lol valorant
 
-      # Avisos de CS2. Va después del ciclo para que anuncie lo que ese mismo
-      # paso acaba de predecir o calificar. Sólo tiers s y a: CS2 mueve ~34
-      # partidas al día contando todos, y de las 51 predichas hoy sólo 8 eran
-      # tier s -- el resto sería ruido.
-      - name: Avisar CS2, LoL y Valorant por Discord
+      # Avisos por juego. Va después del ciclo para que anuncie lo que ese
+      # mismo paso acaba de predecir o calificar. Sólo tiers s y a: los juegos
+      # mueven decenas de partidas al día contando todos, y el resto sería
+      # ruido.
+      - name: Avisar Dota 2, CS2, LoL y Valorant por Discord
         if: always()
-        run: node salida/discord-esports.mjs cs2 lol valorant
-
-      # 1. Predecir las series que todavía no empezaron. Es el paso que más
-      #    urge de los de Dota: si se pierde, la predicción no se recupera.
-      - name: Predecir
-        if: always()
-        run: node juez/vivo-motor.mjs
-
-      # 2. Calificar lo que ya terminó. Si esto falla una vez no se pierde
-      #    nada: los resultados siguen en OpenDota para la corrida siguiente.
-      - name: Calificar
-        if: always()
-        run: node juez/vivo-notas.mjs
-
-      # 3. Avisar por Discord lo nuevo. El registro de qué ya se avisó está en
-      #    Supabase, así que no repite entre corridas.
-      - name: Avisar por Discord
-        if: always()
-        run: node salida/discord.mjs
+        run: node salida/discord-esports.mjs dota2 cs2 lol valorant
 
       # 4. Regenerar el panel y publicarlo en GitHub Pages.
       # UN SOLO generador: salida/web/generar.mjs rellena disenio.dc.html
