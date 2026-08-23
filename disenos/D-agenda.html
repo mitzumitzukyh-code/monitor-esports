@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D · Agenda de operaciones — Monitor eSports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* D · AGENDA DE OPERACIONES: el tiempo como columna vertebral. Hoy y mañana
+     como bloques; el motor "cuenta" lo que decide, en lenguaje llano. */
+  :root {
+    --fondo:#05070A; --panel:#080A0E; --tarjeta:#0D1015; --interior:#11141A;
+    --linea:#1a1e26; --lineaM:#242933; --lineaF:#343943;
+    --tinta:#F2F4F7; --tintaM:#A7ADB8; --tintaS:#8B95A5; --apag:#6F7784;
+    --acento:#FF2638; --ok:#19E68C; --aviso:#FFB000;
+    --dota:#9A3CFF; --cs2:#F5C400; --lol:#00CFFF; --val:#23F28A;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--fondo); color: var(--tinta); font-family: Manrope, Helvetica, sans-serif; min-width: 1440px; font-size: 13px; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .aviso-demo { background: #1c1400; border-bottom: 1px solid #4a3600; color: var(--aviso); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .08em; padding: 6px 26px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; height: 64px; padding: 0 26px; border-bottom: 1px solid var(--linea); }
+  .marca { display: flex; align-items: center; gap: 12px; }
+  .marca .logo { width: 38px; height: 38px; border-radius: 9px; background: linear-gradient(135deg, #FF2638, #8f1220); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; }
+  .marca h1 { font-size: 16px; font-weight: 800; }
+  .marca h1 span { color: var(--acento); }
+  .ciclo { display: flex; gap: 20px; font-size: 10px; color: var(--tintaS); letter-spacing: .08em; align-items: center; }
+  .ciclo .dot { width: 7px; height: 7px; border-radius: 999px; background: var(--ok); display: inline-block; margin-right: 6px; box-shadow: 0 0 7px #19E68C88; }
+
+  main { display: grid; grid-template-columns: 250px minmax(0,1fr) 340px; gap: 16px; padding: 18px 26px 20px; align-items: start; }
+
+  /* rail: sistema */
+  .rail { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 14px; }
+  .caja { border: 1px solid var(--lineaM); border-radius: 12px; background: var(--tarjeta); overflow: hidden; }
+  .caja h3 { font-size: 9px; letter-spacing: .14em; color: var(--apag); font-weight: 800; padding: 11px 15px; border-bottom: 1px solid var(--linea); }
+  .s-fila { display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; border-bottom: 1px solid var(--linea); font-size: 11.5px; }
+  .s-fila:last-child { border-bottom: none; }
+  .s-fila span { color: var(--tintaS); }
+  .s-fila b { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .jmini { padding: 9px 15px; border-bottom: 1px solid var(--linea); }
+  .jmini .nom { font-size: 10px; font-weight: 800; letter-spacing: .1em; }
+  .jmini .nums { display: flex; justify-content: space-between; margin-top: 4px; font-size: 9.5px; color: var(--apag); }
+  .jmini .nums b { color: var(--tintaM); font-family: 'JetBrains Mono', monospace; }
+  .jmini .bar { height: 3px; background: var(--lineaM); border-radius: 99px; margin-top: 5px; overflow: hidden; }
+  .jmini .bar i { display: block; height: 100%; border-radius: 99px; }
+
+  /* agenda central */
+  .dia { margin-bottom: 18px; }
+  .dia > h2 { display: flex; align-items: baseline; gap: 12px; font-size: 14px; font-weight: 800; letter-spacing: .06em; padding: 4px 2px 10px; }
+  .dia > h2 small { font-size: 10px; color: var(--apag); font-weight: 600; letter-spacing: .04em; }
+  .evento { display: grid; grid-template-columns: 86px 14px minmax(0,1fr) 110px; gap: 0 14px; position: relative; }
+  .evento .hora { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; font-weight: 700; color: var(--tintaM); padding-top: 14px; }
+  .evento .hora small { display: block; font-size: 8.5px; color: var(--apag); font-weight: 400; }
+  .evento .tubo { position: relative; }
+  .evento .tubo::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--lineaM); transform: translateX(-50%); }
+  .evento:first-child .tubo::before { top: 18px; }
+  .evento:last-child .tubo::before { bottom: auto; height: 18px; }
+  .evento .punto { position: absolute; left: 50%; top: 18px; width: 10px; height: 10px; border-radius: 99px; background: var(--jc); transform: translateX(-50%); box-shadow: 0 0 9px var(--jc); }
+  .tarjetita { border: 1px solid var(--lineaM); border-radius: 10px; background: var(--tarjeta); padding: 11px 14px; margin: 8px 0; }
+  .tarjetita .juego { font-size: 8.5px; font-weight: 800; letter-spacing: .12em; }
+  .tarjetita .serie { font-size: 14.5px; font-weight: 700; margin-top: 3px; }
+  .tarjetita .serie span { color: var(--apag); font-size: 9px; letter-spacing: .12em; margin: 0 8px; font-weight: 600; }
+  .tarjetita .pie { display: flex; justify-content: space-between; align-items: baseline; margin-top: 6px; font-size: 10px; color: var(--tintaS); }
+  .tarjetita .pie .prob { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; color: var(--jc); }
+  .tarjetita .pie .parejo { color: var(--aviso); font-weight: 700; font-size: 9px; letter-spacing: .08em; }
+  .tarjetita.jugada { opacity: .82; }
+
+  /* cuaderno del motor */
+  .nota { padding: 10px 15px; border-bottom: 1px solid var(--linea); font-size: 11.5px; line-height: 1.5; }
+  .nota:last-child { border-bottom: none; }
+  .nota .cuando { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--apag); display: block; margin-bottom: 3px; }
+  .nota b { font-weight: 700; }
+  .v-verde { color: var(--ok); } .v-rojo { color: var(--acento); } .v-azul { color: var(--lol); }
+
+  footer { display: flex; align-items: center; justify-content: space-between; padding: 12px 26px; border-top: 1px solid var(--linea); font-size: 9.5px; color: var(--apag); letter-spacing: .08em; }
+</style>
+</head>
+<body>
+<div class="aviso-demo">PROPUESTA D · AGENDA DE OPERACIONES — DATOS DE EJEMPLO, NADA AQUÍ ESTÁ CABLEADO</div>
+
+<header>
+  <div class="marca">
+    <div class="logo">M</div>
+    <div><h1>MONITOR <span>eSPORTS</span></h1></div>
+  </div>
+  <div class="ciclo">
+    <span><span class="dot"></span>CICLO ACTIVO</span>
+    <span>última corrida hace 4 min</span>
+    <span>bo3.gg OK</span>
+    <span>Supabase OK</span>
+    <span>Discord OK</span>
+  </div>
+</header>
+
+<main>
+  <!-- rail izquierdo: sistema -->
+  <div class="rail">
+    <div class="caja">
+      <h3>EL MOTOR · POR JUEGO</h3>
+      <div class="jmini">
+        <div class="nom" style="color:var(--dota)">DOTA 2</div>
+        <div class="nums"><span>mejora vs moneda</span><b>−17.2%</b></div>
+        <div class="bar"><i style="width:69%; background:var(--dota)"></i></div>
+      </div>
+      <div class="jmini">
+        <div class="nom" style="color:var(--cs2)">CS2</div>
+        <div class="nums"><span>mejora vs moneda</span><b>−11.8%</b></div>
+        <div class="bar"><i style="width:47%; background:var(--cs2)"></i></div>
+      </div>
+      <div class="jmini">
+        <div class="nom" style="color:var(--lol)">LOL</div>
+        <div class="nums"><span>mejora vs moneda</span><b>−15.0%</b></div>
+        <div class="bar"><i style="width:60%; background:var(--lol)"></i></div>
+      </div>
+      <div class="jmini">
+        <div class="nom" style="color:var(--val)">VALORANT</div>
+        <div class="nums"><span>mejora vs moneda</span><b>−7.3%</b></div>
+        <div class="bar"><i style="width:29%; background:var(--val)"></i></div>
+      </div>
+    </div>
+    <div class="caja">
+      <h3>SISTEMA</h3>
+      <div class="s-fila"><span>Series juzgadas</span><b>17.277</b></div>
+      <div class="s-fila"><span>Partidas aplicadas</span><b>31.261</b></div>
+      <div class="s-fila"><span>Predicciones vivas</span><b>11</b></div>
+      <div class="s-fila"><span>Última calificación</span><b>hace 2 h</b></div>
+      <div class="s-fila"><span>Errores 24 h</span><b style="color:var(--ok)">0</b></div>
+    </div>
+    <div class="caja">
+      <h3>REGLA DE LA CASA</h3>
+      <div style="padding:10px 15px; font-size:10px; color:var(--tintaS); line-height:1.55">Los porcentajes salen solo del cálculo. Ningún LLM produce un número que llegue a esta pantalla.</div>
+    </div>
+  </div>
+
+  <!-- agenda -->
+  <div>
+    <div class="dia">
+      <h2>HOY <small>sábado 23 de agosto · hora de Venezuela</small></h2>
+
+      <div class="evento" style="--jc: var(--dota)">
+        <div class="hora">14:00<small>ya se jugó</small></div>
+        <div class="tubo"><div class="punto"></div></div>
+        <div class="tarjetita jugada">
+          <div class="juego" style="color:var(--dota)">DOTA 2 · DREAMLEAGUE S27 · BO3</div>
+          <div class="serie">Team Falcons<span>VS</span>Gaimin Gladiators</div>
+          <div class="pie"><span>calificada</span><span>✅ le dábamos <b class="mono" style="color:var(--tintaM)">61.2%</b> — ganó</span></div>
+        </div>
+        <div></div>
+      </div>
+
+      <div class="evento" style="--jc: var(--cs2)">
+        <div class="hora">15:30<small>ya se jugó</small></div>
+        <div class="tubo"><div class="punto"></div></div>
+        <div class="tarjetita jugada">
+          <div class="juego" style="color:var(--cs2)">CS2 · IEM KATOWICE · BO3</div>
+          <div class="serie">Vitality<span>VS</span>MOUZ</div>
+          <div class="pie"><span>calificada</span><span>❌ íbamos con <b class="mono" style="color:var(--tintaM)">Vitality 68%</b> — ganó MOUZ</span></div>
+        </div>
+        <div></div>
+      </div>
+
+      <div class="evento" style="--jc: var(--dota)">
+        <div class="hora">18:00<small>en 3 h</small></div>
+        <div class="tubo"><div class="punto"></div></div>
+        <div class="tarjetita">
+          <div class="juego" style="color:var(--dota)">DOTA 2 · DREAMLEAGUE S27 · BO3</div>
+          <div class="serie">Team Falcons<span>VS</span>Gaimin Gladiators</div>
+          <div class="pie"><span>probabilidad guardada 14:02</span><span class="prob">61.2%</span></div>
+        </div>
+        <div></div>
+      </div>
+
+      <div class="evento" style="--jc: var(--cs2)">
+        <div class="hora">20:30<small>en 5 h</small></div>
+        <div class="tubo"><div class="punto"></div></div>
+        <div class="tarjetita">
+          <div class="juego" style="color:var(--cs2)">CS2 · IEM KATOWICE · BO3</div>
+          <div class="serie">NAVI<span>VS</span>FaZe</div>
+          <div class="pie"><span>probabilidad guardada 14:02 · cuota 1.85</span><span class="prob">57.4%</span></div>
+        </div>
+        <div></div>
+      </div>
+
+      <div class="evento" style="--jc: var(--lol)">
+        <div class="hora">21:00<small>en 6 h</small></div>
+        <div class="tubo"><div class="punto"></div></div>
+        <div class="tarjetita">
+          <div class="juego" style="color:var(--lol)">LOL · LCK SPRING · BO3</div>
+          <div class="serie">T1<span>VS</span>Gen.G</div>
+          <div class="pie"><span>probabilidad guardada 14:02</span><span class="prob">54.8% <b class="parejo">PAREJO</b></span></div>
+        </div>
+        <div></div>
+      </div>
+
+      <div class="evento" style="--jc: var(--val)">
+        <div class="hora">22:15<small>en 7 h</small></div>
+        <div class="tubo"><div class="punto"></div></div>
+        <div class="tarjetita">
+          <div class="juego" style="color:var(--val)">VALORANT · VCT KICKOFF · BO3</div>
+          <div class="serie">Sentinels<span>VS</span>Fnatic</div>
+          <div class="pie"><span>probabilidad guardada 14:02</span><span class="prob">52.9% <b class="parejo">PAREJO</b></span></div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+
+    <div class="dia">
+      <h2>MAÑANA <small>domingo 24 de agosto</small></h2>
+
+      <div class="evento" style="--jc: var(--dota)">
+        <div class="hora">16:00</div>
+        <div class="tubo"><div class="punto"></div></div>
+        <div class="tarjetita">
+          <div class="juego" style="color:var(--dota)">DOTA 2 · DREAMLEAGUE S27 · BO3</div>
+          <div class="serie">OG<span>VS</span>Nigma Galaxy</div>
+          <div class="pie"><span>probabilidad guardada 14:02</span><span class="prob">55.3%</span></div>
+        </div>
+        <div></div>
+      </div>
+
+      <div class="evento" style="--jc: var(--cs2)">
+        <div class="hora">17:30</div>
+        <div class="tubo"><div class="punto"></div></div>
+        <div class="tarjetita">
+          <div class="juego" style="color:var(--cs2)">CS2 · IEM KATOWICE · BO3</div>
+          <div class="serie">Vitality<span>VS</span>G2</div>
+          <div class="pie"><span>probabilidad guardada 14:02</span><span class="prob">51.2% <b class="parejo">PAREJO</b></span></div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- cuaderno del motor -->
+  <div class="caja" style="position: sticky; top: 14px">
+    <h3>CUADERNO DEL MOTOR · LO QUE DECIDIÓ Y POR QUÉ</h3>
+    <div class="nota">
+      <span class="cuando">HOY 14:02 · PREDICCIÓN GUARDADA</span>
+      <b class="v-azul">Falcons 61.2% vs GG.</b> El rating de Falcons viene de 12 series tier s; GG llega con roster cambiado y solo 6 partidas juntas — el motor castiga la poca muestra.
+    </div>
+    <div class="nota">
+      <span class="cuando">HOY 13:40 · CALIFICADA</span>
+      <span class="v-rojo">✗ Fallamos con Vitality (68%).</span> MOUZ venía de 4 seguidas y el rating tarda en girar. Es exactamente la clase de fallo que el Brier castiga más.
+    </div>
+    <div class="nota">
+      <span class="cuando">HOY 13:12 · CALIFICADA</span>
+      <span class="v-verde">✓ Spirit 71%.</span> Ganó 2–0. La confianza alta estaba justificada: 5 head-to-head favorables.
+    </div>
+    <div class="nota">
+      <span class="cuando">HOY 14:02 · SISTEMA</span>
+      Cuotas capturadas para 3 series de CS2. Dota sigue sin casa que lo coteje: <b>mercado «—» es lo honesto</b>, no un cero.
+    </div>
+    <div class="nota">
+      <span class="cuando">AYER 22:10 · SISTEMA</span>
+      Barrido semanal de coeficientes: ninguna combinación superó a la vigente. No se cambia nada (regla 4).
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>SIN APUESTAS · SIN CUOTAS · SOLO CÁLCULO</span>
+  <span>Cada probabilidad quedó guardada antes de jugarse la serie y no se reescribe · hora de Venezuela</span>
+</footer>
+</body>
+</html>

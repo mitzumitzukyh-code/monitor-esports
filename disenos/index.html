@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Propuestas · Centro de control — Monitor eSports</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body { background: #05070A; color: #F2F4F7; font-family: Manrope, sans-serif; min-width: 1440px; padding: 40px 60px; }
+  h1 { font-size: 22px; font-weight: 800; }
+  h1 span { color: #FF2638; }
+  p.sub { color: #8B95A5; font-size: 12px; margin-top: 6px; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 26px; }
+  a.tarjeta { display: block; border: 1px solid #242933; border-radius: 12px; background: #0D1015; padding: 22px 24px; text-decoration: none; color: inherit; transition: border-color .15s; }
+  a.tarjeta:hover { border-color: #FF2638; }
+  .letra { font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 700; color: #FF2638; }
+  h2 { font-size: 16px; font-weight: 800; margin-top: 8px; }
+  p { color: #A7ADB8; font-size: 12px; line-height: 1.6; margin-top: 8px; }
+  .tags { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .tag { font-size: 9px; font-weight: 800; letter-spacing: .1em; padding: 4px 9px; border-radius: 6px; border: 1px solid #343943; color: #8B95A5; }
+</style>
+</head>
+<body>
+<h1>MONITOR <span>eSPORTS</span> · 4 propuestas de centro de control</h1>
+<p class="sub">Datos de ejemplo — la calidad del motor (Brier, n, mejora vs moneda) son los números reales del proyecto. Elige una y se cablea al generador.</p>
+<div class="grid">
+  <a class="tarjeta" href="A-sala-de-control.html">
+    <div class="letra">A</div>
+    <h2>Sala de control</h2>
+    <p>Densidad máxima tipo terminal: todo en una pantalla. Tabla única con las próximas series de los 4 juegos mezcladas por hora, rail de juegos con KPI, columna de calidad y últimos juicios. Para monitorear de un vistazo sin hacer click.</p>
+    <div class="tags"><span class="tag">DENSA</span><span class="tag">TODO VISIBLE</span><span class="tag">MONO</span></div>
+  </a>
+  <a class="tarjeta" href="B-comandero.html">
+    <div class="letra">B</div>
+    <h2>Comandero por juego</h2>
+    <p>Un juego a la vez y la página entera se re-tematiza con su color. Hero con LA serie que viene en grande (probabilidades enormes, marcadores probables) + calidad del juego al costado. Tabs clicables en el mockup.</p>
+    <div class="tags"><span class="tag">RE-TEMATIZA</span><span class="tag">HERO</span><span class="tag">INTERACTIVO</span></div>
+  </a>
+  <a class="tarjeta" href="C-radar-confianza.html">
+    <div class="letra">C</div>
+    <h2>Radar de confianza</h2>
+    <p>Organizada alrededor de una pregunta: ¿en qué confía el motor y cuánto? Próximas series ordenadas por confianza con anillos, análisis de dónde acertamos y dónde fallamos, barras de mejora por juego.</p>
+    <div class="tags"><span class="tag">CONFIANZA</span><span class="tag">ANILLOS</span><span class="tag">ANÁLISIS</span></div>
+  </a>
+  <a class="tarjeta" href="D-agenda.html">
+    <div class="letra">D</div>
+    <h2>Agenda de operaciones</h2>
+    <p>El tiempo como columna vertebral: hoy y mañana como línea de tiempo con las series de los 4 juegos. Lateral con el "cuaderno del motor" — lo que decidió y por qué, en lenguaje llano, como los avisos de Discord.</p>
+    <div class="tags"><span class="tag">TIMELINE</span><span class="tag">NARRATIVA</span><span class="tag">OPERACIONES</span></div>
+  </a>
+</div>
+</body>
+</html>

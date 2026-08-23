@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C · Radar de confianza — Monitor eSports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* C · RADAR DE CONFIANZA: la página se organiza alrededor de una pregunta —
+     ¿en qué confía el motor y cuánto? Anillos de confianza, sin tablas. */
+  :root {
+    --fondo:#05070A; --panel:#080A0E; --tarjeta:#0D1015; --interior:#11141A;
+    --linea:#1a1e26; --lineaM:#242933; --lineaF:#343943;
+    --tinta:#F2F4F7; --tintaM:#A7ADB8; --tintaS:#8B95A5; --apag:#6F7784;
+    --acento:#FF2638; --ok:#19E68C; --aviso:#FFB000;
+    --dota:#9A3CFF; --cs2:#F5C400; --lol:#00CFFF; --val:#23F28A;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--fondo); color: var(--tinta); font-family: Manrope, Helvetica, sans-serif; min-width: 1440px; font-size: 13px; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .aviso-demo { background: #1c1400; border-bottom: 1px solid #4a3600; color: var(--aviso); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .08em; padding: 6px 26px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; height: 64px; padding: 0 26px; border-bottom: 1px solid var(--linea); }
+  .marca { display: flex; align-items: center; gap: 12px; }
+  .marca .logo { width: 38px; height: 38px; border-radius: 9px; background: linear-gradient(135deg, #FF2638, #8f1220); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; }
+  .marca h1 { font-size: 16px; font-weight: 800; }
+  .marca h1 span { color: var(--acento); }
+  .titulo-vista { text-align: center; }
+  .titulo-vista h2 { font-size: 13px; font-weight: 800; letter-spacing: .1em; }
+  .titulo-vista small { font-size: 9.5px; color: var(--apag); letter-spacing: .08em; }
+  .global { text-align: right; }
+  .global .n { font-family: 'JetBrains Mono', monospace; font-size: 19px; font-weight: 700; color: var(--ok); }
+  .global small { font-size: 9px; color: var(--apag); letter-spacing: .1em; }
+
+  main { display: grid; grid-template-columns: 300px minmax(0,1fr) 300px; gap: 16px; padding: 18px 26px 20px; align-items: start; }
+  .caja { border: 1px solid var(--lineaM); border-radius: 12px; background: var(--tarjeta); overflow: hidden; }
+  .caja h3 { font-size: 9px; letter-spacing: .14em; color: var(--apag); font-weight: 800; padding: 11px 15px; border-bottom: 1px solid var(--linea); }
+
+  /* gauge global */
+  .gauge { display: flex; align-items: center; gap: 16px; padding: 16px; }
+  .gauge svg { flex: none; }
+  .gauge .num { font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 700; }
+  .gauge .sub { font-size: 10px; color: var(--tintaS); margin-top: 2px; line-height: 1.5; }
+  .kfila { display: flex; justify-content: space-between; padding: 8px 15px; border-top: 1px solid var(--linea); font-size: 11.5px; }
+  .kfila span { color: var(--tintaS); }
+  .kfila b { font-family: 'JetBrains Mono', monospace; }
+
+  /* radar: filas por confianza */
+  .radar-fila { display: grid; grid-template-columns: 56px minmax(0,1fr) 130px; gap: 14px; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--linea); }
+  .radar-fila:hover { background: #0f1319; }
+  .anillo { position: relative; width: 52px; height: 52px; }
+  .anillo svg { transform: rotate(-90deg); }
+  .anillo .pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; font-weight: 700; }
+  .serie .juego { font-size: 8.5px; font-weight: 800; letter-spacing: .12em; }
+  .serie .nombres { font-size: 14.5px; font-weight: 700; margin-top: 3px; }
+  .serie .nombres span { color: var(--apag); font-size: 9px; letter-spacing: .12em; margin: 0 8px; font-weight: 600; }
+  .serie .cuando { font-size: 10px; color: var(--apag); margin-top: 3px; font-family: 'JetBrains Mono', monospace; }
+  .delta { text-align: right; }
+  .delta .l { font-size: 8.5px; color: var(--apag); letter-spacing: .1em; font-weight: 700; }
+  .delta .v { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; margin-top: 3px; }
+  .delta small { display: block; font-size: 9px; color: var(--apag); margin-top: 2px; }
+
+  /* análisis lateral */
+  .analisis { padding: 6px 0; }
+  .a-fila { padding: 9px 15px; border-bottom: 1px solid var(--linea); font-size: 11.5px; line-height: 1.45; }
+  .a-fila:last-child { border-bottom: none; }
+  .a-fila b { font-weight: 700; }
+  .a-fila small { display: block; color: var(--apag); font-size: 9.5px; margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+  .v-verde { color: var(--ok); font-weight: 700; }
+  .v-rojo { color: var(--acento); font-weight: 700; }
+  .v-ambar { color: var(--aviso); font-weight: 700; }
+
+  footer { display: flex; align-items: center; justify-content: space-between; padding: 12px 26px; border-top: 1px solid var(--linea); font-size: 9.5px; color: var(--apag); letter-spacing: .08em; }
+  .leyenda { display: flex; gap: 16px; padding: 9px 16px; border-top: 1px solid var(--linea); font-size: 9px; color: var(--apag); letter-spacing: .06em; }
+  .leyenda i { width: 8px; height: 8px; border-radius: 99px; display: inline-block; margin-right: 5px; }
+</style>
+</head>
+<body>
+<div class="aviso-demo">PROPUESTA C · RADAR DE CONFIANZA — DATOS DE EJEMPLO, NADA AQUÍ ESTÁ CABLEADO</div>
+
+<header>
+  <div class="marca">
+    <div class="logo">M</div>
+    <div><h1>MONITOR <span>eSPORTS</span></h1></div>
+  </div>
+  <div class="titulo-vista"><h2>RADAR DE CONFIANZA</h2><small>LO QUE VIENE, ORDENADO POR CUÁNTO CONFIAMOS</small></div>
+  <div class="global"><div class="n">58.5%</div><small>ACIERTO GLOBAL DEL FAVORITO</small></div>
+</header>
+
+<main>
+  <!-- izquierda: calidad del sistema -->
+  <div style="display:flex; flex-direction:column; gap:16px">
+    <div class="caja">
+      <h3>EL MOTOR EN NÚMEROS</h3>
+      <div class="gauge">
+        <svg width="86" height="86" viewBox="0 0 86 86">
+          <circle cx="43" cy="43" r="36" fill="none" stroke="#242933" stroke-width="8"/>
+          <circle cx="43" cy="43" r="36" fill="none" stroke="#19E68C" stroke-width="8" stroke-dasharray="211 226" stroke-linecap="round"/>
+          <text x="43" y="48" text-anchor="middle" fill="#F2F4F7" font-size="16" font-family="JetBrains Mono" font-weight="700">58.5</text>
+        </svg>
+        <div>
+          <div class="num">36 <span style="font-size:12px; color:var(--apag)">series</span></div>
+          <div class="sub">juzgadas contra el resultado real en el último torneo. El intervalo de confianza todavía toca la moneda: no se canta victoria.</div>
+        </div>
+      </div>
+      <div class="kfila"><span>Brier promedio</span><b>0.4138</b></div>
+      <div class="kfila"><span>Base ingenua</span><b>0.5000</b></div>
+      <div class="kfila"><span>Mejora vs moneda</span><b style="color:var(--ok)">−17.2%</b></div>
+    </div>
+
+    <div class="caja">
+      <h3>POR JUEGO · MEJORA VS SU MONEDA</h3>
+      <div style="padding: 12px 15px; display:flex; flex-direction:column; gap:10px">
+        <div><div style="display:flex; justify-content:space-between; font-size:10.5px"><span style="color:var(--dota); font-weight:800">DOTA 2</span><span class="mono">−17.2% · n36</span></div><div style="height:5px;border-radius:99px;background:var(--lineaM);margin-top:5px"><i style="display:block;height:100%;width:69%;border-radius:99px;background:var(--dota)"></i></div></div>
+        <div><div style="display:flex; justify-content:space-between; font-size:10.5px"><span style="color:var(--lol); font-weight:800">LOL</span><span class="mono">−15.0% · n2.4K</span></div><div style="height:5px;border-radius:99px;background:var(--lineaM);margin-top:5px"><i style="display:block;height:100%;width:60%;border-radius:99px;background:var(--lol)"></i></div></div>
+        <div><div style="display:flex; justify-content:space-between; font-size:10.5px"><span style="color:var(--cs2); font-weight:800">CS2</span><span class="mono">−11.8% · n12.4K</span></div><div style="height:5px;border-radius:99px;background:var(--lineaM);margin-top:5px"><i style="display:block;height:100%;width:47%;border-radius:99px;background:var(--cs2)"></i></div></div>
+        <div><div style="display:flex; justify-content:space-between; font-size:10.5px"><span style="color:var(--val); font-weight:800">VALORANT</span><span class="mono">−7.3% · n2.4K</span></div><div style="height:5px;border-radius:99px;background:var(--lineaM);margin-top:5px"><i style="display:block;height:100%;width:29%;border-radius:99px;background:var(--val)"></i></div></div>
+      </div>
+      <div class="leyenda"><span><i style="background:var(--ok)"></i>concluyente solo CS2</span><span><i style="background:var(--aviso)"></i>resto: faltan series</span></div>
+    </div>
+  </div>
+
+  <!-- centro: el radar -->
+  <div class="caja">
+    <h3>PRÓXIMAS SERIES · ORDENADAS POR CONFIANZA DEL MOTOR</h3>
+
+    <div class="radar-fila">
+      <div class="anillo">
+        <svg width="52" height="52" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="#242933" stroke-width="4.6"/><circle cx="26" cy="26" r="22" fill="none" stroke="#19E68C" stroke-width="4.6" stroke-dasharray="96 138" stroke-linecap="round"/><text x="26" y="30" text-anchor="middle" fill="#F2F4F7" font-size="12" font-family="JetBrains Mono" font-weight="700">69</text></svg>
+      </div>
+      <div class="serie">
+        <div class="juego" style="color:var(--cs2)">CS2 · IEM KATOWICE · BO3</div>
+        <div class="nombres">Spirit<span>VS</span>MOUZ</div>
+        <div class="cuando">HOY 00:30 · CARACAS</div>
+      </div>
+      <div class="delta">
+        <div class="l">MOTOR DA</div>
+        <div class="v">63.1% Spirit</div>
+        <small>mercado — · cuota 1.72</small>
+      </div>
+    </div>
+
+    <div class="radar-fila">
+      <div class="anillo">
+        <svg width="52" height="52" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="#242933" stroke-width="4.6"/><circle cx="26" cy="26" r="22" fill="none" stroke="#19E68C" stroke-width="4.6" stroke-dasharray="85 138" stroke-linecap="round"/><text x="26" y="30" text-anchor="middle" fill="#F2F4F7" font-size="12" font-family="JetBrains Mono" font-weight="700">61</text></svg>
+      </div>
+      <div class="serie">
+        <div class="juego" style="color:var(--dota)">DOTA 2 · DREAMLEAGUE S27 · BO3</div>
+        <div class="nombres">Team Falcons<span>VS</span>Gaimin Gladiators</div>
+        <div class="cuando">HOY 18:00 · CARACAS</div>
+      </div>
+      <div class="delta">
+        <div class="l">MOTOR DA</div>
+        <div class="v">61.2% Falcons</div>
+        <small>mercado —</small>
+      </div>
+    </div>
+
+    <div class="radar-fila">
+      <div class="anillo">
+        <svg width="52" height="52" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="#242933" stroke-width="4.6"/><circle cx="26" cy="26" r="22" fill="none" stroke="#FFB000" stroke-width="4.6" stroke-dasharray="76 138" stroke-linecap="round"/><text x="26" y="30" text-anchor="middle" fill="#F2F4F7" font-size="12" font-family="JetBrains Mono" font-weight="700">55</text></svg>
+      </div>
+      <div class="serie">
+        <div class="juego" style="color:var(--lol)">LOL · LCK SPRING · BO3</div>
+        <div class="nombres">T1<span>VS</span>Gen.G</div>
+        <div class="cuando">HOY 21:00 · CARACAS</div>
+      </div>
+      <div class="delta">
+        <div class="l">MOTOR DA</div>
+        <div class="v" class="mono">54.8% T1</div>
+        <small style="color:var(--aviso)">MUY PAREJO</small>
+      </div>
+    </div>
+
+    <div class="radar-fila">
+      <div class="anillo">
+        <svg width="52" height="52" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="#242933" stroke-width="4.6"/><circle cx="26" cy="26" r="22" fill="none" stroke="#FFB000" stroke-width="4.6" stroke-dasharray="70 138" stroke-linecap="round"/><text x="26" y="30" text-anchor="middle" fill="#F2F4F7" font-size="12" font-family="JetBrains Mono" font-weight="700">51</text></svg>
+      </div>
+      <div class="serie">
+        <div class="juego" style="color:var(--val)">VALORANT · VCT KICKOFF · BO3</div>
+        <div class="nombres">Sentinels<span>VS</span>Fnatic</div>
+        <div class="cuando">HOY 22:15 · CARACAS</div>
+      </div>
+      <div class="delta">
+        <div class="l">MOTOR DA</div>
+        <div class="v">52.9% Sentinels</div>
+        <small style="color:var(--aviso)">MUY PAREJO</small>
+      </div>
+    </div>
+
+    <div class="leyenda">
+      <span><i style="background:var(--ok)"></i>confianza alta (≥ 60%)</span>
+      <span><i style="background:var(--aviso)"></i>serie pareja (el motor prácticamente tira la moneda)</span>
+    </div>
+  </div>
+
+  <!-- derecha: análisis -->
+  <div style="display:flex; flex-direction:column; gap:16px">
+    <div class="caja">
+      <h3>DÓNDE ACERTAMOS</h3>
+      <div class="analisis">
+        <div class="a-fila"><span class="v-verde">✓ Team Liquid 85%</span> — ganó sin sobresaltos<small>DOTA 2 · bo3 · brier 0.022</small></div>
+        <div class="a-fila"><span class="v-verde">✓ Team Falcons 81%</span> — ganó 2–0<small>DOTA 2 · bo3 · brier 0.036</small></div>
+        <div class="a-fila"><span class="v-verde">✓ Team Yandex 80%</span> — ganó 2–1<small>DOTA 2 · bo3 · brier 0.040</small></div>
+      </div>
+    </div>
+    <div class="caja">
+      <h3>DÓNDE NOS EQUIVOCAMOS</h3>
+      <div class="analisis">
+        <div class="a-fila"><span class="v-rojo">✗ íbamos con Team Falcons 88%</span> — ganó Iron Wing<small>DOTA 2 · bo3 · brier 1.538 · el golpe del torneo</small></div>
+        <div class="a-fila"><span class="v-rojo">✗ íbamos con TEAM VISION 66%</span> — ganó Team Spirit<small>LA FINAL · brier 0.884</small></div>
+        <div class="a-fila"><span class="v-rojo">✗ íbamos con Team Spirit 73%</span> — ganó Nigma Galaxy<small>DOTA 2 · bo3 · brier 1.063</small></div>
+      </div>
+    </div>
+    <div class="caja">
+      <h3>REGLA DE LA CASA</h3>
+      <div class="analisis">
+        <div class="a-fila">Los porcentajes salen solo del cálculo. <b>Ningún LLM produce un número que llegue a esta pantalla.</b> Los fallos se publican igual de grandes que los aciertos.</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>SIN APUESTAS · SIN CUOTAS · SOLO CÁLCULO</span>
+  <span>Hora de Venezuela · cada probabilidad quedó guardada antes de jugarse la serie y no se reescribe</span>
+</footer>
+</body>
+</html>

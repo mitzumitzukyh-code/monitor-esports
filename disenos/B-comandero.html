@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B · Comandero por juego — Monitor eSports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* B · COMANDERO: la página entera se re-tematiza con el color del juego
+     seleccionado. Un juego a la vez, con aire; el hero es LA serie que viene. */
+  :root {
+    --fondo:#05070A; --panel:#080A0E; --tarjeta:#0D1015; --interior:#11141A;
+    --linea:#1a1e26; --lineaM:#242933; --lineaF:#343943;
+    --tinta:#F2F4F7; --tintaM:#A7ADB8; --tintaS:#8B95A5; --apag:#6F7784;
+    --acento:#FF2638; --ok:#19E68C; --aviso:#FFB000;
+    --dota:#9A3CFF; --cs2:#F5C400; --lol:#00CFFF; --val:#23F28A;
+    --jc: var(--dota); --jn: 'DOTA 2';
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--fondo); color: var(--tinta); font-family: Manrope, Helvetica, sans-serif; min-width: 1440px; font-size: 13px; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .aviso-demo { background: #1c1400; border-bottom: 1px solid #4a3600; color: var(--aviso); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .08em; padding: 6px 26px; }
+
+  header { border-bottom: 1px solid var(--linea); background: var(--fondo); }
+  .marca-fila { display: flex; align-items: center; justify-content: space-between; padding: 14px 26px 0; }
+  .marca { display: flex; align-items: center; gap: 12px; }
+  .marca .logo { width: 38px; height: 38px; border-radius: 9px; background: linear-gradient(135deg, #FF2638, #8f1220); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; }
+  .marca h1 { font-size: 16px; font-weight: 800; }
+  .marca h1 span { color: var(--acento); }
+  .estado { font-size: 10px; color: var(--tintaS); letter-spacing: .08em; }
+  .estado .dot { width: 7px; height: 7px; border-radius: 999px; background: var(--ok); display: inline-block; margin-right: 6px; box-shadow: 0 0 7px #19E68C88; }
+
+  /* tabs de juego: grandes, con el color de cada uno */
+  .tabs { display: flex; gap: 10px; padding: 14px 26px; }
+  .tab { flex: 1; border: 1px solid var(--lineaM); border-radius: 10px; background: var(--tarjeta); padding: 13px 16px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: border-color .15s; }
+  .tab:hover { border-color: var(--lineaF); }
+  .tab .nom { font-weight: 800; font-size: 13px; letter-spacing: .05em; color: var(--c); }
+  .tab .mini { text-align: right; font-size: 9.5px; color: var(--apag); }
+  .tab .mini b { display: block; color: var(--tintaM); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  .tab.activa { border-color: var(--c); background: color-mix(in srgb, var(--c) 7%, var(--tarjeta)); box-shadow: 0 0 22px color-mix(in srgb, var(--c) 18%, transparent); }
+  .tab.activa .nom::after { content: ' ●'; font-size: 9px; }
+
+  main { padding: 6px 26px 20px; }
+
+  /* hero: la serie que viene del juego activo */
+  .hero { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 14px; margin-bottom: 14px; }
+  .hero-card { border: 1px solid var(--lineaM); border-top: 3px solid var(--jc); border-radius: 12px; background: var(--tarjeta); padding: 20px 24px; position: relative; overflow: hidden; }
+  .hero-card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(90% 120% at 15% 0%, color-mix(in srgb, var(--jc) 16%, transparent), transparent 55%); pointer-events: none; }
+  .meta { display: flex; align-items: center; gap: 12px; font-size: 11px; color: var(--tintaS); letter-spacing: .06em; }
+  .chipj { font-size: 9px; font-weight: 800; letter-spacing: .1em; padding: 4px 9px; border-radius: 6px; color: var(--jc); border: 1px solid color-mix(in srgb, var(--jc) 40%, transparent); background: rgba(5,7,10,.8); }
+  .enfrentamiento { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 18px; margin-top: 18px; }
+  .lado { display: flex; flex-direction: column; gap: 8px; }
+  .lado.der { text-align: right; }
+  .lado .nombre { font-size: 21px; font-weight: 800; }
+  .lado .rating { font-size: 10.5px; color: var(--tintaS); }
+  .lado .prob { font-family: 'JetBrains Mono', monospace; font-size: 44px; font-weight: 700; color: var(--jc); line-height: 1; }
+  .vscol { text-align: center; }
+  .vscol .vs { font-size: 10px; color: var(--apag); letter-spacing: .18em; }
+  .vscol .hora { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; margin-top: 6px; }
+  .marcadores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 18px; }
+  .mk { border: 1px solid var(--linea); border-radius: 8px; background: var(--interior); padding: 9px 12px; }
+  .mk .l { font-size: 9px; color: var(--apag); letter-spacing: .1em; font-weight: 700; }
+  .mk .v { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; margin-top: 3px; }
+  .mk .bar { height: 3px; border-radius: 99px; background: var(--lineaM); margin-top: 7px; overflow: hidden; }
+  .mk .bar i { display: block; height: 100%; background: var(--jc); }
+
+  /* lateral del hero: calidad del juego activo */
+  .lateral { border: 1px solid var(--lineaM); border-radius: 12px; background: var(--tarjeta); padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .lateral h3 { font-size: 9px; letter-spacing: .14em; color: var(--apag); font-weight: 800; }
+  .filaq { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--linea); padding: 7px 0; font-size: 12px; }
+  .filaq span { color: var(--tintaS); }
+  .filaq b { font-family: 'JetBrains Mono', monospace; }
+  .sello { align-self: flex-start; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; padding: 4px 9px; border-radius: 6px; }
+  .sello.no { color: var(--aviso); border: 1px solid #D88B00; background: rgba(255,176,0,.09); }
+
+  /* siguientes series del juego */
+  .sig { border: 1px solid var(--lineaM); border-radius: 12px; background: var(--tarjeta); overflow: hidden; margin-bottom: 14px; }
+  .sig .cabeza { display: flex; justify-content: space-between; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--linea); }
+  .sig .cabeza h2 { font-size: 12px; font-weight: 800; letter-spacing: .06em; }
+  .fila { display: grid; grid-template-columns: 70px minmax(0,1.8fr) 90px 90px; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--linea); }
+  .fila:hover { background: #0f1319; }
+  .fila .hora { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--tintaM); }
+  .fila .serie b { font-weight: 700; } .fila .serie span { color: var(--apag); font-size: 9px; letter-spacing: .1em; margin: 0 8px; }
+  .fila .p { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; color: var(--jc); text-align: right; }
+  .fila .parejo { font-size: 8.5px; color: var(--aviso); letter-spacing: .08em; font-weight: 700; text-align: right; }
+
+  footer { display: flex; align-items: center; justify-content: space-between; padding: 12px 26px; border-top: 1px solid var(--linea); font-size: 9.5px; color: var(--apag); letter-spacing: .08em; }
+  section[data-juego] { display: none; }
+  section[data-juego].visible { display: block; }
+</style>
+</head>
+<body>
+<div class="aviso-demo">PROPUESTA B · COMANDERO POR JUEGO — DATOS DE EJEMPLO, NADA AQUÍ ESTÁ CABLEADO</div>
+
+<header>
+  <div class="marca-fila">
+    <div class="marca">
+      <div class="logo">M</div>
+      <div><h1>MONITOR <span>eSPORTS</span></h1></div>
+    </div>
+    <div class="estado"><span class="dot"></span>CICLO ACTIVO · última corrida hace 4 min · bo3.gg OK · Supabase OK</div>
+  </div>
+  <div class="tabs" id="tabs">
+    <div class="tab activa" data-j="dota" style="--c: var(--dota)" onclick="ir('dota')">
+      <span class="nom">DOTA 2</span>
+      <span class="mini">mejora vs moneda <b>−17.2%</b> · 36 juzgadas</span>
+    </div>
+    <div class="tab" data-j="cs2" style="--c: var(--cs2)" onclick="ir('cs2')">
+      <span class="nom">CS2</span>
+      <span class="mini">mejora vs moneda <b>−11.8%</b> · 12.447 juzgadas</span>
+    </div>
+    <div class="tab" data-j="lol" style="--c: var(--lol)" onclick="ir('lol')">
+      <span class="nom">LOL</span>
+      <span class="mini">mejora vs moneda <b>−15.0%</b> · 2.444 juzgadas</span>
+    </div>
+    <div class="tab" data-j="val" style="--c: var(--val)" onclick="ir('val')">
+      <span class="nom">VALORANT</span>
+      <span class="mini">mejora vs moneda <b>−7.3%</b> · 2.350 juzgadas</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- DOTA 2 -->
+  <section data-juego="dota" class="visible" style="--j: var(--dota)">
+    <div class="hero">
+      <div class="hero-card">
+        <div class="meta"><span class="chipj">DOTA 2</span><span>DREAMLEAGUE S27 · BO3</span><span>·</span><span class="mono">HOY 18:00 · CARACAS</span></div>
+        <div class="enfrentamiento">
+          <div class="lado"><div class="nombre">Team Falcons</div><div class="rating">rating 1.842 · 334 partidas</div><div class="prob">61.2%</div></div>
+          <div class="vscol"><div class="vs">VS</div><div class="hora mono">18:00</div></div>
+          <div class="lado der"><div class="nombre">Gaimin Gladiators</div><div class="rating">rating 1.771 · 291 partidas</div><div class="prob" style="color:var(--tintaM)">38.8%</div></div>
+        </div>
+        <div class="marcadores">
+          <div class="mk"><div class="l">2–0</div><div class="v">36.4%</div><div class="bar"><i style="width:36%"></i></div></div>
+          <div class="mk"><div class="l">2–1</div><div class="v">24.8%</div><div class="bar"><i style="width:25%"></i></div></div>
+          <div class="mk"><div class="l">1–2</div><div class="v">22.1%</div><div class="bar"><i style="width:22%"></i></div></div>
+        </div>
+      </div>
+      <div class="lateral">
+        <h3>CALIDAD DEL MOTOR · DOTA 2</h3>
+        <div class="filaq"><span>Brier del motor</span><b>0.4138</b></div>
+        <div class="filaq"><span>Base ingenua</span><b>0.5000</b></div>
+        <div class="filaq"><span>Mejora vs moneda</span><b style="color:var(--ok)">−17.2%</b></div>
+        <div class="filaq"><span>Series juzgadas</span><b>36</b></div>
+        <div class="filaq"><span>Motor</span><b>Glicko-2 · τ0.2 · RD350</b></div>
+        <span class="sello no">NO CONCLUYENTE — faltan series</span>
+      </div>
+    </div>
+    <div class="sig">
+      <div class="cabeza"><h2>DESPUÉS · DOTA 2</h2><span style="font-size:10px;color:var(--apag)">probabilidad congelada al publicarse</span></div>
+      <div class="fila"><span class="hora">23:00</span><span class="serie"><b>Team Liquid</b><span>VS</span>Tundra</span><span class="parejo">48.7% PAREJO</span><span class="p" style="color:var(--tintaM)">—</span></div>
+      <div class="fila"><span class="hora">MAÑANA 16:00</span><span class="serie"><b>OG</b><span>VS</span>Nigma Galaxy</span><span class="p">55.3%</span><span class="p" style="color:var(--tintaM)">—</span></div>
+    </div>
+  </section>
+
+  <!-- CS2 -->
+  <section data-juego="cs2" style="--j: var(--cs2)">
+    <div class="hero">
+      <div class="hero-card">
+        <div class="meta"><span class="chipj">CS2</span><span>IEM KATOWICE 2027 · BO3</span><span>·</span><span class="mono">HOY 20:30 · CARACAS</span></div>
+        <div class="enfrentamiento">
+          <div class="lado"><div class="nombre">NAVI</div><div class="rating">rating 1.798 · 512 partidas</div><div class="prob">57.4%</div></div>
+          <div class="vscol"><div class="vs">VS</div><div class="hora mono">20:30</div></div>
+          <div class="lado der"><div class="nombre">FaZe</div><div class="rating">rating 1.755 · 488 partidas</div><div class="prob" style="color:var(--tintaM)">42.6%</div></div>
+        </div>
+        <div class="marcadores">
+          <div class="mk"><div class="l">2–0</div><div class="v">33.0%</div><div class="bar"><i style="width:33%"></i></div></div>
+          <div class="mk"><div class="l">2–1</div><div class="v">24.4%</div><div class="bar"><i style="width:24%"></i></div></div>
+          <div class="mk"><div class="l">1–2</div><div class="v">18.2%</div><div class="bar"><i style="width:18%"></i></div></div>
+        </div>
+      </div>
+      <div class="lateral">
+        <h3>CALIDAD DEL MOTOR · CS2</h3>
+        <div class="filaq"><span>Brier del motor</span><b>0.2206</b></div>
+        <div class="filaq"><span>Base ingenua</span><b>0.2500</b></div>
+        <div class="filaq"><span>Mejora vs moneda</span><b style="color:var(--ok)">−11.8%</b></div>
+        <div class="filaq"><span>Series juzgadas</span><b>12.447</b></div>
+        <div class="filaq"><span>Motor</span><b>Glicko-2 · τ1.2 · RD200</b></div>
+        <span class="sello" style="color:var(--ok); border:1px solid #0C9B60; background:rgba(25,230,140,.09)">CONCLUYENTE — le gana a la moneda</span>
+      </div>
+    </div>
+    <div class="sig">
+      <div class="cabeza"><h2>DESPUÉS · CS2</h2><span style="font-size:10px;color:var(--apag)">probabilidad congelada al publicarse</span></div>
+      <div class="fila"><span class="hora">00:30</span><span class="serie"><b>Spirit</b><span>VS</span>MOUZ</span><span class="p">63.1%</span><span class="p" style="color:var(--tintaM)">cuota 1.72</span></div>
+      <div class="fila"><span class="hora">MAÑANA 17:30</span><span class="serie"><b>Vitality</b><span>VS</span>G2</span><span class="parejo">51.2% PAREJO</span><span class="p" style="color:var(--tintaM)">—</span></div>
+    </div>
+  </section>
+
+  <!-- LOL -->
+  <section data-juego="lol" style="--j: var(--lol)">
+    <div class="hero">
+      <div class="hero-card">
+        <div class="meta"><span class="chipj">LOL</span><span>LCK SPRING 2027 · BO3</span><span>·</span><span class="mono">HOY 21:00 · CARACAS</span></div>
+        <div class="enfrentamiento">
+          <div class="lado"><div class="nombre">T1</div><div class="rating">rating 1.812 · 402 partidas</div><div class="prob">54.8%</div></div>
+          <div class="vscol"><div class="vs">VS</div><div class="hora mono">21:00</div></div>
+          <div class="lado der"><div class="nombre">Gen.G</div><div class="rating">rating 1.790 · 396 partidas</div><div class="prob" style="color:var(--tintaM)">45.2%</div></div>
+        </div>
+        <div class="marcadores">
+          <div class="mk"><div class="l">2–0</div><div class="v">30.0%</div><div class="bar"><i style="width:30%"></i></div></div>
+          <div class="mk"><div class="l">2–1</div><div class="v">24.8%</div><div class="bar"><i style="width:25%"></i></div></div>
+          <div class="mk"><div class="l">1–2</div><div class="v">20.4%</div><div class="bar"><i style="width:20%"></i></div></div>
+        </div>
+      </div>
+      <div class="lateral">
+        <h3>CALIDAD DEL MOTOR · LOL</h3>
+        <div class="filaq"><span>Brier del motor</span><b>0.2126</b></div>
+        <div class="filaq"><span>Base ingenua</span><b>0.2500</b></div>
+        <div class="filaq"><span>Mejora vs moneda</span><b style="color:var(--ok)">−15.0%</b></div>
+        <div class="filaq"><span>Series juzgadas</span><b>2.444</b></div>
+        <div class="filaq"><span>Motor</span><b>Glicko-2 · τ0.2 · RD150</b></div>
+        <span class="sello no">NO CONCLUYENTE — faltan series</span>
+      </div>
+    </div>
+    <div class="sig">
+      <div class="cabeza"><h2>DESPUÉS · LOL</h2><span style="font-size:10px;color:var(--apag)">probabilidad congelada al publicarse</span></div>
+      <div class="fila"><span class="hora">MAÑANA 15:00</span><span class="serie"><b>G2 Esports</b><span>VS</span>Fnatic</span><span class="p">58.9%</span><span class="p" style="color:var(--tintaM)">—</span></div>
+    </div>
+  </section>
+
+  <!-- VALORANT -->
+  <section data-juego="val" style="--j: var(--val)">
+    <div class="hero">
+      <div class="hero-card">
+        <div class="meta"><span class="chipj">VALORANT</span><span>VCT KICKOFF · AMÉRICAS · BO3</span><span>·</span><span class="mono">HOY 22:15 · CARACAS</span></div>
+        <div class="enfrentamiento">
+          <div class="lado"><div class="nombre">Sentinels</div><div class="rating">rating 1.744 · 288 partidas</div><div class="prob">52.9%</div></div>
+          <div class="vscol"><div class="vs">VS</div><div class="hora mono">22:15</div></div>
+          <div class="lado der"><div class="nombre">Fnatic</div><div class="rating">rating 1.731 · 301 partidas</div><div class="prob" style="color:var(--tintaM)">47.1%</div></div>
+        </div>
+        <div class="marcadores">
+          <div class="mk"><div class="l">2–0</div><div class="v">27.9%</div><div class="bar"><i style="width:28%"></i></div></div>
+          <div class="mk"><div class="l">2–1</div><div class="v">25.0%</div><div class="bar"><i style="width:25%"></i></div></div>
+          <div class="mk"><div class="l">1–2</div><div class="v">22.2%</div><div class="bar"><i style="width:22%"></i></div></div>
+        </div>
+      </div>
+      <div class="lateral">
+        <h3>CALIDAD DEL MOTOR · VALORANT</h3>
+        <div class="filaq"><span>Brier del motor</span><b>0.2318</b></div>
+        <div class="filaq"><span>Base ingenua</span><b>0.2500</b></div>
+        <div class="filaq"><span>Mejora vs moneda</span><b style="color:var(--ok)">−7.3%</b></div>
+        <div class="filaq"><span>Series juzgadas</span><b>2.350</b></div>
+        <div class="filaq"><span>Motor</span><b>Glicko-2 · τ1.2 · RD150</b></div>
+        <span class="sello no">NO CONCLUYENTE — faltan series</span>
+      </div>
+    </div>
+    <div class="sig">
+      <div class="cabeza"><h2>DESPUÉS · VALORANT</h2><span style="font-size:10px;color:var(--apag)">probabilidad congelada al publicarse</span></div>
+      <div class="fila"><span class="hora">MAÑANA 19:00</span><span class="serie"><b>PRX</b><span>VS</span>EDG</span><span class="parejo">50.6% PAREJO</span><span class="p" style="color:var(--tintaM)">—</span></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>SIN APUESTAS · SIN CUOTAS · SOLO CÁLCULO</span>
+  <span>Los porcentajes salen solo del cálculo (Elo / Glicko-2). Ningún LLM produce un número que llegue a esta pantalla.</span>
+</footer>
+
+<script>
+  // Cambio de juego: re-tematiza la página con el color del seleccionado.
+  function ir(j) {
+    document.documentElement.style.setProperty('--jc', getComputedStyle(document.querySelector(`.tab[data-j="${j}"]`)).getPropertyValue('--c'));
+    document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('activa', t.dataset.j === j));
+    document.querySelectorAll('section[data-juego]').forEach((s) => s.classList.toggle('visible', s.dataset.juego === j));
+  }
+</script>
+</body>
+</html>
