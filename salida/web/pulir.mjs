@@ -37,10 +37,21 @@ const CHIP_CON_LOGO = `<span style="{{ p.chip }}"><sc-if value="{{ p.logoJuego }
 
 // La rejilla era auto-fill: con una sola tarjeta quedaba flotando en una
 // columna propia mientras el resto del ancho moría vacío. auto-fit colapsa
-// las pistas vacías: una tarjeta ocupa el ancho completo, cuatro reparten
-// igual que antes.
+// las pistas vacías, pero con UNA tarjeta la estira al ancho completo y el
+// contenido se ve perdido. Se fija el ancho de la tarjeta (430px, que es lo
+// que el diseño tenía en mente) y se centra el grupo.
 const GRILLA_ANTES = `grid-template-columns: repeat(auto-fill, minmax(390px, 1fr))`;
-const GRILLA_DESPUES = `grid-template-columns: repeat(auto-fit, minmax(min(100%, 430px), 1fr))`;
+const GRILLA_DESPUES = `grid-template-columns: repeat(auto-fit, minmax(min(100%, 430px), 430px)); justify-content: center;`;
+
+// Los escudos son una caja con iniciales; el logo real entra como <img>
+// encima y si no carga se elimina solo (onerror) y vuelve la inicial. Sin
+// esto, un logo roto dejaba el cuadro vacío -- exactamente lo que se veía en
+// producción con el CDN viejo de Valve ya muerto.
+const ESCUDO = (varNombre, keyInicial, keyLogo) => {
+  const antes = `<div style="\{\{ ${varNombre} \}\}">\{\{ ${keyInicial} \}\}</div>`;
+  const despues = `<div style="\{\{ ${varNombre} \}\}; position: relative; overflow: hidden;"><span>\{\{ ${keyInicial} \}\}</span><sc-if value="\{\{ ${keyLogo} \}\}"><img src="\{\{ ${keyLogo} \}\}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()"></sc-if></div>`;
+  return [antes, despues];
+};
 
 // El icono de menú arriba del rail no abre nada (el rail ya navega) y
 // AJUSTES apunta a una vista de contacto que ya vive en el pie. Salen.
@@ -59,6 +70,17 @@ function cambiar(html, antes, despues, nombre) {
   return html.replace(antes, despues);
 }
 
+// Tarjeta (`p.*`), fila de tabla (`r.*`) y ficha (`m*`): los tres lugares
+// donde el diseño dibuja un escudo con iniciales.
+const ESCUDOS = [
+  ESCUDO('p.escudoA', 'p.inicialA', 'p.logoA'),
+  ESCUDO('p.escudoB', 'p.inicialB', 'p.logoB'),
+  ESCUDO('r.escudoA', 'r.inicialA', 'r.logoA'),
+  ESCUDO('r.escudoB', 'r.inicialB', 'r.logoB'),
+  ESCUDO('mEscudoA', 'mInicialA', 'mLogoA'),
+  ESCUDO('mEscudoB', 'mInicialB', 'mLogoB'),
+];
+
 export function pulir(cuerpo) {
   let out = cuerpo;
   if (!USUARIO_FALSO.test(out)) throw new Error('pulir: no encontré el usuario de mentira del encabezado; el diseño cambió y hay que revisar esta regla');
@@ -68,5 +90,6 @@ export function pulir(cuerpo) {
   out = cambiar(out, ETIQUETA_CORTADA, ETIQUETA_HONESTA, 'la etiqueta cortada');
   out = cambiar(out, CHIP_TEXTO, CHIP_CON_LOGO, 'el chip del juego');
   out = cambiar(out, GRILLA_ANTES, GRILLA_DESPUES, 'la rejilla de tarjetas');
+  for (const [antes, despues] of ESCUDOS) out = cambiar(out, antes, despues, `el escudo de ${antes}`);
   return out;
 }

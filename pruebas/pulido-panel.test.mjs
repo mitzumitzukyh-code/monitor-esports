@@ -89,6 +89,12 @@ const DISENIO_MINIMO = [
   '<div style="font-size: 10.5px; color: #4B5360; letter-spacing: 0.08em; font-weight: 600; white-space: nowrap;">PROBABILIDAD DEL MOTOR VS MERCADO SIN VIG</div>',
   '<span style="{{ p.chip }}">{{ p.juego }}</span>',
   '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(390px, 1fr)); gap: 16px;"></div>',
+  '<div style="{{ p.escudoA }}">{{ p.inicialA }}</div>',
+  '<div style="{{ p.escudoB }}">{{ p.inicialB }}</div>',
+  '<div style="{{ r.escudoA }}">{{ r.inicialA }}</div>',
+  '<div style="{{ r.escudoB }}">{{ r.inicialB }}</div>',
+  '<div style="{{ mEscudoA }}">{{ mInicialA }}</div>',
+  '<div style="{{ mEscudoB }}">{{ mInicialB }}</div>',
   BLOQUE_USUARIO,
 ].join('\n');
 
@@ -100,7 +106,15 @@ test('pulir: quita hamburguesa y AJUSTES, arregla etiqueta, chip y rejilla', () 
   assert.ok(!out.includes('MERCADO SIN VIG'), 'la etiqueta cortada sigue');
   assert.ok(out.includes('CALIFICADA CONTRA EL RESULTADO'), 'la etiqueta honesta no quedó');
   assert.ok(out.includes('<sc-if value="{{ p.logoJuego }}">'), 'el chip no quedó cableado al logo');
-  assert.ok(out.includes('repeat(auto-fit, minmax(min(100%, 430px), 1fr))'), 'la rejilla no quedó adaptable');
+  assert.ok(out.includes('repeat(auto-fit, minmax(min(100%, 430px), 430px)); justify-content: center;'), 'la rejilla no quedó centrada');
+});
+
+test('pulir: los escudos llevan <img> con onerror y caen a la inicial', () => {
+  const out = pulir(DISENIO_MINIMO);
+  assert.ok(out.includes('<sc-if value="{{ p.logoA }}"><img src="{{ p.logoA }}"'), 'el escudo A de la tarjeta no lleva logo');
+  assert.ok(out.includes('onerror="this.remove()"'), 'el onerror del escudo no quedó');
+  assert.ok(out.includes('<span>{{ p.inicialA }}</span>'), 'la inicial del escudo se perdió');
+  assert.ok(out.includes('<sc-if value="{{ mLogoB }}">'), 'el escudo B de la ficha no lleva logo');
 });
 
 test('pulir: si el diseño cambia y una regla ya no calza, avisa en voz alta', () => {

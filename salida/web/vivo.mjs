@@ -24,9 +24,30 @@ export function hayCredenciales() {
 // se genera igual, que es lo que importa.
 // `fetchImpl` existe para poder probar esto sin credenciales ni red: es el
 // mismo punto de inyección que usa seleccionar().
-export async function proximasSeries({ cuantas = 4, ahora = Date.now(), fetchImpl } = {}) {
+//
+// Los escudos se resuelven aparte, con OpenDota (/teams/{id} trae logo_url
+// en el CDN NUEVO de Valve -- steamusercontent; el viejo steamcdn-a.akamaihd
+// devuelve 404 y fue lo que dejó los cuadros vacíos en producción el
+// 2026-08-23). Son 2-4 llamadas por corrida, para el presupuesto de la regla 5
+// es nada. Si una falla, queda la inicial.
+async function logosOpenDota(ids, fetchImpl) {
+  const unicos = [...new Set((ids ?? []).filter(Boolean))];
+  const logros = new Map();
+  await Promise.all(unicos.map(async (id) => {
+    try {
+      const r = await fetchImpl(`https://api.opendota.com/api/teams/${id}`);
+      if (!r.ok) return;
+      const t = await r.json();
+      if (t && t.logo_url) logros.set(id, t.logo_url);
+    } catch { /* sin logo: la inicial de siempre */ }
+  }));
+  return logros;
+}
+
+export async function proximasSeries({ cuantas = 4, ahora = Date.now(), fetchImpl, fetchImplOpenDota } = {}) {
   if (!hayCredenciales()) return null;
   const opciones = fetchImpl ? { fetchImpl } : undefined;
+  const fetchOpd = fetchImplOpenDota ?? ((url) => fetch(url));
   try {
     const [series, predicciones, equipos] = await Promise.all([
       seleccionar('dota_series', '?select=*&terminada=eq.false&order=start_time.asc', opciones),
@@ -36,29 +57,33 @@ export async function proximasSeries({ cuantas = 4, ahora = Date.now(), fetchImp
 
     const nombre = new Map(equipos.map((e) => [e.team_id, e.nombre]));
     const predPorSerie = new Map(predicciones.map((p) => [p.series_id, p]));
-    return series
+    const queVienen = series
       // El feed sigue listando series que YA empezaron: es el mismo bug real
       // que documenta CLAUDE.md. Acá sólo se muestran las que faltan.
       .filter((s) => new Date(s.start_time).getTime() > ahora)
-      .slice(0, cuantas)
-      .map((s) => {
-        const p = predPorSerie.get(s.series_id) ?? null;
-        return {
-          seriesId: s.series_id,
-          torneo: s.league_name,
-          formato: String(s.formato || '').toLowerCase(),
-          // Los team_id hacen falta para el escudo real de cada equipo
-          // (steamcdn por id); sin ellos la tarjeta queda en iniciales.
-          equipoA: s.equipo_a,
-          equipoB: s.equipo_b,
-          nombreA: nombre.get(s.equipo_a) ?? `#${s.equipo_a}`,
-          nombreB: nombre.get(s.equipo_b) ?? `#${s.equipo_b}`,
-          inicio: s.start_time,
-          prediccion: p
-            ? { ganaA: Number(p.prob_gana_a), empate: Number(p.prob_empate), ganaB: Number(p.prob_gana_b) }
-            : null,
-        };
-      });
+      .slice(0, cuantas);
+    const logos = await logosOpenDota(queVienen.flatMap((s) => [s.equipo_a, s.equipo_b]), fetchOpd);
+
+    return queVienen.map((s) => {
+      const p = predPorSerie.get(s.series_id) ?? null;
+      return {
+        seriesId: s.series_id,
+        torneo: s.league_name,
+        formato: String(s.formato || '').toLowerCase(),
+        // Los team_id hacen falta para el escudo real de cada equipo
+        // (OpenDota resuelve logo_url por id); sin ellos queda la inicial.
+        equipoA: s.equipo_a,
+        equipoB: s.equipo_b,
+        nombreA: nombre.get(s.equipo_a) ?? `#${s.equipo_a}`,
+        nombreB: nombre.get(s.equipo_b) ?? `#${s.equipo_b}`,
+        logoA: logos.get(s.equipo_a) ?? null,
+        logoB: logos.get(s.equipo_b) ?? null,
+        inicio: s.start_time,
+        prediccion: p
+          ? { ganaA: Number(p.prob_gana_a), empate: Number(p.prob_empate), ganaB: Number(p.prob_gana_b) }
+          : null,
+      };
+    });
   } catch (e) {
     return { error: e.message.slice(0, 120) };
   }

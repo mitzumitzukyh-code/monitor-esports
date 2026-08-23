@@ -45,22 +45,12 @@ const chipJuego = (j) => {
   return { fontSize: '9px', fontWeight: 800, letterSpacing: '0.1em', padding: '5px 9px', borderRadius: '7px', color: c, border: `1px solid ${c}66`, background: 'rgba(5,7,10,0.80)', whiteSpace: 'nowrap', display: 'inline-block' };
 };
 
-const escudo = (nombre, juego, size = 30, logoUrl = null) => {
+const escudo = (nombre, juego, size = 30) => {
   const c = colorJuego(juego);
-  return { width: `${size}px`, height: `${size}px`, flex: 'none', borderRadius: '8px', border: `1px solid ${c}55`, background: 'rgba(5,7,10,0.9)', color: c, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `${size * 0.38}px`, fontWeight: 800, letterSpacing: '0.02em',
-    // El escudo real (steamcdn por team_id) entra como fondo y tapa la
-    // inicial; si el logo no existe para ese equipo, la caja queda con la
-    // inicial de siempre -- el fallback es el texto, no un cuadro vacío,
-    // por eso la inicial se vuelve transparente SOLO cuando hay logo.
-    ...(logoUrl ? { backgroundImage: `url("${logoUrl}")`, backgroundSize: 'cover', backgroundPosition: 'center', color: 'transparent' } : {}) };
+  return { width: `${size}px`, height: `${size}px`, flex: 'none', borderRadius: '8px', border: `1px solid ${c}55`, background: 'rgba(5,7,10,0.9)', color: c, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `${size * 0.38}px`, fontWeight: 800, letterSpacing: '0.02em' };
 };
 
 const inicial = (n) => String(n || '?').replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase();
-
-// Escudos de equipo: Valve publica uno por team_id en su CDN (es la misma
-// fuente que ya usaba datos/logos-dota.json, sólo que sin copiar 16 URLs a
-// mano). Si Valve no tiene al equipo, la URL falla y queda la inicial.
-const logoSteam = (teamId) => teamId ? `https://steamcdn-a.akamaihd.net/apps/dota2/images/team_logos/${teamId}.png` : null;
 
 // Logos oficiales de los juegos, recuperados del historial del repo
 // (commit "Los cuatro logos oficiales que mando el dueno") a salida/web/logos/.
@@ -139,8 +129,8 @@ function serieComoPartido(s, arte) {
     logoJuego: logoDeJuego(JUEGO),
     inicialA: inicial(s.nombreA),
     inicialB: inicial(s.nombreB),
-    escudoA: escudo(s.nombreA, JUEGO, 30, logoSteam(s.equipoA)),
-    escudoB: escudo(s.nombreB, JUEGO, 30, logoSteam(s.equipoB)),
+    escudoA: escudo(s.nombreA, JUEGO, 30),
+    escudoB: escudo(s.nombreB, JUEGO, 30),
     probA: pct(s.prediccion.ganaA),
     // Sin cuotas guardadas no hay mercado contra el que medirse. Se dice, no
     // se rellena.
@@ -165,7 +155,7 @@ function serieComoFila(s) {
     logoJuego: logoDeJuego(JUEGO),
     formato: s.formato.toUpperCase(),
     inicialA: inicial(s.nombreA), inicialB: inicial(s.nombreB),
-    escudoA: escudo(s.nombreA, JUEGO, 26, logoSteam(s.equipoA)), escudoB: escudo(s.nombreB, JUEGO, 26, logoSteam(s.equipoB)),
+    escudoA: escudo(s.nombreA, JUEGO, 26), escudoB: escudo(s.nombreB, JUEGO, 26),
     gaugeColor: color, gaugeDash: gauge(s.prediccion.ganaA, color).dash,
     probA: pct(s.prediccion.ganaA),
     probStyle: { fontFamily: "'JetBrains Mono', monospace", fontSize: '16px', fontWeight: 800, color, lineHeight: 1 },
@@ -226,8 +216,12 @@ function proximaComoPartido(s, arte) {
     cierra: cuandoEmpieza(s.inicio),
     a: s.nombreA, b: s.nombreB, chip: chipJuego(JUEGO),
     logoJuego: logoDeJuego(JUEGO),
+    inicio: s.inicio,
     inicialA: inicial(s.nombreA), inicialB: inicial(s.nombreB),
-    escudoA: escudo(s.nombreA, JUEGO, 30, logoSteam(s.equipoA)), escudoB: escudo(s.nombreB, JUEGO, 30, logoSteam(s.equipoB)),
+    // El logo real (steamusercontent, resuelto por OpenDota en vivo.mjs)
+    // entra como <img> con onerror; si no está o no carga, queda la inicial.
+    logoA: s.logoA ?? null, logoB: s.logoB ?? null,
+    escudoA: escudo(s.nombreA, JUEGO, 30), escudoB: escudo(s.nombreB, JUEGO, 30),
     probA: tiene ? pct(s.prediccion.ganaA) : VACIO,
     mercadoA: VACIO, cuotaA: VACIO,
     edge: VACIO, edgeStyle: { fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: C.tintaApagada },
@@ -419,7 +413,7 @@ export function ficha(s, r, arte) {
     mInicio: s.fecha, mCierra: VACIO,
     mTeamA: s.nombreA, mTeamB: s.nombreB,
     mInicialA: inicial(s.nombreA), mInicialB: inicial(s.nombreB),
-    mEscudoA: escudo(s.nombreA, JUEGO, 44, logoSteam(s.equipoA)), mEscudoB: escudo(s.nombreB, JUEGO, 44, logoSteam(s.equipoB)),
+    mEscudoA: escudo(s.nombreA, JUEGO, 44), mEscudoB: escudo(s.nombreB, JUEGO, 44),
     mRatingA: Math.round(s.ratingA), mRatingB: Math.round(s.ratingB),
     // El Elo no tiene desviación: es el límite conocido del motor, y se dice.
     mRdA: 'n/a (Elo)', mRdB: 'n/a (Elo)',
@@ -449,7 +443,7 @@ function clasificacionValores(r) {
   const filas = r.clasificacion.map((f, i) => ({
     pos: f.posicion,
     posColor: i === 0 ? '#F5C400' : i === 1 ? '#C7CDD9' : i === 2 ? '#C97B3D' : C.tintaApagada,
-    equipo: f.nombre, escudo: escudo(f.nombre, JUEGO, 24, logoSteam(f.teamId)), inicial: inicial(f.nombre),
+    equipo: f.nombre, escudo: escudo(f.nombre, JUEGO, 24), inicial: inicial(f.nombre),
     rating: miles(Math.round(f.rating)),
     // Sin dato de tendencia por equipo en el histórico: no se inventa.
     tendArrow: '', tendVal: VACIO, tendColor: C.tintaApagada,
