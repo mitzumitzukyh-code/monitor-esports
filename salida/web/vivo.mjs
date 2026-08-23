@@ -47,6 +47,10 @@ export async function proximasSeries({ cuantas = 4, ahora = Date.now(), fetchImp
           seriesId: s.series_id,
           torneo: s.league_name,
           formato: String(s.formato || '').toLowerCase(),
+          // Los team_id hacen falta para el escudo real de cada equipo
+          // (steamcdn por id); sin ellos la tarjeta queda en iniciales.
+          equipoA: s.equipo_a,
+          equipoB: s.equipo_b,
           nombreA: nombre.get(s.equipo_a) ?? `#${s.equipo_a}`,
           nombreB: nombre.get(s.equipo_b) ?? `#${s.equipo_b}`,
           inicio: s.start_time,

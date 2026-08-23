@@ -21,6 +21,7 @@ import { resumen } from './datos.mjs';
 import { valores, C } from './valores.mjs';
 import { proximasSeries, hayCredenciales } from './vivo.mjs';
 import { renderizar, partesDelDisenio, envolverVista, esc } from './plantilla.mjs';
+import { pulir } from './pulir.mjs';
 
 const AQUI = new URL('./', import.meta.url);
 const RAIZ = new URL('../../', import.meta.url);
@@ -199,9 +200,9 @@ async function main() {
 
   // El diseño enlaza ./logo-monitor.png, que no existe en este repo.
   const conLogo = marcarVistas(
-    logo
+    pulir(logo
       ? plantilla.replace(/src="\.\/logo-monitor\.png"/g, `src="${logo}"`)
-      : plantilla.replace(/<img src="\.\/logo-monitor\.png"[^>]*>/g, '')
+      : plantilla.replace(/<img src="\.\/logo-monitor\.png"[^>]*>/g, ''))
   );
 
   await limpiarFichasViejas();
