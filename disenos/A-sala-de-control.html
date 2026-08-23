@@ -68,7 +68,8 @@
   .juego.activa { border-color: var(--jc); background: color-mix(in srgb, var(--jc) 8%, var(--tarjeta)); box-shadow: 0 0 18px color-mix(in srgb, var(--jc) 20%, transparent); }
   .juego .ver-todas { display: none; font-size: 8.5px; color: var(--aviso); letter-spacing: .1em; font-weight: 800; margin-top: 6px; }
   .juego.activa .ver-todas { display: block; }
-  .juego .nom { font-weight: 800; font-size: 14.5px; letter-spacing: .04em; color: var(--jc); }
+  .juego .nom { font-weight: 800; font-size: 14.5px; letter-spacing: .04em; color: var(--jc); display: flex; align-items: center; gap: 9px; }
+  .juego .nom img { width: 24px; height: 24px; border-radius: 6px; object-fit: cover; background: #000; flex: none; }
   .juego .kpi { display: flex; justify-content: space-between; margin-top: 6px; font-size: 10.5px; color: var(--tintaS); }
   .juego .kpi b { color: var(--tinta); font-family: 'JetBrains Mono', monospace; font-weight: 700; }
   .casa { border: 1px solid var(--lineaM); border-radius: 8px; background: var(--tarjeta); padding: 11px 13px; font-size: 10.5px; color: var(--tintaS); line-height: 1.55; margin-top: 10px; }
@@ -156,25 +157,25 @@
   <aside class="juegos">
     <h3>JUEGOS</h3>
     <div class="juego" data-filtro="DOTA 2" style="--jc: var(--dota)">
-      <div class="nom">DOTA 2</div>
+      <div class="nom"><img src="logos/logo-dota2.png" alt="Dota 2">DOTA 2</div>
       <div class="kpi"><span>mejora vs moneda</span><b>−17.2%</b></div>
       <div class="kpi"><span>juzgadas</span><b>36</b></div>
       <div class="kpi"><span>próximas</span><b>2</b></div>
     </div>
     <div class="juego" data-filtro="CS2" style="--jc: var(--cs2)">
-      <div class="nom">CS2</div>
+      <div class="nom"><img src="logos/logo-cs2.jpg" alt="CS2">CS2</div>
       <div class="kpi"><span>mejora vs moneda</span><b>−11.8%</b></div>
       <div class="kpi"><span>juzgadas</span><b>12.447</b></div>
       <div class="kpi"><span>próximas</span><b>5</b></div>
     </div>
     <div class="juego" data-filtro="LOL" style="--jc: var(--lol)">
-      <div class="nom">LOL</div>
+      <div class="nom"><img src="logos/logo-lol.png" alt="LoL">LOL</div>
       <div class="kpi"><span>mejora vs moneda</span><b>−15.0%</b></div>
       <div class="kpi"><span>juzgadas</span><b>2.444</b></div>
       <div class="kpi"><span>próximas</span><b>3</b></div>
     </div>
     <div class="juego" data-filtro="VALORANT" style="--jc: var(--val)">
-      <div class="nom">VALORANT</div>
+      <div class="nom"><img src="logos/logo-valorant.png" alt="Valorant">VALORANT</div>
       <div class="kpi"><span>mejora vs moneda</span><b>−7.3%</b></div>
       <div class="kpi"><span>juzgadas</span><b>2.350</b></div>
       <div class="kpi"><span>próximas</span><b>1</b></div>
