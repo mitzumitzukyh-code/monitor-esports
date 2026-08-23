@@ -29,6 +29,12 @@ const ENLACE_REPO = `
 const ETIQUETA_CORTADA = `<div style="font-size: 10.5px; color: #4B5360; letter-spacing: 0.08em; font-weight: 600; white-space: nowrap;">PROBABILIDAD DEL MOTOR VS MERCADO SIN VIG</div>`;
 const ETIQUETA_HONESTA = `<div style="font-size: 10.5px; color: #4B5360; letter-spacing: 0.08em; font-weight: 600; text-align: right;">PROBABILIDAD DEL MOTOR · CALIFICADA CONTRA EL RESULTADO</div>`;
 
+// En la ficha, la columna de mercado dice "MERCADO SIN VIG" -- misterioso y
+// heredado del mockup. El motivo real de que salga «—» es que no hay cuotas
+// de Dota guardadas: eso es lo que dice ahora.
+const ETIQUETA_FICHA = `<div style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.12em; color: #6F7784;">MERCADO SIN VIG</div>`;
+const ETIQUETA_FICHA_HONESTA = `<div style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.12em; color: #6F7784;">MERCADO · SIN CUOTAS</div>`;
+
 // El chip del juego lleva ahora el logo oficial (recuperado del historial
 // del repo). La imagen entra por p.logoJuego; si un día falta el archivo,
 // el sc-if no dibuja nada y el chip queda de texto, igual que hoy.
@@ -88,6 +94,7 @@ export function pulir(cuerpo) {
   out = quitar(out, HAMBURGUESA, 'la hamburguesa del rail');
   out = quitar(out, AJUSTES, 'el botón AJUSTES del rail');
   out = cambiar(out, ETIQUETA_CORTADA, ETIQUETA_HONESTA, 'la etiqueta cortada');
+  out = cambiar(out, ETIQUETA_FICHA, ETIQUETA_FICHA_HONESTA, 'la etiqueta MERCADO SIN VIG de la ficha');
   out = cambiar(out, CHIP_TEXTO, CHIP_CON_LOGO, 'el chip del juego');
   out = cambiar(out, GRILLA_ANTES, GRILLA_DESPUES, 'la rejilla de tarjetas');
   for (const [antes, despues] of ESCUDOS) out = cambiar(out, antes, despues, `el escudo de ${antes}`);

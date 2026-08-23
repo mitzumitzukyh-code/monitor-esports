@@ -146,12 +146,20 @@ ${conCliente ? `<script>${CLIENTE}</script>` : ''}
 }
 
 // Las filas de la tabla llevan los datos que el filtro y el orden necesitan.
+// El estilo viene serializado por estiloATexto, que escribe SIN espacio
+// después de los dos puntos ("grid-template-columns:minmax(...)"), así que el
+// patrón acepta cualquier espacio en blanco ahí -- con espacio literal
+// quedaba sin anotar la tabla entera y los filtros no movían nada.
 function anotarFilas(html, filas) {
   let i = 0;
-  return html.replace(/<div data-accion="ficha:(\d+)" style="([^"]*grid-template-columns: minmax\(0, 1\.7fr\)[^"]*)"/g, (m, id, estilo) => {
+  return html.replace(/<div data-accion="ficha:(\d+)" style="([^"]*grid-template-columns:\s*minmax\(0, 1\.7fr\)[^"]*)"/g, (m, id, estilo) => {
     const f = filas[i++];
     if (!f) return m;
-    return `<div data-fila data-juego="${esc(f.juego)}" data-edge="${esc(f._pa)}" data-motor="${esc(f._pa)}" data-cierra="${esc(f.cierra)}" data-accion="ficha:${id}" style="${estilo}"`;
+    // data-edge es la CONFIANZA (qué tan por debajo de la base ingenua quedó
+    // el Brier de esa serie) y data-motor la probabilidad: antes iban las dos
+    // con el mismo valor y "más confiable" ordenaba por probabilidad.
+    const edge = f._edge != null ? f._edge : f._pa;
+    return `<div data-fila data-juego="${esc(f.juego)}" data-edge="${esc(edge)}" data-motor="${esc(f._pa)}" data-cierra="${esc(f.cierra)}" data-accion="ficha:${id}" style="${estilo}"`;
   });
 }
 
@@ -240,4 +248,4 @@ async function main() {
 // triple slash) y el generador se moría callado al correrlo en local.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
 
-export { documento, marcarVistas };
+export { documento, marcarVistas, anotarFilas };

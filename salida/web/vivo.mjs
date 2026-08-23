@@ -34,12 +34,16 @@ async function logosOpenDota(ids, fetchImpl) {
   const unicos = [...new Set((ids ?? []).filter(Boolean))];
   const logros = new Map();
   await Promise.all(unicos.map(async (id) => {
-    try {
-      const r = await fetchImpl(`https://api.opendota.com/api/teams/${id}`);
-      if (!r.ok) return;
-      const t = await r.json();
-      if (t && t.logo_url) logros.set(id, t.logo_url);
-    } catch { /* sin logo: la inicial de siempre */ }
+    for (let intento = 0; intento < 2; intento += 1) {
+      try {
+        const r = await fetchImpl(`https://api.opendota.com/api/teams/${id}`);
+        if (!r.ok) continue; // 429/5xx: se reintenta una vez
+        const t = await r.json();
+        if (t && t.logo_url) logros.set(id, t.logo_url);
+        return;
+      } catch { /* sin logo: la inicial de siempre */ }
+      if (intento === 0) await new Promise((resolver) => setTimeout(resolver, 400));
+    }
   }));
   return logros;
 }

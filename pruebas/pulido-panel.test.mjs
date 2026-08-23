@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 
 import { mejorMarcadorDePrediccion, fraseSeriesProximas, logoDeJuego } from '../salida/web/valores.mjs';
 import { pulir } from '../salida/web/pulir.mjs';
+import { anotarFilas } from '../salida/web/generar.mjs';
 
 test('mejorMarcadorDePrediccion: favorito claro en bo3 marca 2–0 o 0–2', () => {
   const aFavor = mejorMarcadorDePrediccion(0.95, 'bo3');
@@ -87,6 +88,7 @@ const DISENIO_MINIMO = [
   '  <span style="font-size: 8.5px;">AJUSTES</span>',
   '</div>',
   '<div style="font-size: 10.5px; color: #4B5360; letter-spacing: 0.08em; font-weight: 600; white-space: nowrap;">PROBABILIDAD DEL MOTOR VS MERCADO SIN VIG</div>',
+  '<div style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.12em; color: #6F7784;">MERCADO SIN VIG</div>',
   '<span style="{{ p.chip }}">{{ p.juego }}</span>',
   '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(390px, 1fr)); gap: 16px;"></div>',
   '<div style="{{ p.escudoA }}">{{ p.inicialA }}</div>',
@@ -130,4 +132,31 @@ test('pulir: reemplaza al usuario falso por el enlace honesto al repo', () => {
   assert.ok(!out.includes('Nivel 24'), 'el nivel falso sigue');
   assert.ok(!out.includes('>3</span>'), 'el badge falso de notificaciones sigue');
   assert.ok(out.includes('github.com/mitzumitzukyh-code/monitor-esports'), 'el enlace honesto al repo no quedó');
+});
+
+// --- anotarFilas (el filtro y el orden de Predicciones) -------------------
+
+const FILA_SERIALIZADA = (id) =>
+  `<div data-accion="ficha:${id}" style="display:grid;grid-template-columns:minmax(0, 1.7fr) 92px 60px 190px 96px 92px 96px;gap:10px;padding:14px 18px 14px 15px;border-bottom:1px solid #1a1e26;border-left:3px solid #9A3CFF99;font-size:12px;align-items:center;cursor:pointer"></div>`;
+
+test('anotarFilas: anota aunque el estilo venga sin espacio después de los dos puntos', () => {
+  const html = FILA_SERIALIZADA(1130069) + FILA_SERIALIZADA(1130066);
+  const filas = [
+    { juego: 'DOTA 2', _pa: 0.417, _edge: -0.217, cierra: '2026-08-22' },
+    { juego: 'CS2', _pa: 0.63, _edge: 0.045, cierra: '2026-08-21' },
+  ];
+  const out = anotarFilas(html, filas);
+  assert.equal((out.match(/data-fila/g) || []).length, 2, 'no anotó las dos filas');
+  assert.ok(out.includes('data-juego="CS2"'), 'el juego de la segunda fila no quedó');
+  assert.ok(out.includes('data-edge="-0.217"'), 'data-edge debe ser la confianza (brier - base), no la probabilidad');
+  assert.ok(out.includes('data-motor="0.417"'), 'data-motor debe ser la probabilidad');
+});
+
+test('anotarFilas: el orden por confianza usa brier-base y por motor usa la probabilidad', () => {
+  const out = anotarFilas(FILA_SERIALIZADA(1), [{ juego: 'DOTA 2', _pa: 0.9, _edge: -0.5, cierra: '2026-08-20' }]);
+  const edge = out.match(/data-edge="([^"]+)"/)[1];
+  const motor = out.match(/data-motor="([^"]+)"/)[1];
+  assert.notEqual(edge, motor, 'edge y motor no pueden ser el mismo número');
+  assert.equal(edge, '-0.5');
+  assert.equal(motor, '0.9');
 });

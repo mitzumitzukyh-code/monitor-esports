@@ -170,6 +170,9 @@ function serieComoFila(s) {
     rowStyle: { display: 'grid', gridTemplateColumns: 'minmax(0, 1.7fr) 92px 60px 190px 96px 92px 96px', gap: '10px', padding: '14px 18px 14px 15px', borderBottom: `1px solid ${C.linea}`, borderLeft: `3px solid ${color}99`, fontSize: '12px', alignItems: 'center', cursor: 'pointer' },
     onClick: `ficha:${s.seriesId}`,
     _pa: pa,
+    // Confianza = cuánto le ganó (o perdió) el Brier a la base ingenua.
+    // Es lo que debe ordenar "más confiable", no la probabilidad.
+    _edge: s.brier - s.base,
   };
 }
 
