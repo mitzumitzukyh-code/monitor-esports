@@ -1,409 +1,572 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es-VE">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>A · Sala de Control — Monitor eSports</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- ============ SEO: bloque que faltaba completo en la v1 ============ -->
+<title>Monitor eSports · Predicciones verificables de Dota 2, CS2, LoL y Valorant</title>
+<meta name="description" content="Panel abierto de predicciones para Dota 2, CS2, League of Legends y Valorant. Cada porcentaje queda congelado antes de la serie y se califica con Brier contra el 0.250 de la moneda. Los fallos se publican igual que los aciertos.">
+<link rel="canonical" href="https://mitzumitzukyh-code.github.io/monitor-esports/">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#05070A">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="alternate icon" href="assets/favicon.ico">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_VE">
+<meta property="og:site_name" content="Monitor eSports">
+<meta property="og:url" content="https://mitzumitzukyh-code.github.io/monitor-esports/">
+<meta property="og:title" content="Monitor eSports · Predicciones que no se pueden editar">
+<meta property="og:description" content="Predicciones de Dota 2, CS2, LoL y Valorant calificadas con Brier contra la moneda. Sin apuestas, sin cuotas, sin LLM tocando los números.">
+<meta property="og:image" content="https://mitzumitzukyh-code.github.io/monitor-esports/assets/icon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Monitor eSports · Predicciones que no se pueden editar">
+<meta name="twitter:description" content="Brier contra la moneda, en vivo, para 4 juegos. Los fallos se publican igual que los aciertos.">
+<meta name="twitter:image" content="https://mitzumitzukyh-code.github.io/monitor-esports/assets/icon-512.png">
+
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+{"@type":"WebApplication","@id":"https://mitzumitzukyh-code.github.io/monitor-esports/#app",
+ "name":"Monitor eSports","url":"https://mitzumitzukyh-code.github.io/monitor-esports/",
+ "applicationCategory":"SportsApplication","operatingSystem":"Web",
+ "inLanguage":"es-VE","isAccessibleForFree":true,
+ "offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},
+ "description":"Panel abierto de predicciones para Dota 2, CS2, League of Legends y Valorant, calificadas con puntaje de Brier."},
+{"@type":"Dataset","@id":"https://mitzumitzukyh-code.github.io/monitor-esports/#dataset",
+ "name":"Predicciones inmutables de eSports con calificación Brier",
+ "description":"Probabilidades generadas por Elo/Glicko-2 antes del inicio de cada serie, congeladas y calificadas contra el resultado real.",
+ "creator":{"@id":"https://mitzumitzukyh-code.github.io/monitor-esports/#app"},
+ "variableMeasured":[
+   {"@type":"PropertyValue","name":"Puntaje de Brier","description":"Menor es mejor. 0.250 es la moneda."},
+   {"@type":"PropertyValue","name":"Mejora vs moneda","unitText":"PERCENT"}]},
+{"@type":"FAQPage","mainEntity":[
+ {"@type":"Question","name":"¿Cómo se calculan los porcentajes?",
+  "acceptedAnswer":{"@type":"Answer","text":"Con modelos de calificación Elo y Glicko-2 sobre historial de series. Ningún modelo de lenguaje produce un número que llegue a la pantalla."}},
+ {"@type":"Question","name":"¿Qué es el puntaje de Brier?",
+  "acceptedAnswer":{"@type":"Answer","text":"Mide qué tan bien calibrada está una predicción probabilística. Va de 0 a 1 y mientras más bajo, mejor. Una moneda que siempre dice 50% saca 0.250."}},
+ {"@type":"Question","name":"¿Esto es una casa de apuestas?",
+  "acceptedAnswer":{"@type":"Answer","text":"No. No se aceptan apuestas ni se publican cuotas para apostar. Las cuotas de mercado se usan solo como punto de comparación."}}]}
+]}
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap"></noscript>
+
 <style>
-  /* A · SALA DE CONTROL (v2): título centrado, estado del sistema con título
-     propio y en grande, botón EN VIVO que late (quieto = desconectado),
-     hora de 12 horas, títulos grandes en colores sólidos. */
-  :root {
-    --fondo:#05070A; --panel:#080A0E; --tarjeta:#0D1015; --interior:#11141A;
-    --linea:#1a1e26; --lineaM:#242933; --lineaF:#343943;
-    --tinta:#F2F4F7; --tintaM:#A7ADB8; --tintaS:#8B95A5; --apag:#6F7784;
-    --acento:#FF2638; --ok:#19E68C; --aviso:#FFB000;
-    --dota:#9A3CFF; --cs2:#F5C400; --lol:#00CFFF; --val:#23F28A;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--fondo); color: var(--tinta); font-family: Manrope, Helvetica, sans-serif; min-width: 1440px; font-size: 13px; }
-  .mono { font-family: 'JetBrains Mono', monospace; }
-  .aviso-demo { background: #1c1400; border-bottom: 1px solid #4a3600; color: var(--aviso); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .08em; padding: 6px 26px; }
+/* ═══ TOKENS · rejilla de 4pt, escala tipográfica cerrada ═══ */
+:root {
+  --fondo:#05070A; --tarjeta:#0D1015; --interior:#11141A; --hover:#151920;
+  --linea:#242933; --lineaM:#333A47; --lineaF:#4A5364;
+  --tinta:#F2F4F7; --tintaM:#A7ADB8; --tintaS:#8B95A5;
+  --apag:#828B99;                    /* v1: #6F7784 = 4.22:1, reprobaba AA */
+  --acento:#FF2638; --ok:#19E68C; --aviso:#FFB000;
+  --dota:#B478FF;                    /* v1: #9A3CFF = 4.05:1, reprobaba AA */
+  --cs2:#F5C400; --lol:#00CFFF; --val:#23F28A;
 
-  /* ---- latido: late = conectado; quieto = no conectado ---- */
-  @keyframes latido { 0%, 100% { opacity: 1; box-shadow: 0 0 12px currentColor; } 50% { opacity: .3; box-shadow: none; } }
-  .late { animation: latido 1.5s ease-in-out infinite; }
+  --e1:4px; --e2:8px; --e3:12px; --e4:16px; --e5:24px; --e6:32px;
+  --t1:11px; --t2:12px; --t3:13px; --t4:15px; --t5:18px; --t6:22px; --t7:28px;
+  --r1:6px; --r2:10px; --rp:999px;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body {
+  background:var(--fondo); color:var(--tinta);
+  font:600 var(--t3)/1.5 Manrope,system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.mono { font-family:var(--mono); font-variant-numeric:tabular-nums; }
 
-  /* ---- barra superior: logo | título centrado | botón + hora ---- */
-  header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 84px; padding: 0 26px; border-bottom: 1px solid var(--linea); background: var(--fondo); }
-  .logo { width: 52px; height: 52px; border-radius: 12px; background: linear-gradient(135deg, #FF2638, #8f1220); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 26px; justify-self: start; }
-  .titulo-centro { text-align: center; }
-  .titulo-centro h1 { font-size: 26px; font-weight: 800; letter-spacing: .02em; }
-  .titulo-centro h1 span { color: var(--acento); }
-  .titulo-centro small { display: block; font-size: 11px; color: var(--tinta); letter-spacing: .22em; font-weight: 700; margin-top: 3px; }
-  .derecha { justify-self: end; display: flex; align-items: center; gap: 18px; }
-  .boton-vivo { display: flex; align-items: center; gap: 9px; border: 1px solid #0C9B60; background: rgba(25,230,140,.08); color: var(--ok); border-radius: 999px; padding: 9px 16px; font-weight: 800; font-size: 12px; letter-spacing: .12em; }
-  .boton-vivo i { width: 9px; height: 9px; border-radius: 99px; background: var(--ok); color: var(--ok); }
-  .reloj { text-align: right; }
-  .reloj .hora { font-family: 'JetBrains Mono', monospace; font-size: 27px; font-weight: 700; line-height: 1; }
-  .reloj .sub { font-size: 9px; color: var(--apag); letter-spacing: .12em; margin-top: 3px; }
+/* Accesibilidad base: foco visible en todo, movimiento opcional */
+:focus-visible { outline:2px solid var(--tinta); outline-offset:2px; border-radius:var(--r1); }
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+}
+.saltar { position:absolute; left:-9999px; top:var(--e2); z-index:99;
+  background:var(--tinta); color:var(--fondo); padding:var(--e2) var(--e4); border-radius:var(--r1); }
+.saltar:focus { left:var(--e4); }
+.solo-lector { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 
-  /* ---- estado del sistema: con título propio y en grande ---- */
-  .sistema { padding: 14px 26px 4px; }
-  .sistema h2 { font-size: 15px; font-weight: 800; letter-spacing: .1em; color: var(--tinta); margin-bottom: 10px; }
-  .sistema h2 em { font-style: normal; color: var(--acento); }
-  .fuentes { display: flex; gap: 12px; }
-  .fuente { flex: 1; display: flex; align-items: center; gap: 12px; border: 1px solid var(--lineaM); border-radius: 10px; background: var(--tarjeta); padding: 13px 16px; }
-  .fuente .dot { width: 11px; height: 11px; border-radius: 99px; flex: none; }
-  .fuente.viva .dot { background: var(--ok); color: var(--ok); animation: latido 1.5s ease-in-out infinite; }
-  .fuente.fria .dot { background: var(--apag); }
-  .fuente.pend .dot { background: var(--aviso); }
-  .fuente .nom { font-size: 15px; font-weight: 800; color: var(--tinta); line-height: 1.1; }
-  .fuente .det { font-size: 11px; color: var(--tintaS); margin-top: 2px; }
-  .fuente.apagado { opacity: .75; }
+@keyframes latido { 0%,100%{opacity:1} 50%{opacity:.25} }
+.late { animation:latido 1.6s ease-in-out infinite; }
 
-  /* ---- layout principal ---- */
-  main { display: grid; grid-template-columns: 230px minmax(0,1fr) 340px; gap: 14px; padding: 16px 26px 20px; align-items: start; }
-  .titulo-seccion { font-size: 16px; font-weight: 800; letter-spacing: .06em; color: var(--tinta); }
-  .titulo-seccion small { display: block; font-size: 10px; color: var(--tintaS); font-weight: 600; letter-spacing: .04em; margin-top: 2px; }
+/* ═══ CABECERA ═══ */
+.franja { background:#1c1400; border-bottom:1px solid #4a3600; color:var(--aviso);
+  font-family:var(--mono); font-size:var(--t1); letter-spacing:.06em; padding:var(--e2) var(--e5); }
+header { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:var(--e4);
+  padding:var(--e4) var(--e5); border-bottom:1px solid var(--linea); }
+.logo { width:48px; height:48px; border-radius:var(--r2); display:grid; place-items:center;
+  background:linear-gradient(135deg,var(--acento),#8f1220); font-size:var(--t6); font-weight:800; }
+.marca h1 { font-size:var(--t6); font-weight:800; letter-spacing:-.01em; line-height:1.1; }
+.marca h1 span { color:var(--acento); }
+.marca p { font-size:var(--t1); color:var(--tintaS); letter-spacing:.12em; margin-top:var(--e1); }
+.derecha { display:flex; align-items:center; gap:var(--e4); }
+.vivo { display:inline-flex; align-items:center; gap:var(--e2); border:1px solid #0C9B60;
+  background:rgba(25,230,140,.08); color:var(--ok); border-radius:var(--rp);
+  padding:var(--e2) var(--e3); font-size:var(--t2); font-weight:800; letter-spacing:.08em; }
+.vivo i { width:8px; height:8px; border-radius:var(--rp); background:currentColor; flex:none; }
+/* Ciclo callado: el mismo botón, pero apagado. Un verde que late sin ciclo
+   detrás sería el primer número vendedor de la pantalla. */
+.vivo.pausa { border-color:var(--lineaM); background:transparent; color:var(--tintaM); }
+.reloj .hora { font-family:var(--mono); font-size:var(--t6); font-weight:700; line-height:1; }
+.reloj .sub { font-size:var(--t1); color:var(--apag); letter-spacing:.08em; margin-top:var(--e1); }
 
-  /* rail de juegos */
-  .juegos { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 14px; }
-  .juegos h3 { font-size: 14px; font-weight: 800; letter-spacing: .1em; color: var(--tinta); margin-bottom: 4px; }
-  .juego { border: 1px solid var(--lineaM); border-radius: 8px; background: var(--tarjeta); padding: 11px 13px; cursor: pointer; border-left: 4px solid var(--jc); }
-  .juego:hover { border-color: var(--lineaF); }
-  .juego.activa { border-color: var(--jc); background: color-mix(in srgb, var(--jc) 8%, var(--tarjeta)); box-shadow: 0 0 18px color-mix(in srgb, var(--jc) 20%, transparent); }
-  .juego .ver-todas { display: none; font-size: 8.5px; color: var(--aviso); letter-spacing: .1em; font-weight: 800; margin-top: 6px; }
-  .juego.activa .ver-todas { display: block; }
-  .juego .nom { font-weight: 800; font-size: 14.5px; letter-spacing: .04em; color: var(--jc); display: flex; align-items: center; gap: 9px; }
-  .juego .nom img { width: 24px; height: 24px; border-radius: 6px; object-fit: cover; background: #000; flex: none; }
-  .juego .kpi { display: flex; justify-content: space-between; margin-top: 6px; font-size: 10.5px; color: var(--tintaS); }
-  .juego .kpi b { color: var(--tinta); font-family: 'JetBrains Mono', monospace; font-weight: 700; }
-  .casa { border: 1px solid var(--lineaM); border-radius: 8px; background: var(--tarjeta); padding: 11px 13px; font-size: 10.5px; color: var(--tintaS); line-height: 1.55; margin-top: 10px; }
-  .casa b { color: var(--tinta); }
+/* ═══ FIRMA VISUAL · CINTA DE VEREDICTOS ═══
+   Lo que diferencia al producto (publicar los fallos) pasa a estar
+   en el primer pantallazo, no escondido en una caja de 10px abajo. */
+.cinta { display:grid; grid-template-columns:auto 1fr auto; gap:var(--e4); align-items:center;
+  padding:var(--e3) var(--e5); border-bottom:1px solid var(--linea); background:var(--tarjeta); }
+.cinta .rotulo { font-size:var(--t1); font-weight:800; letter-spacing:.12em; color:var(--tintaM); }
+.cinta .rotulo b { display:block; font-size:var(--t3); color:var(--tinta); letter-spacing:.02em; }
+.marcas { display:flex; gap:3px; flex-wrap:wrap; }
+.marcas i { width:14px; height:22px; border-radius:3px; flex:none; }
+.marcas i.ok { background:rgba(25,230,140,.22); border:1px solid var(--ok); }
+.marcas i.no { background:rgba(255,38,56,.18); border:1px solid var(--acento); }
+.cinta .cuenta { font-family:var(--mono); font-size:var(--t2); color:var(--tintaS); text-align:right; white-space:nowrap; }
+.cinta .cuenta b { display:block; font-size:var(--t5); color:var(--tinta); }
 
-  /* tabla central */
-  .panel { border: 1px solid var(--lineaM); border-radius: 10px; background: var(--tarjeta); overflow: hidden; }
-  .panel .cabeza { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid var(--linea); }
-  table { width: 100%; border-collapse: collapse; }
-  th { text-align: left; font-size: 10px; letter-spacing: .12em; color: var(--tintaM); font-weight: 800; padding: 9px 12px; border-bottom: 1px solid var(--linea); }
-  td { padding: 11px 12px; border-bottom: 1px solid var(--linea); font-size: 12.5px; vertical-align: middle; }
-  tr:hover td { background: #0f1319; }
-  .chip { font-size: 9.5px; font-weight: 800; letter-spacing: .1em; padding: 5px 10px; border-radius: 6px; border: 1px solid; white-space: nowrap; }
-  .prob { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; }
-  .conf { width: 38px; height: 38px; }
-  .parejo { color: var(--aviso); font-size: 9.5px; letter-spacing: .08em; font-weight: 800; }
-  .vs { color: var(--apag); font-size: 9.5px; letter-spacing: .1em; margin: 0 9px; }
-  .equipos b { font-weight: 700; } .equipos span { color: var(--tintaS); }
-  .cuota { color: var(--apag); }
-  .estado { display: inline-block; margin-top: 4px; font-size: 9px; font-weight: 800; letter-spacing: .08em; }
-  .estado.curso { color: var(--ok); animation: latido 1.5s ease-in-out infinite; }
-  .estado.fin { color: var(--apag); }
-  .estado.cuenta { color: var(--tintaM); }
-  /* Veredicto en la fila terminada: le atinamos (verde) o no (rojo de marca,
-     igual que en ÚLTIMOS JUICIOS). Sin resultado aún: ámbar, que es aviso. */
-  .estado.ok { color: var(--ok); }
-  .estado.fallo { color: var(--acento); }
-  .estado.espera { color: var(--aviso); }
-  .marcador { margin-left: 8px; font-size: 10px; color: var(--tintaM); font-weight: 700; }
-  tr.terminada td { opacity: .5; }
-  tr.terminada td .estado { opacity: 1; }
+/* ═══ ESTADO DEL SISTEMA · una sola línea, no 5 tarjetas iguales ═══ */
+.sistema { display:flex; align-items:center; gap:var(--e5); flex-wrap:wrap;
+  padding:var(--e3) var(--e5); border-bottom:1px solid var(--linea); }
+.sistema h2 { font-size:var(--t2); font-weight:800; letter-spacing:.12em; color:var(--tintaM); }
+.fuentes { display:flex; gap:var(--e4); flex-wrap:wrap; list-style:none; }
+.fuente { display:flex; align-items:center; gap:var(--e2); font-size:var(--t2); }
+.fuente .dot { width:8px; height:8px; border-radius:var(--rp); flex:none; }
+.fuente.viva .dot { background:var(--ok); animation:latido 1.6s ease-in-out infinite; }
+.fuente.fria .dot { background:var(--apag); }
+.fuente b { font-weight:800; }
+.fuente span { color:var(--tintaS); }
+.fuente.fria b { color:var(--tintaM); }
 
-  /* columna derecha */
-  .col { display: flex; flex-direction: column; gap: 14px; }
-  .panel h3.titulo-seccion { padding: 13px 16px 0; }
-  .panel .cabeza small { color: var(--tintaS); font-size: 10.5px; }
-  .calidad { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px; }
-  .cq { border: 1px solid var(--linea); border-radius: 8px; background: var(--interior); padding: 11px; }
-  .cq .nom { font-size: 10.5px; font-weight: 800; letter-spacing: .1em; color: var(--jc); }
-  .cq .big { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700; margin-top: 4px; color: var(--tinta); }
-  .cq .sub { font-size: 9.5px; color: var(--tintaS); margin-top: 2px; }
-  .cq .mejora { display: inline-block; margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
-  .bien { color: var(--ok); border: 1px solid #0C9B60; background: rgba(25,230,140,.09); }
-  /* Peor que la moneda: ámbar, no rojo -- el rojo es la marca, no el error. */
-  .mal { color: var(--aviso); border: 1px solid #4a3600; background: rgba(255,176,0,.09); }
-  .nc { font-size: 9px; color: var(--apag); letter-spacing: .08em; margin-top: 5px; font-weight: 700; }
-  .juicio { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--linea); font-size: 12px; align-items: baseline; }
-  .juicio .marca2 { font-weight: 800; }
-  .juicio small { color: var(--apag); margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; white-space: nowrap; }
+/* ═══ LAYOUT ═══ */
+main { display:grid; grid-template-columns:212px minmax(0,1fr) 320px;
+  gap:var(--e3); padding:var(--e4) var(--e5) var(--e6); align-items:start; }
+.panel { border:1px solid var(--linea); border-radius:var(--r2); background:var(--tarjeta); overflow:hidden; }
+.panel > header { display:flex; align-items:center; justify-content:space-between; gap:var(--e3);
+  padding:var(--e3) var(--e4); border-bottom:1px solid var(--linea); }
+.panel h2 { font-size:var(--t4); font-weight:800; letter-spacing:.02em; }
+.panel h2 small { display:block; font-size:var(--t1); color:var(--tintaS); font-weight:600; letter-spacing:.02em; margin-top:2px; }
 
-  footer { display: flex; align-items: center; justify-content: space-between; padding: 13px 26px; border-top: 1px solid var(--linea); font-size: 10px; color: var(--apag); letter-spacing: .08em; }
+/* rail de juegos — ahora botones reales, navegables con teclado */
+.rail { display:flex; flex-direction:column; gap:var(--e2); position:sticky; top:var(--e3); }
+.rail h2 { font-size:var(--t2); font-weight:800; letter-spacing:.12em; color:var(--tintaM); margin-bottom:var(--e1); }
+.juego { all:unset; box-sizing:border-box; display:block; cursor:pointer; border:1px solid var(--linea); border-left:3px solid var(--jc);
+  border-radius:var(--r1); background:var(--tarjeta); padding:var(--e3); transition:background .15s,border-color .15s; }
+.juego:hover { background:var(--hover); border-color:var(--lineaM); border-left-color:var(--jc); }
+.juego[aria-pressed="true"] { background:color-mix(in srgb,var(--jc) 10%,var(--tarjeta)); border-color:var(--jc); }
+.juego .nom { display:flex; align-items:center; gap:var(--e2); font-size:var(--t3); font-weight:800; color:var(--jc); letter-spacing:.03em; }
+.juego .nom img { width:20px; height:20px; border-radius:var(--r1); object-fit:cover; background:#000; flex:none; }
+.juego dl { display:grid; grid-template-columns:1fr auto; gap:2px var(--e2); margin-top:var(--e2); font-size:var(--t1); }
+.juego dt { color:var(--tintaS); }
+.juego dd { font-family:var(--mono); font-weight:700; text-align:right; }
+.pista { font-size:var(--t1); color:var(--aviso); letter-spacing:.06em; font-weight:800; padding:0 var(--e1); }
+.casa { border:1px solid var(--linea); border-left:3px solid var(--acento); border-radius:var(--r1);
+  background:var(--tarjeta); padding:var(--e3); font-size:var(--t2); color:var(--tintaS); line-height:1.55; }
+.casa b { display:block; color:var(--tinta); font-size:var(--t1); letter-spacing:.1em; margin-bottom:var(--e1); }
+
+/* ═══ TABLA ═══ */
+.pestanas { display:flex; gap:var(--e1); }
+.pestana { all:unset; box-sizing:border-box; display:inline-block; cursor:pointer; padding:var(--e2) var(--e3); border-radius:var(--r1);
+  font-size:var(--t2); font-weight:800; letter-spacing:.06em; color:var(--tintaS); }
+.pestana:hover { background:var(--interior); color:var(--tinta); }
+.pestana[aria-selected="true"] { background:var(--interior); color:var(--tinta); box-shadow:inset 0 -2px 0 var(--acento); }
+.pestana em { font-style:normal; font-family:var(--mono); color:var(--apag); margin-left:var(--e1); }
+.envoltura { overflow:auto; max-height:calc(100vh - 336px); min-height:320px;
+  scrollbar-color:var(--lineaF) transparent; }
+table { width:100%; border-collapse:collapse; }
+caption { text-align:left; padding:var(--e2) var(--e4); font-size:var(--t1); color:var(--apag); }
+thead th { position:sticky; top:0; z-index:2; background:var(--tarjeta);
+  text-align:left; font-size:var(--t1); letter-spacing:.1em; color:var(--tintaM); font-weight:800;
+  padding:var(--e2) var(--e3); border-bottom:1px solid var(--lineaM); white-space:nowrap; }
+tbody th, td { padding:var(--e3); border-bottom:1px solid var(--linea); font-size:var(--t3);
+  vertical-align:middle; text-align:left; font-weight:600; }
+tbody tr:hover th, tbody tr:hover td { background:var(--hover); }
+tbody tr:last-child th, tbody tr:last-child td { border-bottom:0; }
+tbody tr.oculta { display:none; }
+.celda-hora { white-space:nowrap; color:var(--tintaM); }
+.celda-hora .hora-txt { display:block; font-size:var(--t2); }
+.estado, .veredicto { display:inline-block; margin-top:var(--e1); font-size:var(--t1); font-weight:800; letter-spacing:.06em; }
+.estado.curso { color:var(--ok); }
+.estado.cuenta { color:var(--tintaM); }
+/* Se pasó de su duración estimada y nadie la calificó: ámbar, no verde. */
+.estado.viejo { color:var(--aviso); }
+.veredicto.ok { color:var(--ok); }
+.veredicto.no { color:var(--acento); }
+/* 50/50 exacto: no se cobró ni acierto ni fallo. Ámbar, que es aviso. */
+.veredicto.espera { color:var(--aviso); }
+/* Chip: el juego se codifica por color Y por texto Y por borde propio.
+   En la v1 el borde era #666 fijo y el color era el único canal. */
+.chip { display:inline-block; font-size:var(--t1); font-weight:800; letter-spacing:.08em;
+  padding:var(--e1) var(--e2); border-radius:var(--r1); border:1px solid currentColor;
+  background:color-mix(in srgb,currentColor 12%,transparent); white-space:nowrap; }
+.j-dota { color:var(--dota) } .j-cs2 { color:var(--cs2) }
+.j-lol { color:var(--lol) } .j-val { color:var(--val) }
+.equipos b { font-weight:800; }
+.equipos span { color:var(--tintaS); }
+.vs { color:var(--apag); font-size:var(--t1); letter-spacing:.1em; margin:0 var(--e2); text-transform:uppercase; }
+.marcador { color:var(--tinta); font-weight:700; margin-left:var(--e2); }
+.fmt { color:var(--tintaS); }
+.celda-motor { min-width:168px; }
+.motor-fila { display:flex; align-items:baseline; gap:var(--e2); }
+.prob { font-size:var(--t5); font-weight:700; }
+.parejo { font-size:var(--t1); font-weight:800; letter-spacing:.06em; color:var(--aviso);
+  border:1px solid #4a3600; background:rgba(255,176,0,.1); border-radius:var(--r1); padding:1px var(--e1); }
+/* El número solo no dice nada: SIEMPRE va pegado al equipo al que se le da.
+   Un 50.0% suelto al lado de "A vs B" no se puede leer. */
+.favorito { font-size:var(--t2); color:var(--tintaM); margin-top:2px; line-height:1.35; }
+.favorito b { color:var(--tinta); font-weight:800; }
+.favorito .rel { color:var(--apag); margin-right:var(--e1); }
+.favorito.ninguno { color:var(--aviso); }
+/* Reemplaza al anillo SVG: mismo dato, 1 div en vez de 3 nodos SVG por fila */
+.barra { height:4px; border-radius:var(--rp); background:var(--linea); margin-top:var(--e2); overflow:hidden; }
+.barra i { display:block; height:100%; background:var(--tintaM); border-radius:var(--rp); }
+.mercado { color:var(--apag); }
+tr.juzgada th, tr.juzgada td { background:rgba(255,255,255,.012); }
+tr.juzgada .prob { color:var(--tintaM); }
+
+/* ═══ COLUMNA DERECHA ═══ */
+.col { display:flex; flex-direction:column; gap:var(--e3); }
+.calidad { display:grid; grid-template-columns:1fr 1fr; gap:var(--e2); padding:var(--e3); }
+.cq { border:1px solid var(--linea); border-top:2px solid var(--jc); border-radius:var(--r1);
+  background:var(--interior); padding:var(--e3); }
+.cq .nom { font-size:var(--t1); font-weight:800; letter-spacing:.1em; color:var(--jc); }
+.cq .big { font-family:var(--mono); font-size:var(--t6); font-weight:700; margin-top:var(--e1); }
+.cq .sub { font-size:var(--t1); color:var(--tintaS); margin-top:2px; }
+.cq .mejora { display:inline-block; margin-top:var(--e2); font-family:var(--mono); font-size:var(--t2);
+  font-weight:700; padding:2px var(--e2); border-radius:var(--r1); }
+.bien { color:var(--ok); border:1px solid #0C9B60; background:rgba(25,230,140,.09); }
+.mal { color:var(--aviso); border:1px solid #4a3600; background:rgba(255,176,0,.09); }
+.nc { font-size:var(--t1); color:var(--apag); letter-spacing:.06em; margin-top:var(--e2); font-weight:800; }
+.nc.si { color:var(--ok); }
+.juicio { display:flex; gap:var(--e2); align-items:baseline; padding:var(--e3) var(--e4);
+  border-bottom:1px solid var(--linea); font-size:var(--t3); }
+.juicio:last-child { border-bottom:0; }
+.juicio .marca { font-weight:800; flex:none; }
+.juicio small { color:var(--apag); margin-left:auto; font-family:var(--mono); font-size:var(--t1); white-space:nowrap; }
+
+footer { display:flex; flex-wrap:wrap; gap:var(--e3) var(--e5); justify-content:space-between;
+  padding:var(--e4) var(--e5); border-top:1px solid var(--linea); font-size:var(--t2); color:var(--apag); }
+footer a { color:var(--tintaS); }
+footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
+
+/* ═══ RESPONSIVE · lo que la v1 no tenía (body{min-width:1440px}) ═══ */
+@media (max-width:1180px) {
+  main { grid-template-columns:minmax(0,1fr); }
+  .rail { position:static; flex-direction:row; overflow-x:auto; padding-bottom:var(--e2); }
+  .rail h2, .pista { display:none; }
+  .juego { min-width:168px; flex:none; }
+  .casa { display:none; }
+}
+@media (max-width:860px) {
+  header { grid-template-columns:auto 1fr; row-gap:var(--e3); }
+  .derecha { grid-column:1/-1; justify-content:space-between; }
+  .cinta { grid-template-columns:1fr; }
+  .cinta .cuenta { text-align:left; }
+  main { padding:var(--e3) var(--e4) var(--e5); }
+  .calidad { grid-template-columns:1fr 1fr; }
+  /* La tabla se vuelve tarjetas: nada de scroll horizontal en el teléfono */
+  .envoltura { max-height:none; min-height:0; overflow:visible; }
+  thead { display:none; }
+  table, tbody, tbody tr, tbody th, tbody td { display:block; width:100%; }
+  tbody tr { border:1px solid var(--linea); border-radius:var(--r1); margin-bottom:var(--e2); padding:var(--e3); }
+  tbody th, tbody td { border:0; padding:2px 0; }
+  tbody td::before { content:attr(data-rotulo) " "; font-size:var(--t1); color:var(--apag);
+    letter-spacing:.08em; font-weight:800; }
+  .celda-hora { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:var(--e2); }
+  .celda-hora .hora-txt { display:inline; }
+  .equipos { font-size:var(--t4); }
+}
 </style>
 </head>
 <body>
-<div class="aviso-demo">PROPUESTA A (v3) · SALA DE CONTROL — MAQUETA CON DATOS DE EJEMPLO; EL GENERADOR SUSTITUYE LAS ZONAS <!--ZONA:*--> POR DATOS REALES</div>
+<a class="saltar" href="#tabla">Saltar a las series</a>
+
+<p class="franja">DATOS REALES · CICLO CADA 10 MINUTOS · HORA DE VENEZUELA</p>
 
 <header>
-  <div class="logo">M</div>
-  <div class="titulo-centro">
+  <div class="logo" aria-hidden="true">M</div>
+  <div class="marca">
     <h1>MONITOR <span>eSPORTS</span></h1>
-    <small>CENTRO DE CONTROL · 4 JUEGOS</small>
+    <p>CENTRO DE CONTROL · DOTA 2 · CS2 · LOL · VALORANT</p>
   </div>
   <div class="derecha">
-    <!--ZONA:VIVO-->
-    <div class="boton-vivo"><i class="late"></i>EN VIVO</div>
-    <!--/ZONA:VIVO-->
-    <div class="reloj">
-      <div class="hora" id="reloj">2:32 PM</div>
-      <div class="sub">HORA DE VENEZUELA</div>
-    </div>
+    <!--ZONA:VIVO--><p class="vivo" role="status"><i class="late" aria-hidden="true"></i>EN VIVO</p><!--/ZONA:VIVO-->
+    <p class="reloj">
+      <span class="hora mono" id="reloj" aria-live="off">—</span>
+      <span class="sub">HORA DE VENEZUELA</span>
+    </p>
   </div>
 </header>
 
-<div class="sistema">
-  <h2>ESTADO DEL <em>SISTEMA</em></h2>
+<section class="cinta" aria-labelledby="t-cinta">
+  <!--ZONA:CINTA-->
+  <p class="rotulo" id="t-cinta">ÚLTIMAS 9 JUZGADAS<b>Aciertos y fallos, sin filtrar</b></p>
+  <div class="marcas" role="img" aria-label="9 predicciones juzgadas: 5 aciertos y 4 fallos, de la más vieja a la más nueva"><i class="no" title="Team Heretics 69.9% vs GIANTX — falló"></i><i class="ok" title="FORZE Reload 66.8% vs Younglings — acertó"></i><i class="ok" title="RED Canids 74.6% vs Fluxo W7M — acertó"></i><i class="no" title="BBL Esports 70.3% vs Fire Flux Esports — falló"></i><i class="no" title="Just Players 58.2% vs ex-Zero Tenacity — falló"></i><i class="ok" title="ENRAGE 59.2% vs Subtop De France — acertó"></i><i class="no" title="Shifters 87.4% vs Karmine Corp — falló"></i><i class="no" title="LOS 56.4% vs LOUD — falló"></i><i class="no" title="MAYBE 56.1% vs FORZE Reload — falló"></i></div>
+  <p class="cuenta"><b>5/9</b>al favorito</p>
+  <!--/ZONA:CINTA-->
+</section>
+
+<section class="sistema" aria-labelledby="t-sistema">
+  <h2 id="t-sistema">ESTADO DEL SISTEMA</h2>
   <!--ZONA:FUENTES-->
-  <div class="fuentes">
-    <div class="fuente viva">
-      <span class="dot"></span>
-      <div><div class="nom">bo3.gg</div><div class="det">4/4 juegos · historial y calendario</div></div>
-    </div>
-    <div class="fuente viva">
-      <span class="dot"></span>
-      <div><div class="nom">Supabase</div><div class="det">sincronizado · ratings al día</div></div>
-    </div>
-    <div class="fuente viva">
-      <span class="dot"></span>
-      <div><div class="nom">Discord</div><div class="det">avisos activos</div></div>
-    </div>
-    <div class="fuente viva">
-      <span class="dot"></span>
-      <div><div class="nom">Telegram</div><div class="det">avisos activos</div></div>
-    </div>
-    <div class="fuente fria apagado">
-      <span class="dot"></span>
-      <div><div class="nom" style="color:var(--tintaM)">OpenDota</div><div class="det">solo histórico — sin ciclo en vivo</div></div>
-    </div>
-  </div>
+  <ul class="fuentes">
+    <li class="fuente viva"><span class="dot" aria-hidden="true"></span><b>bo3.gg</b><span>4/4 juegos</span></li>
+    <li class="fuente viva"><span class="dot" aria-hidden="true"></span><b>Supabase</b><span>al día</span></li>
+    <li class="fuente viva"><span class="dot" aria-hidden="true"></span><b>Discord</b><span>avisos activos</span></li>
+    <li class="fuente viva"><span class="dot" aria-hidden="true"></span><b>Telegram</b><span>avisos activos</span></li>
+    <li class="fuente fria"><span class="dot" aria-hidden="true"></span><b>OpenDota</b><span>solo histórico</span></li>
+  </ul>
   <!--/ZONA:FUENTES-->
-</div>
+</section>
 
 <main>
-  <aside class="juegos">
-    <h3>JUEGOS</h3>
+  <nav class="rail" aria-labelledby="t-rail">
+    <h2 id="t-rail">JUEGOS</h2>
     <!--ZONA:RAIL-->
-    <div class="juego" data-filtro="DOTA 2" style="--jc: var(--dota)">
-      <div class="nom"><img src="logos/logo-dota2.png" alt="Dota 2">DOTA 2</div>
-      <div class="kpi"><span>mejora vs moneda</span><b>−17.2%</b></div>
-      <div class="kpi"><span>juzgadas</span><b>36</b></div>
-      <div class="kpi"><span>próximas</span><b>2</b></div>
-    </div>
-    <div class="juego" data-filtro="CS2" style="--jc: var(--cs2)">
-      <div class="nom"><img src="logos/logo-cs2.jpg" alt="CS2">CS2</div>
-      <div class="kpi"><span>mejora vs moneda</span><b>−11.8%</b></div>
-      <div class="kpi"><span>juzgadas</span><b>12.447</b></div>
-      <div class="kpi"><span>próximas</span><b>5</b></div>
-    </div>
-    <div class="juego" data-filtro="LOL" style="--jc: var(--lol)">
-      <div class="nom"><img src="logos/logo-lol.png" alt="LoL">LOL</div>
-      <div class="kpi"><span>mejora vs moneda</span><b>−15.0%</b></div>
-      <div class="kpi"><span>juzgadas</span><b>2.444</b></div>
-      <div class="kpi"><span>próximas</span><b>3</b></div>
-    </div>
-    <div class="juego" data-filtro="VALORANT" style="--jc: var(--val)">
-      <div class="nom"><img src="logos/logo-valorant.png" alt="Valorant">VALORANT</div>
-      <div class="kpi"><span>mejora vs moneda</span><b>−7.3%</b></div>
-      <div class="kpi"><span>juzgadas</span><b>2.350</b></div>
-      <div class="kpi"><span>próximas</span><b>1</b></div>
-    </div>
+    <button class="juego" type="button" aria-pressed="false" data-filtro="DOTA 2" style="--jc:var(--dota)">
+      <span class="nom"><img src="logos/logo-dota2.png" alt="" width="20" height="20" loading="lazy" decoding="async">DOTA 2</span>
+      <dl><dt>mejora vs moneda</dt><dd>—</dd><dt>juzgadas</dt><dd>0</dd><dt>próximas (24 h)</dt><dd>1</dd></dl>
+    </button>
+    <button class="juego" type="button" aria-pressed="false" data-filtro="CS2" style="--jc:var(--cs2)">
+      <span class="nom"><img src="logos/logo-cs2.jpg" alt="" width="20" height="20" loading="lazy" decoding="async">CS2</span>
+      <dl><dt>mejora vs moneda</dt><dd>−6.1%</dd><dt>juzgadas</dt><dd>243</dd><dt>próximas (24 h)</dt><dd>12</dd></dl>
+    </button>
+    <button class="juego" type="button" aria-pressed="false" data-filtro="LOL" style="--jc:var(--lol)">
+      <span class="nom"><img src="logos/logo-lol.png" alt="" width="20" height="20" loading="lazy" decoding="async">LOL</span>
+      <dl><dt>mejora vs moneda</dt><dd>−20.3%</dd><dt>juzgadas</dt><dd>117</dd><dt>próximas (24 h)</dt><dd>2</dd></dl>
+    </button>
+    <button class="juego" type="button" aria-pressed="false" data-filtro="VALORANT" style="--jc:var(--val)">
+      <span class="nom"><img src="logos/logo-valorant.png" alt="" width="20" height="20" loading="lazy" decoding="async">VALORANT</span>
+      <dl><dt>mejora vs moneda</dt><dd>+11.8%</dd><dt>juzgadas</dt><dd>47</dd><dt>próximas (24 h)</dt><dd>0</dd></dl>
+    </button>
     <!--/ZONA:RAIL-->
-    <div class="ver-todas">CLIC DE NUEVO = VER TODOS LOS JUEGOS</div>
-    <div class="casa">
-      <b>REGLA DE LA CASA.</b> Los porcentajes salen solo del cálculo. Ningún LLM produce un número que llegue a esta pantalla.
-    </div>
-  </aside>
+    <p class="pista" hidden id="pista">Clic de nuevo = ver los 4 juegos</p>
+    <p class="casa"><b>REGLA DE LA CASA</b>Los porcentajes salen solo del cálculo (Elo / Glicko-2). Ningún LLM produce un número que llegue a esta pantalla.</p>
+  </nav>
 
-  <section class="panel">
-    <div class="cabeza">
-      <div class="titulo-seccion" id="titulo-proximas">PRÓXIMAS SERIES<small>los 4 juegos · ordenadas por hora</small></div>
-      <small class="mono" style="color:var(--tintaS)">ventana rodante de 24 horas · estados en vivo</small>
+  <section class="panel" id="tabla" aria-labelledby="t-series">
+    <header>
+      <h2 id="t-series">SERIES<small>ventana rodante de 24 h · hora de Venezuela · bajo cada porcentaje va el equipo al que se le da</small></h2>
+      <div class="pestanas" role="tablist" aria-label="Filtrar series por estado">
+        <!--ZONA:PESTANAS-->
+        <button class="pestana" type="button" role="tab" aria-selected="true" data-grupo="abierta">EN VIVO Y PRÓXIMAS <em>2</em></button>
+        <button class="pestana" type="button" role="tab" aria-selected="false" data-grupo="juzgada">JUZGADAS <em>2</em></button>
+        <button class="pestana" type="button" role="tab" aria-selected="false" data-grupo="todas">TODAS <em>4</em></button>
+        <!--/ZONA:PESTANAS-->
+      </div>
+    </header>
+    <div class="envoltura">
+      <table>
+        <caption class="solo-lector">Series de eSports con la probabilidad del motor para el equipo favorito</caption>
+        <thead>
+          <tr>
+            <th scope="col">HORA</th><th scope="col">JUEGO</th><th scope="col">SERIE</th>
+            <th scope="col">FMT</th><th scope="col">MOTOR</th><th scope="col">MERCADO</th>
+          </tr>
+        </thead>
+        <tbody>
+        <!--ZONA:FILAS-->
+<tr class="juzgada" data-grupo="juzgada" data-juego="LOL" data-inicio="2026-08-23T15:00:00+00:00" data-formato="bo3" data-resultado="ganaB" data-acierto="0">
+<th scope="row" class="mono celda-hora"><span class="hora-txt">—</span><span class="veredicto no">✗ FALLÓ</span></th>
+<td><span class="chip j-lol">LOL</span></td>
+<td class="equipos"><b>GIANTX</b><span class="vs">vs</span><span>Team Heretics</span> <span class="marcador mono">2–0</span></td>
+<td class="mono fmt">bo3</td>
+<td class="celda-motor">
+  <div class="motor-fila"><span class="prob mono">69.9%</span></div>
+  <p class="favorito"><span class="rel">íbamos con</span> <b>Team Heretics</b></p>
+  <div class="barra" role="img" aria-label="El motor le dio 69.9 por ciento a Team Heretics"><i style="width:69.9%"></i></div>
+</td>
+<td class="mercado mono">—</td>
+</tr>
+<tr class="abierta" data-grupo="abierta" data-juego="CS2" data-inicio="2026-08-23T16:00:00+00:00" data-formato="bo1">
+<th scope="row" class="mono celda-hora"><span class="hora-txt">—</span><span class="estado"></span></th>
+<td><span class="chip j-cs2">CS2</span></td>
+<td class="equipos"><b>ROUNDS</b><span class="vs">vs</span><span>PURE</span></td>
+<td class="mono fmt">bo1</td>
+<td class="celda-motor">
+  <div class="motor-fila"><span class="prob mono">55.9%</span></div>
+  <p class="favorito"><span class="rel">→</span> <b>ROUNDS</b></p>
+  <div class="barra" role="img" aria-label="El motor le da 55.9 por ciento a ROUNDS"><i style="width:55.9%"></i></div>
+</td>
+<td class="mercado mono">—</td>
+</tr>
+<tr class="abierta" data-grupo="abierta" data-juego="DOTA 2" data-inicio="2026-08-23T17:30:00+00:00" data-formato="bo3">
+<th scope="row" class="mono celda-hora"><span class="hora-txt">—</span><span class="estado"></span></th>
+<td><span class="chip j-dota">DOTA 2</span></td>
+<td class="equipos"><b>Summer Bear</b><span class="vs">vs</span><span>Ducksquad</span></td>
+<td class="mono fmt">bo3</td>
+<td class="celda-motor">
+  <div class="motor-fila"><span class="prob mono">50.0%</span> <span class="parejo">MUY PAREJO</span></div>
+  <p class="favorito ninguno">sin favorito · moneda al aire</p>
+  <div class="barra" role="img" aria-label="El motor no le da ventaja a ninguno de los dos: 50 por ciento"><i style="width:50.0%"></i></div>
+</td>
+<td class="mercado mono">—</td>
+</tr>
+<tr class="juzgada" data-grupo="juzgada" data-juego="CS2" data-inicio="2026-08-23T15:30:00+00:00" data-formato="bo3" data-resultado="ganaA" data-acierto="1">
+<th scope="row" class="mono celda-hora"><span class="hora-txt">—</span><span class="veredicto ok">✓ ACERTÓ</span></th>
+<td><span class="chip j-cs2">CS2</span></td>
+<td class="equipos"><b>FORZE Reload</b><span class="vs">vs</span><span>Younglings</span> <span class="marcador mono">2–1</span></td>
+<td class="mono fmt">bo3</td>
+<td class="celda-motor">
+  <div class="motor-fila"><span class="prob mono">66.8%</span></div>
+  <p class="favorito"><span class="rel">íbamos con</span> <b>FORZE Reload</b></p>
+  <div class="barra" role="img" aria-label="El motor le dio 66.8 por ciento a FORZE Reload"><i style="width:66.8%"></i></div>
+</td>
+<td class="mercado mono">—</td>
+</tr>
+        <!--/ZONA:FILAS-->
+        </tbody>
+      </table>
     </div>
-    <table>
-      <tr><th>HORA</th><th>JUEGO</th><th>SERIE</th><th>FMT</th><th>MOTOR</th><th>CONFIANZA</th><th>MERCADO</th></tr>
-      <!--ZONA:FILAS-->
-      <tr data-offset="-245" data-resultado="ganaA" data-acierto="1">
-        <td class="mono"><span class="hora-txt">—</span><br><span class="estado"></span></td>
-        <td data-juego="DOTA 2"><span class="chip" style="color:var(--dota); border-color:#666">DOTA 2</span></td>
-        <td class="equipos"><b>Team Falcons</b><span class="vs">VS</span><span>Gaimin Gladiators</span> <span class="marcador mono">2–1</span></td>
-        <td class="mono">bo3</td>
-        <td><span class="prob">61.2%</span></td>
-        <td><svg class="conf" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="#242933" stroke-width="3.4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#19E68C" stroke-width="3.4" stroke-dasharray="61 94" stroke-linecap="round" transform="rotate(-90 18 18)"/><text x="18" y="21.5" text-anchor="middle" fill="#F2F4F7" font-size="9.5" font-family="JetBrains Mono">61</text></svg></td>
-        <td class="cuota mono">—</td>
-      </tr>
-      <tr data-offset="-130">
-        <td class="mono"><span class="hora-txt">—</span><br><span class="estado"></span></td>
-        <td data-juego="CS2"><span class="chip" style="color:var(--cs2); border-color:#666">CS2</span></td>
-        <td class="equipos"><b>NAVI</b><span class="vs">VS</span><span>FaZe</span></td>
-        <td class="mono">bo3</td>
-        <td><span class="prob">57.4%</span></td>
-        <td><svg class="conf" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="#242933" stroke-width="3.4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#19E68C" stroke-width="3.4" stroke-dasharray="57 94" stroke-linecap="round" transform="rotate(-90 18 18)"/><text x="18" y="21.5" text-anchor="middle" fill="#F2F4F7" font-size="9.5" font-family="JetBrains Mono">57</text></svg></td>
-        <td class="cuota mono">1.85</td>
-      </tr>
-      <tr data-offset="-15">
-        <td class="mono"><span class="hora-txt">—</span><br><span class="estado"></span></td>
-        <td data-juego="DOTA 2"><span class="chip" style="color:var(--dota); border-color:#666">DOTA 2</span></td>
-        <td class="equipos"><b>Team Liquid</b><span class="vs">VS</span><span>Tundra</span></td>
-        <td class="mono">bo3</td>
-        <td><span class="prob">48.7%</span> <span class="parejo">MUY PAREJO</span></td>
-        <td><svg class="conf" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="#242933" stroke-width="3.4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#FFB000" stroke-width="3.4" stroke-dasharray="49 94" stroke-linecap="round" transform="rotate(-90 18 18)"/><text x="18" y="21.5" text-anchor="middle" fill="#F2F4F7" font-size="9.5" font-family="JetBrains Mono">49</text></svg></td>
-        <td class="cuota mono">—</td>
-      </tr>
-      <tr data-offset="25">
-        <td class="mono"><span class="hora-txt">—</span><br><span class="estado"></span></td>
-        <td data-juego="LOL"><span class="chip" style="color:var(--lol); border-color:#666">LOL</span></td>
-        <td class="equipos"><b>T1</b><span class="vs">VS</span><span>Gen.G</span></td>
-        <td class="mono">bo3</td>
-        <td><span class="prob">54.8%</span> <span class="parejo">MUY PAREJO</span></td>
-        <td><svg class="conf" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="#242933" stroke-width="3.4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#FFB000" stroke-width="3.4" stroke-dasharray="55 94" stroke-linecap="round" transform="rotate(-90 18 18)"/><text x="18" y="21.5" text-anchor="middle" fill="#F2F4F7" font-size="9.5" font-family="JetBrains Mono">55</text></svg></td>
-        <td class="cuota mono">—</td>
-      </tr>
-      <tr data-offset="95">
-        <td class="mono"><span class="hora-txt">—</span><br><span class="estado"></span></td>
-        <td data-juego="CS2"><span class="chip" style="color:var(--cs2); border-color:#666">CS2</span></td>
-        <td class="equipos"><b>Spirit</b><span class="vs">VS</span><span>MOUZ</span></td>
-        <td class="mono">bo3</td>
-        <td><span class="prob">63.1%</span></td>
-        <td><svg class="conf" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="#242933" stroke-width="3.4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#19E68C" stroke-width="3.4" stroke-dasharray="63 94" stroke-linecap="round" transform="rotate(-90 18 18)"/><text x="18" y="21.5" text-anchor="middle" fill="#F2F4F7" font-size="9.5" font-family="JetBrains Mono">63</text></svg></td>
-        <td class="cuota mono">1.72</td>
-      </tr>
-      <tr data-offset="190">
-        <td class="mono"><span class="hora-txt">—</span><br><span class="estado"></span></td>
-        <td data-juego="VALORANT"><span class="chip" style="color:var(--val); border-color:#666">VALORANT</span></td>
-        <td class="equipos"><b>Sentinels</b><span class="vs">VS</span><span>Fnatic</span></td>
-        <td class="mono">bo3</td>
-        <td><span class="prob">52.9%</span> <span class="parejo">MUY PAREJO</span></td>
-        <td><svg class="conf" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="#242933" stroke-width="3.4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#FFB000" stroke-width="3.4" stroke-dasharray="53 94" stroke-linecap="round" transform="rotate(-90 18 18)"/><text x="18" y="21.5" text-anchor="middle" fill="#F2F4F7" font-size="9.5" font-family="JetBrains Mono">53</text></svg></td>
-        <td class="cuota mono">—</td>
-      </tr>
-      <tr data-offset="420">
-        <td class="mono"><span class="hora-txt">—</span><br><span class="estado"></span></td>
-        <td data-juego="DOTA 2"><span class="chip" style="color:var(--dota); border-color:#666">DOTA 2</span></td>
-        <td class="equipos"><b>OG</b><span class="vs">VS</span><span>Nigma Galaxy</span></td>
-        <td class="mono">bo3</td>
-        <td><span class="prob">55.3%</span></td>
-        <td><svg class="conf" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="#242933" stroke-width="3.4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#FFB000" stroke-width="3.4" stroke-dasharray="55 94" stroke-linecap="round" transform="rotate(-90 18 18)"/><text x="18" y="21.5" text-anchor="middle" fill="#F2F4F7" font-size="9.5" font-family="JetBrains Mono">55</text></svg></td>
-        <td class="cuota mono">—</td>
-      </tr>
-      <!--/ZONA:FILAS-->
-    </table>
+    <p class="solo-lector" id="conteo" role="status" aria-live="polite"></p>
   </section>
 
   <div class="col">
-    <div class="panel">
-      <div class="cabeza"><div class="titulo-seccion">CALIDAD DEL MOTOR<small>Brier contra su moneda · por juego · en vivo</small></div></div>
+    <section class="panel" aria-labelledby="t-calidad">
+      <header><h2 id="t-calidad">CALIDAD DEL MOTOR<small>Brier del historial completo · menor es mejor · moneda = 0.250</small></h2></header>
       <!--ZONA:CALIDAD-->
       <div class="calidad">
-        <div class="cq" style="--jc: var(--dota)"><div class="nom">DOTA 2</div><div class="big">0.414</div><div class="sub">base 0.500 · n 36</div><span class="mejora bien">−17.2%</span><div class="nc">NO CONCLUYENTE</div></div>
-        <div class="cq" style="--jc: var(--cs2)"><div class="nom">CS2</div><div class="big">0.221</div><div class="sub">base 0.250 · n 12.447</div><span class="mejora bien">−11.8%</span><div class="nc" style="color:var(--ok)">CONCLUYENTE</div></div>
-        <div class="cq" style="--jc: var(--lol)"><div class="nom">LOL</div><div class="big">0.213</div><div class="sub">base 0.250 · n 2.444</div><span class="mejora bien">−15.0%</span><div class="nc">NO CONCLUYENTE</div></div>
-        <div class="cq" style="--jc: var(--val)"><div class="nom">VALORANT</div><div class="big">0.232</div><div class="sub">base 0.250 · n 2.350</div><span class="mejora bien">−7.3%</span><div class="nc">NO CONCLUYENTE</div></div>
+        <article class="cq" style="--jc:var(--dota)"><p class="nom">DOTA 2</p><p class="big">—</p><p class="sub">sin series juzgadas aún</p></article>
+        <article class="cq" style="--jc:var(--cs2)"><p class="nom">CS2</p><p class="big">0.235</p><p class="sub">n = 243</p><p><span class="mejora bien">−6.1%</span></p><p class="nc">NO CONCLUYENTE</p></article>
+        <article class="cq" style="--jc:var(--lol)"><p class="nom">LOL</p><p class="big">0.199</p><p class="sub">n = 117</p><p><span class="mejora bien">−20.3%</span></p><p class="nc si">CONCLUYENTE</p></article>
+        <article class="cq" style="--jc:var(--val)"><p class="nom">VALORANT</p><p class="big">0.280</p><p class="sub">n = 47</p><p><span class="mejora mal">+11.8%</span></p><p class="nc">NO CONCLUYENTE</p></article>
       </div>
       <!--/ZONA:CALIDAD-->
-    </div>
-    <div class="panel">
-      <div class="cabeza"><div class="titulo-seccion">ÚLTIMOS JUICIOS<small>aciertos y fallos igual de grandes</small></div></div>
+      <p class="casa" style="border:0;border-top:1px solid var(--linea);border-radius:0">Estos números vienen del historial completo. La cinta de arriba es solo la ventana de 24 horas, por eso no cuadran.</p>
+    </section>
+    <section class="panel" aria-labelledby="t-juicios">
+      <header><h2 id="t-juicios">ÚLTIMOS JUICIOS<small>aciertos y fallos igual de grandes</small></h2></header>
       <!--ZONA:JUICIOS-->
-      <div class="juicio"><span class="marca2" style="color:var(--ok)">✓</span><span><b>Team Spirit</b> 71% — ganó</span><small>DOTA 2 · bo3</small></div>
-      <div class="juicio"><span class="marca2" style="color:var(--acento)">✗</span><span>íbamos con <b>Vitality</b> 68% — ganó MOUZ</span><small>CS2 · bo3</small></div>
-      <div class="juicio"><span class="marca2" style="color:var(--ok)">✓</span><span><b>Gen.G</b> 59% — ganó</span><small>LOL · bo3</small></div>
-      <div class="juicio"><span class="marca2" style="color:var(--ok)">✓</span><span><b>Sentinels</b> 55% — ganó</span><small>VALORANT · bo3</small></div>
-      <div class="juicio"><span class="marca2" style="color:var(--acento)">✗</span><span>íbamos con <b>Tundra</b> 61% — ganó Liquid</span><small>DOTA 2 · bo3</small></div>
+      <p class="juicio"><span class="marca" style="color:var(--acento)">✗</span><span>íbamos con <b>Vexar</b> 42% — ganó Lavked</span><small>CS2 · bo3</small></p>
+      <p class="juicio"><span class="marca" style="color:var(--ok)">✓</span><span><b>BNK FEARX Youth</b> 57% — ganó</span><small>LOL · bo5</small></p>
+      <p class="juicio"><span class="marca" style="color:var(--ok)">✓</span><span><b>HYPERSPIRIT</b> 39% — ganó</span><small>CS2 · bo3</small></p>
       <!--/ZONA:JUICIOS-->
-    </div>
+    </section>
   </div>
 </main>
 
 <footer>
-  <span>SIN APUESTAS · SIN CUOTAS · SOLO CÁLCULO</span>
-  <span>Los porcentajes salen solo del cálculo (Elo / Glicko-2). Ningún LLM produce un número que llegue a esta pantalla.</span>
+  <p>SIN APUESTAS · SIN CUOTAS · SOLO CÁLCULO</p>
+  <!-- Sólo enlaces que existen de verdad: una página que promete
+       /metodologia y devuelve 404 miente igual que un número inflado. -->
+  <nav aria-label="Enlaces del sitio">
+    <a href="https://github.com/mitzumitzukyh-code/monitor-esports/blob/main/ARQUITECTURA.md">Cómo se calcula</a>
+    <a href="https://github.com/mitzumitzukyh-code/monitor-esports">Código abierto</a>
+  </nav>
 </footer>
 
 <script>
-  // Reloj en formato de 12 horas, hora de Venezuela. Late con el sistema.
-  function tic() {
-    const partes = new Intl.DateTimeFormat('es-VE', {
-      hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Caracas',
-    }).formatToParts(new Date());
-    const toma = (t) => partes.find((p) => p.type === t)?.value ?? '';
-    const dia = toma('dayPeriod').replace(/\./g, '').toUpperCase();
-    document.getElementById('reloj').textContent = `${toma('hour')}:${toma('minute')} ${dia}`;
-  }
-  tic();
-  setInterval(tic, 1000);
-</script>
+(() => {
+  'use strict';
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const fmt = new Intl.DateTimeFormat('es-VE', { hour:'numeric', minute:'2-digit', hour12:true, timeZone:'America/Caracas' });
+  const hora = (d) => {
+    const p = fmt.formatToParts(d), t = (x) => p.find(q => q.type === x)?.value ?? '';
+    // es-VE devuelve "a. m." — hay que barrer puntos Y espacios, o el reloj
+    // muestra "11:08 A M" (con el espacio adentro), que fue lo que salió.
+    return `${t('hour')}:${t('minute')} ${t('dayPeriod').replace(/[.\s]/g,'').toUpperCase()}`;
+  };
 
-<script>
-  // Filtro por juego: clic en una tarjeta del rail filtra la tabla;
-  // clic de nuevo devuelve a los 4 juegos. En el panel real esto lo hace
-  // el generador con datos vivos; acá es la maqueta de la interacción.
-  let filtroActivo = null;
-  function filtrar(juego) {
-    filtroActivo = filtroActivo === juego ? null : juego;
-    document.querySelectorAll('.juego[data-filtro]').forEach((tarjeta) => {
-      tarjeta.classList.toggle('activa', tarjeta.dataset.filtro === filtroActivo);
-    });
-    document.querySelectorAll('td[data-juego]').forEach((celda) => {
-      celda.parentElement.style.display = !filtroActivo || celda.dataset.juego === filtroActivo ? '' : 'none';
-    });
-    const titulo = document.getElementById('titulo-proximas');
-    titulo.firstChild.textContent = filtroActivo ? 'PRÓXIMAS SERIES · ' + filtroActivo : 'PRÓXIMAS SERIES';
-  }
-  document.querySelectorAll('.juego[data-filtro]').forEach((tarjeta) => {
-    tarjeta.addEventListener('click', () => filtrar(tarjeta.dataset.filtro));
-  });
-</script>
+  /* Reloj: solo escribe en el DOM cuando el minuto cambia. */
+  const nodoReloj = document.getElementById('reloj');
+  let ultima = '';
+  const tic = () => { const h = hora(new Date()); if (h !== ultima) { ultima = h; nodoReloj.textContent = h; } };
+  tic(); setInterval(tic, 1000);
 
-<script>
-  // Estados vivos. Dos clases de fila:
-  //   · data-offset  — filas de la DEMO: minutos relativos a la carga de la
-  //     página, anclados UNA sola vez (recalcular "ahora + offset" en cada tic
-  //     dejaba diffMin constante y la cuenta nunca bajaba).
-  //   · data-inicio  — filas REALES que deja el generador: fecha ISO guardada
-  //     de la serie; el reloj decide TERMINÓ / EN CURSO / cuenta regresiva.
-  // data-resultado (ganaA/ganaB) corta por el camino rápido: terminó, sin
-  // importar el reloj.
-  //
-  // Duración estimada por formato para pasar a TERMINÓ una serie que ya
-  // arrancó y no tiene resultado. bo1 corto; bo5 largo. Minutos redondos:
-  // es un estado de pantalla, no una medición.
-  const DURACION_MIN = { bo1: 30, bo2: 90, bo3: 150, bo5: 240 };
-  const ANCLA_DEMO = Date.now();
-  function fmt12(d) {
-    const p = new Intl.DateTimeFormat('es-VE', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Caracas' }).formatToParts(d);
-    const toma = (x) => p.find((q) => q.type === x)?.value ?? '';
-    return toma('hour') + ':' + toma('minute') + ' ' + toma('dayPeriod').replace(/\./g, '').toUpperCase();
-  }
-  function inicioDe(tr) {
-    if (tr.dataset.inicio) return new Date(tr.dataset.inicio).getTime();
-    return ANCLA_DEMO + Number(tr.dataset.offset) * 60000;
-  }
-  function refrescarEstados() {
+  /* Estados. En la v1 esto recorría 40 filas cada segundo escribiendo texto.
+     Nadie necesita ver "EN 3 H 19 MIN" bajar segundo a segundo: 20 s alcanza. */
+  const DURACION = { bo1:30, bo2:90, bo3:150, bo5:240 };
+  const ANCLA = Date.now();
+  const inicioDe = (tr) => tr.dataset.inicio ? Date.parse(tr.dataset.inicio) : ANCLA + Number(tr.dataset.offset) * 6e4;
+  // :not(.juzgada) además de [data-inicio]: la fila de "sin series" no trae
+  // ni hora ni estado y antes reventaba el bucle entero en null.
+  const abiertas = $$('tbody tr:not(.juzgada)[data-inicio], tbody tr:not(.juzgada)[data-offset]');
+  function refrescar() {
     const ahora = Date.now();
-    document.querySelectorAll('tr[data-offset], tr[data-inicio]').forEach((tr) => {
-      const inicioMs = inicioDe(tr);
-      tr.querySelector('.hora-txt').textContent = fmt12(new Date(inicioMs));
-      const estado = tr.querySelector('.estado');
-      estado.className = 'estado';
-      if (tr.dataset.resultado) {
-        // Calificada: el veredicto completo. ✓ le atinamos, ✗ no.
-        const leAtinamos = tr.dataset.acierto === '1';
-        estado.textContent = 'TERMINÓ ' + (leAtinamos ? '✓' : '✗');
-        estado.classList.add(leAtinamos ? 'ok' : 'fallo');
-        tr.classList.add('terminada');
-      } else if (ahora > inicioMs + (DURACION_MIN[tr.dataset.formato] ?? 150) * 60000) {
-        // Pasó el tiempo estimado y no hay resultado calificado: no nos
-        // hacemos pasar por sabidos -- lo decimos.
-        estado.textContent = 'SIN RESULTADO AÚN';
-        estado.classList.add('espera');
-        tr.classList.add('terminada');
-      } else if (inicioMs <= ahora) {
-        estado.textContent = '● EN CURSO';
-        estado.classList.add('curso');
+    for (const tr of abiertas) {
+      const ini = inicioDe(tr);
+      const th = tr.querySelector('.hora-txt');
+      if (th) th.textContent = hora(new Date(ini));
+      const e = tr.querySelector('.estado');
+      if (!e) continue;
+      e.className = 'estado';
+      if (ahora > ini + (DURACION[tr.dataset.formato] ?? 150) * 6e4) {
+        // Se pasó de su duración y nadie la calificó: se dice, no se adivina.
+        e.textContent = 'TERMINÓ · SIN CALIFICAR'; e.classList.add('viejo');
+      } else if (ini <= ahora) {
+        e.textContent = '● EN CURSO'; e.classList.add('curso', 'late');
       } else {
-        const diffMin = (inicioMs - ahora) / 60000;
-        let h = Math.floor(diffMin / 60);
-        let m = Math.round(diffMin % 60);
-        if (m === 60) { h++; m = 0; } // 119.7 min era "EN 1 H 60 MIN"
-        estado.textContent = h > 0 ? 'EN ' + h + ' H ' + m + ' MIN' : 'EN ' + m + ' MIN';
-        estado.classList.add('cuenta');
+        const min = (ini - ahora) / 6e4;
+        let h = Math.floor(min / 60), m = Math.round(min % 60);
+        if (m === 60) { h++; m = 0; }
+        e.textContent = h > 0 ? `EN ${h} H ${m} MIN` : `EN ${m} MIN`;
+        e.classList.add('cuenta');
       }
-    });
+    }
   }
-  refrescarEstados();
-  setInterval(refrescarEstados, 1000);
+  $$('tbody tr.juzgada .hora-txt').forEach(n => {
+    n.textContent = hora(new Date(inicioDe(n.closest('tr'))));
+  });
+  refrescar(); setInterval(refrescar, 20000);
+
+  /* Filtro por juego + pestañas por estado, en un solo lugar. */
+  const filas = $$('tbody tr');
+  const conteo = document.getElementById('conteo');
+  const pista = document.getElementById('pista');
+  let juego = null, grupo = 'abierta';
+
+  function aplicar() {
+    let n = 0;
+    for (const tr of filas) {
+      // La fila de "sin series" no es una serie: ni se filtra ni se cuenta.
+      if (tr.classList.contains('vacia')) { tr.classList.remove('oculta'); continue; }
+      const ok = (grupo === 'todas' || tr.dataset.grupo === grupo) && (!juego || tr.dataset.juego === juego);
+      tr.classList.toggle('oculta', !ok);
+      if (ok) n++;
+    }
+    conteo.textContent = `${n} series visibles`;
+    pista.hidden = !juego;
+    document.querySelector('#t-series').firstChild.textContent = juego ? `SERIES · ${juego}` : 'SERIES';
+  }
+
+  $$('.juego').forEach(b => b.addEventListener('click', () => {
+    juego = juego === b.dataset.filtro ? null : b.dataset.filtro;
+    $$('.juego').forEach(o => o.setAttribute('aria-pressed', String(o.dataset.filtro === juego)));
+    aplicar();
+  }));
+
+  $$('.pestana').forEach(b => b.addEventListener('click', () => {
+    grupo = b.dataset.grupo;
+    $$('.pestana').forEach(o => o.setAttribute('aria-selected', String(o === b)));
+    aplicar();
+  }));
+
+  /* Si la columna MERCADO viene vacía en todas las filas, se esconde.
+     Mejor no mostrar una columna que solo dice "—" 40 veces. */
+  const celdas = $$('td.mercado');
+  if (celdas.length && celdas.every(c => c.textContent.trim() === '—')) {
+    celdas.forEach(c => c.remove());
+    document.querySelectorAll('thead th')[5]?.remove();
+  }
+
+  /* Rótulos para la vista de tarjetas en móvil. La fila de "sin series"
+     no es una serie: un rótulo "JUEGO" delante de ese aviso queda absurdo. */
+  const rotulos = ['', 'JUEGO', 'SERIE', 'FORMATO', 'MOTOR', 'MERCADO'];
+  filas.forEach(tr => {
+    if (tr.classList.contains('vacia')) return;
+    [...tr.children].forEach((c, i) => {
+      if (i && rotulos[i]) c.dataset.rotulo = rotulos[i];
+    });
+  });
+
+  aplicar();
+})();
 </script>
 </body>
 </html>

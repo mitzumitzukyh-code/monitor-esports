@@ -22,12 +22,14 @@ import { seleccionar } from '../../datos/supabase.mjs';
 import { datosDeEquipos } from '../../datos/juegos/bo3.mjs';
 import {
   JUEGOS,
-  esc,
   estadisticasPorJuego,
+  favoritoDe,
   filaSerie,
   tarjetaJuego,
   tarjetaCalidad,
   lineaJuicio,
+  cintaVeredictos,
+  pestanas,
   fuentesHtml,
   botonVivo,
 } from './sala.mjs';
@@ -40,13 +42,24 @@ const DISENIO = new URL('disenos/A-sala-de-control.html', RAIZ);
 // de 24 h o falta más de 24 h no entra. Tope duro de filas para que una
 // jornada loca no haga una página de 3 MB.
 const VENTANA_HORAS = 24;
-const MAX_FILAS = 40;
+// 40 se quedaba CORTO: una ventana de 24 h con CS2 corriendo trae ~80 series
+// y el tope las cortaba por la mitad (siempre a costa de las juzgadas, que
+// son las de horas más viejas). 90 cubre el peor día sin pesar nada.
+const MAX_FILAS = 90;
 const CUANTOS_JUICIOS = 5;
+const CUANTAS_EN_CINTA = 25;
+// La última tanda de capturas de cuotas cubre todos los partidos vivos
+// (comparten capturado_en): con 200 filas y "primera aparición gana" se
+// obtiene la captura más reciente de cada partido, con su max_coeff histórico.
+const TOPE_CUOTAS = 200;
 
+// El cierre se vuelve a escribir COMPLETO (<!--/ZONA:X-->). Antes salía
+// <!--/X--> y el HTML generado ya no se podía volver a pasar por acá: las
+// zonas quedaban abiertas. Ahora la salida es re-generable.
 function zona(html, nombre, contenido) {
   const patron = new RegExp(`<!--ZONA:${nombre}-->[\\s\\S]*?<!--/ZONA:${nombre}-->`);
   if (!patron.test(html)) throw new Error(`generar: el diseño no trae la zona ${nombre}`);
-  return html.replace(patron, `<!--ZONA:${nombre}-->${contenido}<!--/${nombre}-->`);
+  return html.replace(patron, `<!--ZONA:${nombre}-->${contenido}<!--/ZONA:${nombre}-->`);
 }
 
 async function copiarLogosDelRail() {
@@ -109,10 +122,13 @@ async function main() {
     .sort((a, b) => new Date(a.inicio_programado) - new Date(b.inicio_programado))
     .slice(0, MAX_FILAS);
 
-  const juicios = todas
+  // Juzgadas de la más nueva a la más vieja: las primeras 5 son los juicios
+  // de la derecha; las primeras 25, al revés, son la cinta de arriba.
+  const calificadas = todas
     .filter((f) => f.resultado_real)
-    .sort((a, b) => new Date(b.calificada_en ?? 0) - new Date(a.calificada_en ?? 0))
-    .slice(0, CUANTOS_JUICIOS);
+    .sort((a, b) => new Date(b.calificada_en ?? 0) - new Date(a.calificada_en ?? 0));
+  const juicios = calificadas.slice(0, CUANTOS_JUICIOS);
+  const cinta = calificadas.slice(0, CUANTAS_EN_CINTA).reverse();
 
   // Nombres de equipo contra bo3.gg, agrupados por juego para pedir por
   // disciplina (sin el filtro devuelve vacío, ver bo3.mjs). Sólo los ids que
@@ -120,7 +136,7 @@ async function main() {
   const nombres = new Map();
   const nombre = (id) => nombres.get(id)?.nombre ?? `#${id}`;
   for (const cfg of JUEGOS) {
-    const filasDeJuego = [...enVentana, ...juicios].filter((f) => f.juego === cfg.id);
+    const filasDeJuego = [...enVentana, ...juicios, ...cinta].filter((f) => f.juego === cfg.id);
     const ids = filasDeJuego.flatMap((f) => [f.equipo_a, f.equipo_b]).filter(Boolean);
     if (ids.length === 0) continue;
     try {
@@ -133,6 +149,33 @@ async function main() {
 
   // --- zonas ----------------------------------------------------------------
   const stats = estadisticasPorJuego(todas);
+
+  // Cuotas de mercado: última captura por partido. Si la tabla falla, la
+  // columna MERCADO sale «—» y el script de la página esconde la columna
+  // entera — la página no se rompe por eso.
+  const cuotas = new Map();
+  try {
+    const capturas = await seleccionar(
+      'eslo_cuotas',
+      `?select=match_id,max_coeff_a,max_coeff_b,coeff_a,coeff_b&order=capturado_en.desc&limit=${TOPE_CUOTAS}`,
+    );
+    for (const c of capturas) if (!cuotas.has(c.match_id)) cuotas.set(c.match_id, c);
+  } catch (e) {
+    console.log(`eslo_cuotas: sin datos (${String(e.message).slice(0, 60)}) — MERCADO sale «—».`);
+  }
+  // La cuota que se muestra es la del FAVORITO (el mismo equipo del
+  // porcentaje de MOTOR): max_coeff (lo mejor que pagó) con respaldo en la
+  // cuota puntual de la última captura.
+  const cuotaDe = (f) => {
+    const c = cuotas.get(f.match_id);
+    if (!c) return null;
+    const fav = favoritoDe(f);
+    if (!fav.hay) return null;
+    const bruta = fav.ladoA ? (c.max_coeff_a ?? c.coeff_a) : (c.max_coeff_b ?? c.coeff_b);
+    const n = Number(bruta);
+    return Number.isFinite(n) ? n : null;
+  };
+
   const proximasPorJuego = new Map();
   for (const f of todas) {
     if (f.resultado_real) continue;
@@ -142,10 +185,19 @@ async function main() {
 
   const htmlFilas =
     enVentana.length > 0
-      ? enVentana.map((f) => filaSerie(f, nombre)).join('\n      ')
-      : '<tr><td colspan="7" class="mono" style="text-align:center; color:var(--apag); padding:22px">sin series en la ventana de 24 horas</td></tr>';
+      ? enVentana.map((f) => filaSerie(f, nombre, cuotaDe)).join('\n')
+      : '<tr class="vacia"><td colspan="6" class="mono" style="text-align:center; color:var(--apag); padding:22px">sin series en la ventana de 24 horas</td></tr>';
 
   plantilla = zona(plantilla, 'FILAS', htmlFilas);
+  plantilla = zona(
+    plantilla,
+    'PESTANAS',
+    pestanas({
+      abiertas: enVentana.filter((f) => !f.resultado_real).length,
+      juzgadas: enVentana.filter((f) => f.resultado_real).length,
+    }),
+  );
+  plantilla = zona(plantilla, 'CINTA', cintaVeredictos(cinta, nombre));
   plantilla = zona(
     plantilla,
     'RAIL',
@@ -159,7 +211,9 @@ async function main() {
   plantilla = zona(
     plantilla,
     'JUICIOS',
-    juicios.length > 0 ? juicios.map((c) => lineaJuicio(c, nombre)).join('\n      ') : '<div class="juicio"><span>— todavía no hay series juzgadas —</span></div>',
+    juicios.length > 0
+      ? juicios.map((c) => lineaJuicio(c, nombre)).join('\n      ')
+      : '<p class="juicio"><span class="marca" style="color:var(--aviso)">·</span><span>— todavía no hay series juzgadas —</span></p>',
   );
 
   const ultimaActividad = Math.max(
@@ -179,14 +233,9 @@ async function main() {
   );
   plantilla = zona(plantilla, 'VIVO', botonVivo(vivo));
 
-  // La maqueta se presentaba como propuesta; publicado ya, el banner dice la
-  // verdad. Y el título deja de decir "A ·".
-  plantilla = plantilla.replace(
-    /<div class="aviso-demo">[\s\S]*?<\/div>/,
-    '<div class="aviso-demo">DATOS REALES · CICLO CADA 10 MINUTOS · HORA DE VENEZUELA</div>',
-  );
-  plantilla = plantilla.replace(/<title>[\s\S]*?<\/title>/, '<title>Monitor eSports — Sala de Control</title>');
-
+  // Ya no se parchea ni el banner ni el <title>: el diseño v2 es la página
+  // publicada, con su bloque de SEO completo. Lo que se toca, se toca por
+  // zona.
   await writeFile(new URL('index.html', AQUI), plantilla);
 
   await limpiarFichasViejas();

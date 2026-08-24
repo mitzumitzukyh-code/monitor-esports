@@ -7,6 +7,11 @@
 // Regla de la casa que aplica a esta pantalla: ninguna cifra se endulza.
 // Si Valorant está peor que una moneda, sale peor que una moneda y del
 // mismo tamaño que el resto.
+//
+// Regla nueva del diseño v2: NINGÚN porcentaje sale huérfano. Un "50.0%"
+// al lado de "A vs B" no se puede leer -- no dice a quién se le da la
+// ventaja. Cada fila dice el nombre del equipo debajo del número, y cuando
+// no hay favorito (50/50 exacto) lo dice con todas sus letras.
 
 export function esc(s) {
   return String(s ?? '').replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
@@ -18,16 +23,16 @@ export function esc(s) {
 export const BASE_INGENUA = 0.25;
 
 export const JUEGOS = [
-  { id: 'dota2', etiqueta: 'DOTA 2', css: '--dota', logo: 'logos/logo-dota2.png' },
-  { id: 'cs2', etiqueta: 'CS2', css: '--cs2', logo: 'logos/logo-cs2.jpg' },
-  { id: 'lol', etiqueta: 'LOL', css: '--lol', logo: 'logos/logo-lol.png' },
-  { id: 'valorant', etiqueta: 'VALORANT', css: '--val', logo: 'logos/logo-valorant.png' },
+  { id: 'dota2', etiqueta: 'DOTA 2', css: '--dota', chip: 'j-dota', logo: 'logos/logo-dota2.png' },
+  { id: 'cs2', etiqueta: 'CS2', css: '--cs2', chip: 'j-cs2', logo: 'logos/logo-cs2.jpg' },
+  { id: 'lol', etiqueta: 'LOL', css: '--lol', chip: 'j-lol', logo: 'logos/logo-lol.png' },
+  { id: 'valorant', etiqueta: 'VALORANT', css: '--val', chip: 'j-val', logo: 'logos/logo-valorant.png' },
 ];
 
 const ETIQUETA = new Map(JUEGOS.map((j) => [j.id, j.etiqueta]));
 
-// Umbral del propio diseño: 55% o menos se lee "MUY PAREJO" y su anillo va
-// en ámbar. Es presentación, no matemática: el número no cambia.
+// Umbral del propio diseño: 55% o menos se lee "MUY PAREJO" y se marca en
+// ámbar. Es presentación, no matemática: el número no cambia.
 const UMBRAL_PAREJO = 0.55;
 
 export function estadisticasPorJuego(filas) {
@@ -63,65 +68,118 @@ export function estadisticasPorJuego(filas) {
   return por;
 }
 
-export function anilloConfianza(prob) {
-  const p = Math.round(Number(prob) * 100);
-  const color = Number(prob) > UMBRAL_PAREJO ? '#19E68C' : '#FFB000';
-  return (
-    `<svg class="conf" viewBox="0 0 36 36">` +
-    `<circle cx="18" cy="18" r="15" fill="none" stroke="#242933" stroke-width="3.4"/>` +
-    `<circle cx="18" cy="18" r="15" fill="none" stroke="${color}" stroke-width="3.4" stroke-dasharray="${p} 94" stroke-linecap="round" transform="rotate(-90 18 18)"/>` +
-    `<text x="18" y="21.5" text-anchor="middle" fill="#F2F4F7" font-size="9.5" font-family="JetBrains Mono">${p}</text></svg>`
-  );
+// De una predicción a "quién es el favorito y con cuánto". Un solo lugar:
+// la fila, la cinta y los juicios leían esto a mano y no siempre igual --
+// de ahí salía "íbamos con Butterfly 13%", que es un absurdo (el 13% era
+// del OTRO). Con 50/50 exacto NO hay favorito y se dice.
+export function favoritoDe(f) {
+  // parseFloat y no Number: Number(null) es 0 (finito) y hacía que una
+  // predicción sin probabilidad saliera como "100% para B".
+  const pa = Number.parseFloat(f.prob_a);
+  if (!Number.isFinite(pa)) return { hay: false, prob: null, lado: null };
+  if (pa === 0.5) return { hay: false, prob: 0.5, lado: null };
+  const ladoA = pa > 0.5;
+  return { hay: true, prob: ladoA ? pa : 1 - pa, lado: ladoA ? 'A' : 'B', ladoA };
 }
 
+const pct1 = (p) => (p * 100).toFixed(1);
+
 // Una fila de la tabla. La fecha va ABSOLUTA (data-inicio ISO): el reloj del
-// navegador la convierte a hora de Venezuela y decide el estado. El resultado,
-// si ya se calificó, va en data-resultado + data-acierto: la fila nace
-// TERMINADA, con el GANADOR en negrita, el marcador al lado y ✓/✗ según le
-// hayamos atinado -- un "TERMINÓ" pelado no le dice a nadie qué pasó.
-export function filaSerie(f, nombre) {
-  const pa = Number(f.prob_a);
+// navegador la convierte a hora de Venezuela y decide el estado de las que
+// siguen abiertas. Las juzgadas nacen con su veredicto escrito en el HTML --
+// no dependen de JavaScript para decir qué pasó.
+//
+// Negrita en la columna SERIE = el protagonista de la fila: el ganador si ya
+// terminó, el favorito si todavía no. Y en MOTOR va el nombre del equipo al
+// que pertenece el porcentaje, siempre.
+export function filaSerie(f, nombre, cuotaDe = null) {
+  const fav = favoritoDe(f);
   const etiqueta = ETIQUETA.get(f.juego) ?? String(f.juego).toUpperCase();
+  const cfg = JUEGOS.find((j) => j.id === f.juego);
   const nombreA = nombre(f.equipo_a);
   const nombreB = nombre(f.equipo_b);
-  const tieneProb = Number.isFinite(pa);
+  const nombreFav = fav.hay ? (fav.ladoA ? nombreA : nombreB) : null;
 
   const decidido = f.resultado_real === 'ganaA' || f.resultado_real === 'ganaB';
   const ganoA = f.resultado_real === 'ganaA';
-  // Con resultado, la negrita se la lleva el GANADOR (no el equipo A).
-  const izq = decidido ? (ganoA ? nombreA : nombreB) : nombreA;
-  const der = decidido ? (ganoA ? nombreB : nombreA) : nombreB;
-  // Marcador orientado al ganador (los columnas vienen absolutas: A y B).
+
+  // Orden en pantalla: con resultado manda el ganador (y el marcador va
+  // orientado a él); sin resultado se respeta el orden real A/B y la
+  // negrita se la lleva el favorito, esté donde esté.
+  let izq;
+  let der;
+  let negritaIzq = true;
+  if (decidido) {
+    izq = ganoA ? nombreA : nombreB;
+    der = ganoA ? nombreB : nombreA;
+  } else {
+    izq = nombreA;
+    der = nombreB;
+    negritaIzq = fav.hay ? fav.ladoA : null; // null = 50/50, nadie en negrita
+  }
+  const equipo = (txt, fuerte) => (fuerte ? `<b>${esc(txt)}</b>` : `<span>${esc(txt)}</span>`);
+
   const marcador =
     decidido && f.marcador_a != null && f.marcador_b != null
       ? ganoA
         ? `${f.marcador_a}–${f.marcador_b}`
         : `${f.marcador_b}–${f.marcador_a}`
       : null;
-  const acerto = decidido ? (pa >= 0.5) === ganoA : null;
 
-  const motor = tieneProb
-    ? `<span class="prob">${(Math.max(pa, 1 - pa) * 100).toFixed(1)}%</span>${Math.max(pa, 1 - pa) <= UMBRAL_PAREJO ? ' <span class="parejo">MUY PAREJO</span>' : ''}`
-    : '<span class="prob">—</span>';
-  const confianza = tieneProb ? anilloConfianza(Math.max(pa, 1 - pa)) : '<span class="cuota mono">—</span>';
+  const acerto = decidido && fav.hay ? (fav.ladoA === ganoA) : null;
 
-  const atributos = decidido ? ` data-resultado="${esc(f.resultado_real)}" data-acierto="${acerto ? 1 : 0}"` : '';
+  // MERCADO: la mejor cuota que ofreció el mercado por el FAVORITO (el mismo
+  // equipo del porcentaje, para que la columna se pueda leer contra MOTOR).
+  // Sin cuota capturada, sin favorito o cuota inservible: «—», nunca cero.
+  const cu = cuotaDe ? cuotaDe(f) : null;
+  const mercado = Number.isFinite(cu) && cu > 1 ? cu.toFixed(2) : '—';
+
+  // Celda del motor: número + a quién se le da + barra. Los tres dicen lo
+  // mismo, y ninguno se entiende solo.
+  let motor;
+  if (fav.prob == null) {
+    motor = '<div class="motor-fila"><span class="prob mono">—</span></div>';
+  } else {
+    const p = pct1(fav.prob);
+    const parejo = fav.prob <= UMBRAL_PAREJO ? ' <span class="parejo">MUY PAREJO</span>' : '';
+    const linea = fav.hay
+      ? `<p class="favorito"><span class="rel">${decidido ? 'íbamos con' : '→'}</span> <b>${esc(nombreFav)}</b></p>`
+      : '<p class="favorito ninguno">sin favorito · moneda al aire</p>';
+    const aria = fav.hay
+      ? `El motor le ${decidido ? 'dio' : 'da'} ${p} por ciento a ${nombreFav}`
+      : 'El motor no le da ventaja a ninguno de los dos: 50 por ciento';
+    motor =
+      `<div class="motor-fila"><span class="prob mono">${p}%</span>${parejo}</div>` +
+      `${linea}` +
+      `<div class="barra" role="img" aria-label="${esc(aria)}"><i style="width:${p}%"></i></div>`;
+  }
+
+  // Sin favorito (50/50 exacto) no hubo acierto ni fallo que cobrar: la fila
+  // nace juzgada pero el veredicto es "· 50/50", no "✗ FALLÓ".
+  const hora = decidido
+    ? `<span class="hora-txt">—</span>${
+        acerto == null
+          ? '<span class="veredicto espera">· 50/50</span>'
+          : `<span class="veredicto ${acerto ? 'ok' : 'no'}">${acerto ? '✓ ACERTÓ' : '✗ FALLÓ'}</span>`
+      }`
+    : '<span class="hora-txt">—</span><span class="estado"></span>';
+
+  const atributos = decidido
+    ? ` data-resultado="${esc(f.resultado_real)}"${acerto == null ? '' : ` data-acierto="${acerto ? 1 : 0}"`}`
+    : '';
 
   return (
-    `<tr data-inicio="${esc(f.inicio_programado)}" data-formato="${esc(f.formato)}"${atributos}>` +
-    `<td class="mono"><span class="hora-txt">—</span><br><span class="estado"></span></td>` +
-    `<td data-juego="${esc(etiqueta)}"><span class="chip" style="color:var(${cssDe(f.juego)}); border-color:#666">${esc(etiqueta)}</span></td>` +
-    `<td class="equipos"><b>${esc(izq)}</b><span class="vs">VS</span><span>${esc(der)}</span>${marcador ? ` <span class="marcador mono">${esc(marcador)}</span>` : ''}</td>` +
-    `<td class="mono">${esc(f.formato ?? '')}</td>` +
-    `<td>${motor}</td>` +
-    `<td>${confianza}</td>` +
-    `<td class="cuota mono">—</td>` +
+    `<tr class="${decidido ? 'juzgada' : 'abierta'}" data-grupo="${decidido ? 'juzgada' : 'abierta'}"` +
+    ` data-juego="${esc(etiqueta)}" data-inicio="${esc(f.inicio_programado)}" data-formato="${esc(f.formato)}"${atributos}>` +
+    `<th scope="row" class="mono celda-hora">${hora}</th>` +
+    `<td><span class="chip ${cfg?.chip ?? ''}">${esc(etiqueta)}</span></td>` +
+    `<td class="equipos">${equipo(izq, negritaIzq === true)}<span class="vs">vs</span>${equipo(der, negritaIzq === false)}` +
+    `${marcador ? ` <span class="marcador mono">${esc(marcador)}</span>` : ''}</td>` +
+    `<td class="mono fmt">${esc(f.formato ?? '')}</td>` +
+    `<td class="celda-motor">${motor}</td>` +
+    `<td class="mercado mono">${mercado}</td>` +
     '</tr>'
   );
-}
-
-function cssDe(juego) {
-  return JUEGOS.find((j) => j.id === juego)?.css ?? '--tintaM';
 }
 
 const formatoPctMejora = (mejora) => {
@@ -130,69 +188,119 @@ const formatoPctMejora = (mejora) => {
   return `${mejora < 0 ? '−' : '+'}${Math.abs(mejora * 100).toFixed(1)}%`;
 };
 
+// Rail de juegos: botones de verdad (no divs con click), porque filtran.
 export function tarjetaJuego(cfg, stats, proximas) {
   const j = stats?.juzgadas ?? 0;
   const mejoraTxt = stats && stats.mejora != null ? formatoPctMejora(stats.mejora) : '—';
   return (
-    `<div class="juego" data-filtro="${esc(cfg.etiqueta)}" style="--jc: var(${cfg.css})">` +
-    `<div class="nom"><img src="${cfg.logo}" alt="${esc(cfg.etiqueta)}">${esc(cfg.etiqueta)}</div>` +
-    `<div class="kpi"><span>mejora vs moneda</span><b>${mejoraTxt}</b></div>` +
-    `<div class="kpi"><span>juzgadas</span><b>${j.toLocaleString('es-VE')}</b></div>` +
-    `<div class="kpi"><span>próximas</span><b>${proximas.toLocaleString('es-VE')}</b></div>` +
-    '</div>'
+    `<button class="juego" type="button" aria-pressed="false" data-filtro="${esc(cfg.etiqueta)}" style="--jc:var(${cfg.css})">` +
+    `<span class="nom"><img src="${cfg.logo}" alt="" width="20" height="20" loading="lazy" decoding="async">${esc(cfg.etiqueta)}</span>` +
+    '<dl>' +
+    `<dt>mejora vs moneda</dt><dd>${mejoraTxt}</dd>` +
+    `<dt>juzgadas</dt><dd>${j.toLocaleString('es-VE')}</dd>` +
+    `<dt>próximas (24 h)</dt><dd>${proximas.toLocaleString('es-VE')}</dd>` +
+    '</dl></button>'
   );
 }
 
 export function tarjetaCalidad(cfg, stats) {
   const sinDatos = !stats || stats.brier == null;
   const big = sinDatos ? '—' : stats.brier.toFixed(3);
-  const sub = sinDatos ? 'base 0.250 · sin series juzgadas aún' : `base 0.250 · n ${stats.juzgadas.toLocaleString('es-VE')}`;
+  const sub = sinDatos ? 'sin series juzgadas aún' : `n = ${stats.juzgadas.toLocaleString('es-VE')}`;
   // Peor que la moneda NO va en verde. Ventaja negativa (o inexistente) =
   // ámbar, mismo criterio del diseño para las malas noticias.
   let badge = '';
   if (!sinDatos) {
     const mejor = stats.mejora <= 0;
-    badge = `<span class="mejora ${mejor ? 'bien' : 'mal'}">${formatoPctMejora(stats.mejora)}</span>`;
+    badge = `<p><span class="mejora ${mejor ? 'bien' : 'mal'}">${formatoPctMejora(stats.mejora)}</span></p>`;
   }
-  const nc = sinDatos
-    ? ''
-    : stats.concluyente
-      ? '<div class="nc" style="color:var(--ok)">CONCLUYENTE</div>'
-      : '<div class="nc">NO CONCLUYENTE</div>';
+  const nc = sinDatos ? '' : `<p class="nc${stats.concluyente ? ' si' : ''}">${stats.concluyente ? 'CONCLUYENTE' : 'NO CONCLUYENTE'}</p>`;
   return (
-    `<div class="cq" style="--jc: var(${cfg.css})">` +
-    `<div class="nom">${esc(cfg.etiqueta)}</div><div class="big">${big}</div><div class="sub">${sub}</div>${badge}${nc}</div>`
+    `<article class="cq" style="--jc:var(${cfg.css})">` +
+    `<p class="nom">${esc(cfg.etiqueta)}</p><p class="big mono">${big}</p><p class="sub">${sub}</p>${badge}${nc}</article>`
   );
 }
 
+// Últimos juicios. El porcentaje que sale es SIEMPRE el del equipo nombrado.
 export function lineaJuicio(c, nombre) {
-  const pa = Number(c.prob_a);
-  const favA = pa >= 0.5;
+  const fav = favoritoDe(c);
   const ganoA = c.resultado_real === 'ganaA';
-  const acerto = favA === ganoA;
-  const favorito = favA ? nombre(c.equipo_a) : nombre(c.equipo_b);
   const ganador = ganoA ? nombre(c.equipo_a) : nombre(c.equipo_b);
-  const probFav = Math.round(Math.abs(pa) * 100);
-  const texto = acerto ? `<b>${esc(favorito)}</b> ${probFav}% — ganó` : `íbamos con <b>${esc(favorito)}</b> ${probFav}% — ganó ${esc(ganador)}`;
   const etiqueta = ETIQUETA.get(c.juego) ?? String(c.juego).toUpperCase();
+  const pie = `<small>${esc(etiqueta)} · ${esc(c.formato ?? '')}</small>`;
+
+  // Sin favorito (50/50 exacto) no hubo acierto ni fallo que cobrar.
+  if (!fav.hay) {
+    return (
+      '<p class="juicio"><span class="marca" style="color:var(--aviso)">·</span>' +
+      `<span>50/50 — ganó <b>${esc(ganador)}</b></span>${pie}</p>`
+    );
+  }
+
+  const favorito = fav.ladoA ? nombre(c.equipo_a) : nombre(c.equipo_b);
+  const acerto = fav.ladoA === ganoA;
+  const probFav = Math.round(fav.prob * 100);
+  const texto = acerto
+    ? `<b>${esc(favorito)}</b> ${probFav}% — ganó`
+    : `íbamos con <b>${esc(favorito)}</b> ${probFav}% — ganó ${esc(ganador)}`;
   return (
-    `<div class="juicio"><span class="marca2" style="color:var(${acerto ? '--ok' : '--acento'})">` +
-    `${acerto ? '✓' : '✗'}</span><span>${texto}</span><small>${esc(etiqueta)} · ${esc(c.formato ?? '')}</small></div>`
+    `<p class="juicio"><span class="marca" style="color:var(${acerto ? '--ok' : '--acento'})">` +
+    `${acerto ? '✓' : '✗'}</span><span>${texto}</span>${pie}</p>`
+  );
+}
+
+// Cinta de veredictos: lo que diferencia al producto (publicar los fallos)
+// en el primer pantallazo. Entra de la más vieja a la más nueva.
+export function cintaVeredictos(juzgadas, nombre) {
+  const marcas = [];
+  let aciertos = 0;
+  for (const c of juzgadas) {
+    const fav = favoritoDe(c);
+    if (!fav.hay) continue; // 50/50 exacto: no hay a quién cobrarle
+    const ganoA = c.resultado_real === 'ganaA';
+    const acerto = fav.ladoA === ganoA;
+    if (acerto) aciertos += 1;
+    const favorito = fav.ladoA ? nombre(c.equipo_a) : nombre(c.equipo_b);
+    const otro = fav.ladoA ? nombre(c.equipo_b) : nombre(c.equipo_a);
+    const titulo = `${favorito} ${pct1(fav.prob)}% vs ${otro} — ${acerto ? 'acertó' : 'falló'}`;
+    marcas.push(`<i class="${acerto ? 'ok' : 'no'}" title="${esc(titulo)}"></i>`);
+  }
+  const n = marcas.length;
+  const aria =
+    n === 0
+      ? 'todavía no hay predicciones juzgadas'
+      : `${n} predicciones juzgadas: ${aciertos} aciertos y ${n - aciertos} fallos, de la más vieja a la más nueva`;
+  return (
+    `<p class="rotulo" id="t-cinta">${n === 0 ? 'TODAVÍA SIN JUZGAR' : `ÚLTIMAS ${n} JUZGADAS`}<b>Aciertos y fallos, sin filtrar</b></p>` +
+    `<div class="marcas" role="img" aria-label="${esc(aria)}">${marcas.join('')}</div>` +
+    `<p class="cuenta"><b>${n === 0 ? '—' : `${aciertos}/${n}`}</b>al favorito</p>`
+  );
+}
+
+// Los contadores de las pestañas salen de las filas que de verdad se
+// pintaron: si dicen 15 y hay 3, la pantalla miente.
+export function pestanas({ abiertas, juzgadas }) {
+  const b = (grupo, texto, n, sel) =>
+    `<button class="pestana" type="button" role="tab" aria-selected="${sel}" data-grupo="${grupo}">${texto} <em>${n}</em></button>`;
+  return (
+    b('abierta', 'EN VIVO Y PRÓXIMAS', abiertas, true) +
+    b('juzgada', 'JUZGADAS', juzgadas, false) +
+    b('todas', 'TODAS', abiertas + juzgadas, false)
   );
 }
 
 export function fuentesHtml({ bo3Ok = true, supabaseOk, discordOk, telegramOk }) {
-  const fuente = (viva, nom, det, apagado = false) =>
-    `<div class="fuente ${viva ? 'viva' : 'fria'}${apagado ? ' apagado' : ''}"><span class="dot"></span>` +
-    `<div><div class="nom"${apagado ? ' style="color:var(--tintaM)"' : ''}>${nom}</div><div class="det">${det}</div></div></div>`;
+  const fuente = (viva, nom, det) =>
+    `<li class="fuente ${viva ? 'viva' : 'fria'}"><span class="dot" aria-hidden="true"></span>` +
+    `<b>${nom}</b><span>${det}</span></li>`;
   return (
-    '<div class="fuentes">' +
-    fuente(bo3Ok, 'bo3.gg', '4/4 juegos · historial y calendario') +
-    fuente(supabaseOk, 'Supabase', supabaseOk ? 'predicciones y calificaciones al día' : 'sin respuesta al generar esta página') +
+    '<ul class="fuentes">' +
+    fuente(bo3Ok, 'bo3.gg', '4/4 juegos') +
+    fuente(supabaseOk, 'Supabase', supabaseOk ? 'al día' : 'sin respuesta al generar') +
     fuente(discordOk, 'Discord', discordOk ? 'avisos activos' : 'sin webhook configurado') +
     fuente(telegramOk, 'Telegram', telegramOk ? 'avisos activos' : 'sin bot configurado') +
-    fuente(false, 'OpenDota', 'solo histórico — sin ciclo en vivo', true) +
-    '</div>'
+    fuente(false, 'OpenDota', 'solo histórico') +
+    '</ul>'
   );
 }
 
@@ -200,5 +308,8 @@ export function fuentesHtml({ bo3Ok = true, supabaseOk, discordOk, telegramOk })
 // (o la página se generó sin credenciales). Sin animación no hay mentira:
 // un latido falso sería exactamente el número vendedor que prohíbe la casa.
 export function botonVivo(vivo) {
-  return `<div class="boton-vivo"><i${vivo ? ' class="late"' : ''}></i>${vivo ? 'EN VIVO' : 'CICLO EN PAUSA'}</div>`;
+  return (
+    `<p class="vivo${vivo ? '' : ' pausa'}" role="status"><i${vivo ? ' class="late"' : ''} aria-hidden="true"></i>` +
+    `${vivo ? 'EN VIVO' : 'CICLO EN PAUSA'}</p>`
+  );
 }
