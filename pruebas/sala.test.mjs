@@ -330,8 +330,8 @@ test('cintaVeredictos: una marca por juzgada, con el detalle en el title, y la c
   ];
   const html = cintaVeredictos(juzgadas, nombre);
   assert.equal((html.match(/<i class="/g) ?? []).length, 2);
-  assert.match(html, /<i class="ok"[^>]*>✓<\/i>/, 'el acierto se lee sin pasar el mouse');
-  assert.match(html, /<i class="no"[^>]*>✗<\/i>/, 'el fallo también');
+  assert.match(html, /<i class="ok"[^>]*>V<\/i>/, 'V de victoria, se lee sin pasar el mouse');
+  assert.match(html, /<i class="no"[^>]*>P<\/i>/, 'P de pérdida, también');
   assert.match(html, /ÚLTIMAS 2 JUZGADAS/);
   assert.match(html, /<b>1\/2<\/b>al favorito/);
   assert.match(html, /title="Team Falcons 70\.0% vs Gaimin Gladiators — acertó"/);
