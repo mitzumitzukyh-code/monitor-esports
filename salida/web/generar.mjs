@@ -23,7 +23,10 @@ import { renderizar, partesDelDisenio, envolverVista, esc } from './plantilla.mj
 
 const AQUI = new URL('./', import.meta.url);
 const RAIZ = new URL('../../', import.meta.url);
-const FICHAS = 60; // cuántas series recientes llevan página propia
+// Cuántas series lleva la tabla de Predicciones. Las fichas se generan para
+// TODAS las que se enlazan — antes eran 60 fijas contra 150 filas, y 93 de
+// cada 153 enlaces daban 404.
+const FILAS_TABLA = 150;
 
 // Marca real del repo. El diseño apunta a ./logo-monitor.png, que no está en
 // este proyecto; el logotipo bueno vive en assets/.
@@ -46,7 +49,10 @@ const ESTILO_EXTRA = `
   body { min-width: 1440px; }
   [data-accion] { cursor: pointer; }
   [data-accion]:hover { filter: brightness(1.18); }
-  [data-vista][hidden] { display: none !important; }
+  /* Las vistas y las filas traen \`display\` en el atributo style, que le gana
+     a la regla \`[hidden]{display:none}\` del navegador. Sin el !important, el
+     filtro de juego no ocultaba nada. */
+  [data-vista][hidden], [data-fila][hidden] { display: none !important; }
   a { color: inherit; text-decoration: none; }
   /* Foco visible: el diseño no trae ninguno y sin esto el panel no se puede
      recorrer con el teclado. */
@@ -73,7 +79,14 @@ const CLIENTE = `
 (function(){
   'use strict';
   var vistas = document.querySelectorAll('[data-vista]');
+  function existe(v){
+    for (var i=0;i<vistas.length;i++) if (vistas[i].getAttribute('data-vista')===v) return true;
+    return false;
+  }
   function ir(v){
+    // En una ficha sólo existe la vista 'match'. Sin esta salida, pulsar
+    // INICIO ocultaba TODAS las vistas y dejaba la página en blanco.
+    if (!existe(v)) { location.href = 'index.html#' + v; return; }
     for (var i=0;i<vistas.length;i++) vistas[i].hidden = vistas[i].getAttribute('data-vista') !== v;
     try { history.replaceState(null,'','#'+v); } catch(e){}
     window.scrollTo(0,0);
@@ -86,8 +99,47 @@ const CLIENTE = `
   }
   var filtro='todos', orden='cierra';
   function filas(){ return Array.prototype.slice.call(document.querySelectorAll('[data-fila]')); }
+
+  // Las pastillas de juego y las cabeceras de orden tienen que mostrar cuál
+  // está activa. El diseño trae la de «TODOS» encendida y ahí se quedaba,
+  // aunque se pulsara otra.
+  function marcarActivas(){
+    var p = document.querySelectorAll('[data-accion^="filtro:"]');
+    for (var i=0;i<p.length;i++){
+      var on = p[i].getAttribute('data-accion').slice(7)===filtro;
+      p[i].style.borderColor = on ? '#FF2638' : '#242933';
+      p[i].style.color = on ? '#FF2638' : '#A7ADB8';
+      p[i].style.background = on ? 'rgba(255,255,255,0.035)' : '#0D1015';
+      p[i].style.boxShadow = on ? '0 0 12px #FF263840' : 'none';
+      p[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    var o = document.querySelectorAll('[data-accion^="orden:"]');
+    for (var j=0;j<o.length;j++){
+      var act = o[j].getAttribute('data-accion').slice(6)===orden;
+      o[j].style.color = act ? '#F2F4F7' : '#6F7784';
+      o[j].setAttribute('aria-sort', act ? 'descending' : 'none');
+    }
+  }
+
+  // Aviso para cuando el filtro no deja ninguna fila. Sin esto, pulsar CS2
+  // (que todavía no tiene series) dejaba un hueco en blanco que parece rota.
+  var vacio = null;
+  function avisoVacio(padre, mostrar){
+    if (!mostrar){ if (vacio) vacio.hidden = true; return; }
+    if (!vacio){
+      vacio = document.createElement('div');
+      vacio.setAttribute('data-vacio','');
+      vacio.style.cssText = 'padding:26px 18px;text-align:center;font-size:11.5px;letter-spacing:0.06em;color:#6F7784';
+      vacio.textContent = 'TODAVÍA NO HAY SERIES DE ESTE JUEGO EN EL HISTÓRICO';
+    }
+    if (padre && vacio.parentNode !== padre) padre.appendChild(vacio);
+    vacio.hidden = false;
+  }
+
   function aplicar(){
     var f = filas();
+    if (f.length === 0) return;
+    var padre = f[0].parentNode;
     f.forEach(function(el){
       var ok = filtro==='todos' || el.getAttribute('data-juego')===filtro;
       el.hidden = !ok;
@@ -96,11 +148,12 @@ const CLIENTE = `
     var clave = { edge:'data-edge', motor:'data-motor', cierra:'data-cierra' }[orden];
     visibles.sort(function(a,b){
       var va=a.getAttribute(clave), vb=b.getAttribute(clave);
-      if (orden==='cierra') return vb.localeCompare(va);
+      if (orden==='cierra') return String(vb).localeCompare(String(va));
       return parseFloat(vb)-parseFloat(va);
     });
-    var padre = visibles[0] && visibles[0].parentNode;
-    if (padre) visibles.forEach(function(el){ padre.appendChild(el); });
+    visibles.forEach(function(el){ padre.appendChild(el); });
+    avisoVacio(padre, visibles.length===0);
+    marcarActivas();
   }
   document.addEventListener('click', function(ev){
     var el = ev.target.closest('[data-accion]');
@@ -116,8 +169,12 @@ const CLIENTE = `
     var el = ev.target.closest('[data-accion]');
     if (el){ ev.preventDefault(); el.click(); }
   });
-  var inicial = (location.hash||'#home').slice(1);
-  ir(document.querySelector('[data-vista="'+inicial+'"]') ? inicial : 'home');
+  // Al arrancar hay que mostrar una vista que EXISTA en esta página. En una
+  // ficha la única es 'match': si acá se pidiera 'home', ir() rebotaría a
+  // index.html y la ficha no se podría ni abrir.
+  var inicial = (location.hash||'').slice(1);
+  if (!existe(inicial)) inicial = existe('home') ? 'home' : (vistas[0] && vistas[0].getAttribute('data-vista'));
+  if (inicial) ir(inicial);
 })();
 `;
 
@@ -143,13 +200,39 @@ ${conCliente ? `<script>${CLIENTE}</script>` : ''}
 `;
 }
 
+// Dos rótulos del diseño están escritos a mano en el HTML y dicen algo que
+// no es cierto con los datos que hay. No se toca `disenio.dc.html` —manda el
+// diseño— así que se corrigen acá, en la salida:
+//
+//  · «MAYOR DESVÍO VS MERCADO»: Dota no tiene cuotas en ninguna tabla, así
+//    que no hay casa contra la cual desviarse. Ese panel muestra las series
+//    donde el motor más se alejó de la base ingenua, que es otra cosa.
+//  · «PRÓXIMAS SERIES»: sólo es verdad si Supabase respondió. Sin
+//    credenciales la rejilla cae a las últimas series ya juzgadas, y
+//    llamarlas «próximas» es mentir en el título.
+function rotulosHonestos(html, hayProximas) {
+  let out = html
+    .replace('MAYOR DESVÍO VS MERCADO', 'MAYOR DESVÍO VS LA BASE')
+    .replace('Donde más se separa el motor de la casa.', 'Donde el motor más se alejó de la base ingenua.');
+  if (!hayProximas) {
+    out = out
+      .replace('>PRÓXIMAS SERIES<', '>ÚLTIMAS SERIES JUZGADAS<')
+      .replace('Análisis y probabilidades actualizadas', 'Sin próximas: Supabase no respondió');
+  }
+  return out;
+}
+
 // Las filas de la tabla llevan los datos que el filtro y el orden necesitan.
 function anotarFilas(html, filas) {
   let i = 0;
-  return html.replace(/<div data-accion="ficha:(\d+)" style="([^"]*grid-template-columns: minmax\(0, 1\.7fr\)[^"]*)"/g, (m, id, estilo) => {
+  // OJO con el espacio: estiloATexto() escribe `grid-template-columns:minmax(`
+  // sin espacio tras los dos puntos. La versión anterior de este patrón lo
+  // exigía, no casaba con ninguna fila, y el filtro y el orden quedaban
+  // muertos sin dar error.
+  return html.replace(/<div data-accion="ficha:(\d+)" style="([^"]*grid-template-columns:\s*minmax\(0, 1\.7fr\)[^"]*)"/g, (m, id, estilo) => {
     const f = filas[i++];
     if (!f) return m;
-    return `<div data-fila data-juego="${esc(f.juego)}" data-edge="${esc(f._pa)}" data-motor="${esc(f._pa)}" data-cierra="${esc(f.cierra)}" data-accion="ficha:${id}" style="${estilo}"`;
+    return `<div data-fila data-juego="${esc(f.juego)}" data-edge="${esc(f._edge)}" data-motor="${esc(f._pa)}" data-cierra="${esc(f.cierra)}" data-accion="ficha:${id}" style="${estilo}"`;
   });
 }
 
@@ -206,17 +289,20 @@ async function main() {
   await limpiarFichasViejas();
 
   // --- panel ---
-  const v = valores(r, { vista: 'home', arte, proximas });
-  let cuerpo = anotarFilas(renderizar(conLogo, v), v.tabla);
+  const v = valores(r, { vista: 'home', arte, proximas, cuantasFilas: FILAS_TABLA });
+  let cuerpo = rotulosHonestos(anotarFilas(renderizar(conLogo, v), v.tabla), v._hayProximas);
   await writeFile(new URL('index.html', AQUI), documento({
     cuerpo, estiloDisenio: estiloHelmet, titulo: 'Monitor eSports', conCliente: true,
   }));
 
-  // --- fichas, una por serie reciente ---
-  const recientes = r.series.slice(-FICHAS);
+  // --- fichas: una por CADA serie que el panel enlaza ---
+  // Se sacan del propio HTML ya generado, así no hay forma de que la lista se
+  // separe de los enlaces: si algo enlaza a una ficha, esa ficha existe.
+  const enlazadas = new Set([...cuerpo.matchAll(/data-accion="ficha:([^"]+)"/g)].map((m) => m[1]));
+  const recientes = r.series.filter((s) => enlazadas.has(String(s.seriesId)));
   for (const s of recientes) {
     const vf = valores(r, { vista: 'match', serie: s, arte, proximas });
-    const cf = renderizar(conLogo, vf);
+    const cf = rotulosHonestos(renderizar(conLogo, vf), vf._hayProximas);
     await writeFile(new URL(`serie-${s.seriesId}.html`, AQUI), documento({
       cuerpo: cf, estiloDisenio: estiloHelmet, titulo: `${s.nombreA} vs ${s.nombreB} · Monitor eSports`, conCliente: true,
     }));
@@ -225,7 +311,9 @@ async function main() {
   const iconos = await copiarIconos();
 
   const g = r.calidad.global;
+  const sinFicha = [...enlazadas].filter((id) => !recientes.some((s) => String(s.seriesId) === id));
   console.log(`index.html + ${recientes.length} fichas · ${iconos} iconos`);
+  if (sinFicha.length > 0) console.log(`  AVISO: ${sinFicha.length} enlaces sin ficha: ${sinFicha.slice(0, 3).join(', ')}`);
   console.log(`${g.cantidad} series · brier ${g.brier.toFixed(4)} vs base ${g.base.toFixed(4)} · acierto ${(g.acierto * 100).toFixed(2)} %`);
   console.log(`logotipo: ${logo ? 'assets/logo-mark.svg' : 'no encontrado'} · arte: ${arte ? 'assets/arte-dota.jpg' : 'degradado por juego'}`);
   if (!hayCredenciales()) console.log('próximas series: sin credenciales (corre con --env-file=.env si tienes uno)');
@@ -235,4 +323,4 @@ async function main() {
 
 if (import.meta.url === `file://${process.argv[1]}`) await main();
 
-export { documento, marcarVistas };
+export { documento, marcarVistas, anotarFilas, rotulosHonestos, CLIENTE };

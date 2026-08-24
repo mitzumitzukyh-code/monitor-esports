@@ -140,6 +140,11 @@ function serieComoFila(s) {
     rowStyle: { display: 'grid', gridTemplateColumns: 'minmax(0, 1.7fr) 92px 60px 190px 96px 92px 96px', gap: '10px', padding: '14px 18px 14px 15px', borderBottom: `1px solid ${C.linea}`, borderLeft: `3px solid ${color}99`, fontSize: '12px', alignItems: 'center', cursor: 'pointer' },
     onClick: `ficha:${s.seriesId}`,
     _pa: pa,
+    // Lo que ordena la columna VENTAJA. Dota no tiene cuotas, así que la
+    // ventaja no es contra el mercado sino contra la base ingenua: cuánto le
+    // ganó el motor al 0,5 en esa serie. Antes esto era una copia de _pa, y
+    // ordenar por VENTAJA daba exactamente lo mismo que ordenar por MOTOR.
+    _edge: s.base - s.brier,
   };
 }
 
@@ -234,6 +239,10 @@ export function valores(r, { vista = 'home', serie = null, cuantasFilas = 150, a
     viewMatch: false,
 
     esMock: false, hayError: false, errorMsg: '',
+    // Lo lee generar.mjs para arreglar los rótulos fijos del diseño cuando
+    // la rejilla NO trae series próximas. Empieza con guion bajo porque no
+    // es una clave de la plantilla, es un aviso hacia afuera.
+    _hayProximas: hayProximas,
     cicloTexto: hayProximas
       ? `${proximas.length} series próximas · ${miles(g.cantidad)} juzgadas · ${miles(r.partidas.length)} partidas aplicadas`
       : `Histórico versionado · ${miles(r.partidas.length)} partidas · ${miles(g.cantidad)} series juzgadas`,
