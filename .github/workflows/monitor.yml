@@ -58,6 +58,8 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
     steps:
       - uses: actions/checkout@v4
@@ -88,7 +90,7 @@ jobs:
             fi
           }
 
-          for nombre in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY DISCORD_WEBHOOK; do
+          for nombre in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY DISCORD_WEBHOOK TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID; do
             valor=$(printf '%s' "${!nombre}")
             if [ -z "$valor" ]; then
               echo "::error::Falta el secreto $nombre. Ponerlo en Settings > Secrets and variables > Actions."
@@ -112,8 +114,21 @@ jobs:
             problemas=1
           fi
 
+          # El token lo da BotFather y siempre es <numérico>:<alfanumérico>.
+          # El chat_id es @nombre de canal público, o un número (negativo si
+          # el canal/grupo es privado).
+          if ! printf '%s' "$TELEGRAM_BOT_TOKEN" | grep -qE '^[0-9]+:[A-Za-z0-9_-]+$'; then
+            echo "::error::TELEGRAM_BOT_TOKEN no tiene la forma <numero>:<cadena> que da BotFather."
+            problemas=1
+          fi
+
+          if ! printf '%s' "$TELEGRAM_CHAT_ID" | grep -qE '^@[A-Za-z0-9_]{4,64}$|^-?[0-9]+$'; then
+            echo "::error::TELEGRAM_CHAT_ID no es un @canal ni un id numérico."
+            problemas=1
+          fi
+
           [ "$problemas" -eq 1 ] && exit 1
-          echo "Los tres secretos están puestos y con la forma correcta."
+          echo "Los secretos están puestos y con la forma correcta."
 
       - name: Pruebas
         run: node --test "pruebas/**/*.test.mjs"
@@ -144,6 +159,15 @@ jobs:
       - name: Avisar Dota 2, CS2, LoL y Valorant por Discord
         if: always()
         run: node salida/discord-esports.mjs dota2 cs2 lol valorant
+
+      # Segundo canal, mismo contenido. Los constructores de mensaje son los
+      # mismos (salida/telegram-esports.mjs los reutiliza); lo que NO se
+      # comparte es el registro de "ya avisado": cada canal lleva sus columnas
+      # avisado_telegram_* en eslo_predicciones. Sin eso, el primero que
+      # avisara marcaría la fila y el otro callaría para siempre.
+      - name: Avisar Dota 2, CS2, LoL y Valorant por Telegram
+        if: always()
+        run: node salida/telegram-esports.mjs dota2 cs2 lol valorant
 
       # 4. Regenerar el panel y publicarlo en GitHub Pages.
       # UN SOLO generador: salida/web/generar.mjs rellena disenio.dc.html
