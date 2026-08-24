@@ -106,6 +106,8 @@
   .cq .sub { font-size: 9.5px; color: var(--tintaS); margin-top: 2px; }
   .cq .mejora { display: inline-block; margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
   .bien { color: var(--ok); border: 1px solid #0C9B60; background: rgba(25,230,140,.09); }
+  /* Peor que la moneda: ámbar, no rojo -- el rojo es la marca, no el error. */
+  .mal { color: var(--aviso); border: 1px solid #4a3600; background: rgba(255,176,0,.09); }
   .nc { font-size: 9px; color: var(--apag); letter-spacing: .08em; margin-top: 5px; font-weight: 700; }
   .juicio { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--linea); font-size: 12px; align-items: baseline; }
   .juicio .marca2 { font-weight: 800; }
@@ -115,7 +117,7 @@
 </style>
 </head>
 <body>
-<div class="aviso-demo">PROPUESTA A (v2) · SALA DE CONTROL — DATOS DE EJEMPLO, NADA AQUÍ ESTÁ CABLEADO</div>
+<div class="aviso-demo">PROPUESTA A (v3) · SALA DE CONTROL — MAQUETA CON DATOS DE EJEMPLO; EL GENERADOR SUSTITUYE LAS ZONAS <!--ZONA:*--> POR DATOS REALES</div>
 
 <header>
   <div class="logo">M</div>
@@ -124,7 +126,9 @@
     <small>CENTRO DE CONTROL · 4 JUEGOS</small>
   </div>
   <div class="derecha">
+    <!--ZONA:VIVO-->
     <div class="boton-vivo"><i class="late"></i>EN VIVO</div>
+    <!--/ZONA:VIVO-->
     <div class="reloj">
       <div class="hora" id="reloj">2:32 PM</div>
       <div class="sub">HORA DE VENEZUELA</div>
@@ -134,6 +138,7 @@
 
 <div class="sistema">
   <h2>ESTADO DEL <em>SISTEMA</em></h2>
+  <!--ZONA:FUENTES-->
   <div class="fuentes">
     <div class="fuente viva">
       <span class="dot"></span>
@@ -156,11 +161,13 @@
       <div><div class="nom" style="color:var(--tintaM)">OpenDota</div><div class="det">solo histórico — sin ciclo en vivo</div></div>
     </div>
   </div>
+  <!--/ZONA:FUENTES-->
 </div>
 
 <main>
   <aside class="juegos">
     <h3>JUEGOS</h3>
+    <!--ZONA:RAIL-->
     <div class="juego" data-filtro="DOTA 2" style="--jc: var(--dota)">
       <div class="nom"><img src="logos/logo-dota2.png" alt="Dota 2">DOTA 2</div>
       <div class="kpi"><span>mejora vs moneda</span><b>−17.2%</b></div>
@@ -185,6 +192,7 @@
       <div class="kpi"><span>juzgadas</span><b>2.350</b></div>
       <div class="kpi"><span>próximas</span><b>1</b></div>
     </div>
+    <!--/ZONA:RAIL-->
     <div class="ver-todas">CLIC DE NUEVO = VER TODOS LOS JUEGOS</div>
     <div class="casa">
       <b>REGLA DE LA CASA.</b> Los porcentajes salen solo del cálculo. Ningún LLM produce un número que llegue a esta pantalla.
@@ -198,6 +206,7 @@
     </div>
     <table>
       <tr><th>HORA</th><th>JUEGO</th><th>SERIE</th><th>FMT</th><th>MOTOR</th><th>CONFIANZA</th><th>MERCADO</th></tr>
+      <!--ZONA:FILAS-->
       <tr data-offset="-245">
         <td class="mono"><span class="hora-txt">—</span><br><span class="estado"></span></td>
         <td data-juego="DOTA 2"><span class="chip" style="color:var(--dota); border-color:#666">DOTA 2</span></td>
@@ -261,26 +270,31 @@
         <td><svg class="conf" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="#242933" stroke-width="3.4"/><circle cx="18" cy="18" r="15" fill="none" stroke="#FFB000" stroke-width="3.4" stroke-dasharray="55 94" stroke-linecap="round" transform="rotate(-90 18 18)"/><text x="18" y="21.5" text-anchor="middle" fill="#F2F4F7" font-size="9.5" font-family="JetBrains Mono">55</text></svg></td>
         <td class="cuota mono">—</td>
       </tr>
+      <!--/ZONA:FILAS-->
     </table>
   </section>
 
   <div class="col">
     <div class="panel">
-      <div class="cabeza"><div class="titulo-seccion">CALIDAD DEL MOTOR<small>Brier contra su moneda · por juego</small></div></div>
+      <div class="cabeza"><div class="titulo-seccion">CALIDAD DEL MOTOR<small>Brier contra su moneda · por juego · en vivo</small></div></div>
+      <!--ZONA:CALIDAD-->
       <div class="calidad">
         <div class="cq" style="--jc: var(--dota)"><div class="nom">DOTA 2</div><div class="big">0.414</div><div class="sub">base 0.500 · n 36</div><span class="mejora bien">−17.2%</span><div class="nc">NO CONCLUYENTE</div></div>
         <div class="cq" style="--jc: var(--cs2)"><div class="nom">CS2</div><div class="big">0.221</div><div class="sub">base 0.250 · n 12.447</div><span class="mejora bien">−11.8%</span><div class="nc" style="color:var(--ok)">CONCLUYENTE</div></div>
         <div class="cq" style="--jc: var(--lol)"><div class="nom">LOL</div><div class="big">0.213</div><div class="sub">base 0.250 · n 2.444</div><span class="mejora bien">−15.0%</span><div class="nc">NO CONCLUYENTE</div></div>
         <div class="cq" style="--jc: var(--val)"><div class="nom">VALORANT</div><div class="big">0.232</div><div class="sub">base 0.250 · n 2.350</div><span class="mejora bien">−7.3%</span><div class="nc">NO CONCLUYENTE</div></div>
       </div>
+      <!--/ZONA:CALIDAD-->
     </div>
     <div class="panel">
       <div class="cabeza"><div class="titulo-seccion">ÚLTIMOS JUICIOS<small>aciertos y fallos igual de grandes</small></div></div>
+      <!--ZONA:JUICIOS-->
       <div class="juicio"><span class="marca2" style="color:var(--ok)">✓</span><span><b>Team Spirit</b> 71% — ganó</span><small>DOTA 2 · bo3</small></div>
       <div class="juicio"><span class="marca2" style="color:var(--acento)">✗</span><span>íbamos con <b>Vitality</b> 68% — ganó MOUZ</span><small>CS2 · bo3</small></div>
       <div class="juicio"><span class="marca2" style="color:var(--ok)">✓</span><span><b>Gen.G</b> 59% — ganó</span><small>LOL · bo3</small></div>
       <div class="juicio"><span class="marca2" style="color:var(--ok)">✓</span><span><b>Sentinels</b> 55% — ganó</span><small>VALORANT · bo3</small></div>
       <div class="juicio"><span class="marca2" style="color:var(--acento)">✗</span><span>íbamos con <b>Tundra</b> 61% — ganó Liquid</span><small>DOTA 2 · bo3</small></div>
+      <!--/ZONA:JUICIOS-->
     </div>
   </div>
 </main>
@@ -324,35 +338,50 @@
     tarjeta.addEventListener('click', () => filtrar(tarjeta.dataset.filtro));
   });
 </script>
-  // Estados vivos: cada fila sabe a qué hora empieza (offset de demo relativo
-  // a la carga; en el panel real sería la fecha guardada de la serie) y el
-  // reloj real decide si está TERMINADA, EN CURSO o por venir, con cuenta
-  // regresiva que se mueve sola. Ventana rodante: lo que salga de las 24 h
-  // desaparece de la tabla, como en el panel real.
-  const DURACION_BO3_MIN = 150;
+
+<script>
+  // Estados vivos. Dos clases de fila:
+  //   · data-offset  — filas de la DEMO: minutos relativos a la carga de la
+  //     página, anclados UNA sola vez (recalcular "ahora + offset" en cada tic
+  //     dejaba diffMin constante y la cuenta nunca bajaba).
+  //   · data-inicio  — filas REALES que deja el generador: fecha ISO guardada
+  //     de la serie; el reloj decide TERMINÓ / EN CURSO / cuenta regresiva.
+  // data-resultado (ganaA/ganaB) corta por el camino rápido: terminó, sin
+  // importar el reloj.
+  //
+  // Duración estimada por formato para pasar a TERMINÓ una serie que ya
+  // arrancó y no tiene resultado. bo1 corto; bo5 largo. Minutos redondos:
+  // es un estado de pantalla, no una medición.
+  const DURACION_MIN = { bo1: 30, bo2: 90, bo3: 150, bo5: 240 };
+  const ANCLA_DEMO = Date.now();
   function fmt12(d) {
     const p = new Intl.DateTimeFormat('es-VE', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Caracas' }).formatToParts(d);
     const toma = (x) => p.find((q) => q.type === x)?.value ?? '';
     return toma('hour') + ':' + toma('minute') + ' ' + toma('dayPeriod').replace(/\./g, '').toUpperCase();
   }
+  function inicioDe(tr) {
+    if (tr.dataset.inicio) return new Date(tr.dataset.inicio).getTime();
+    return ANCLA_DEMO + Number(tr.dataset.offset) * 60000;
+  }
   function refrescarEstados() {
     const ahora = Date.now();
-    document.querySelectorAll('tr[data-offset]').forEach((tr) => {
-      const inicio = new Date(ahora + Number(tr.dataset.offset) * 60000);
-      tr.querySelector('.hora-txt').textContent = fmt12(inicio);
+    document.querySelectorAll('tr[data-offset], tr[data-inicio]').forEach((tr) => {
+      const inicioMs = inicioDe(tr);
+      tr.querySelector('.hora-txt').textContent = fmt12(new Date(inicioMs));
       const estado = tr.querySelector('.estado');
-      const diffMin = (inicio.getTime() - ahora) / 60000;
       estado.className = 'estado';
-      if (diffMin < -DURACION_BO3_MIN) {
+      if (tr.dataset.resultado || ahora > inicioMs + (DURACION_MIN[tr.dataset.formato] ?? 150) * 60000) {
         estado.textContent = 'TERMINÓ';
         estado.classList.add('fin');
         tr.classList.add('terminada');
-      } else if (diffMin <= 0) {
+      } else if (inicioMs <= ahora) {
         estado.textContent = '● EN CURSO';
         estado.classList.add('curso');
       } else {
-        const h = Math.floor(diffMin / 60);
-        const m = Math.round(diffMin % 60);
+        const diffMin = (inicioMs - ahora) / 60000;
+        let h = Math.floor(diffMin / 60);
+        let m = Math.round(diffMin % 60);
+        if (m === 60) { h++; m = 0; } // 119.7 min era "EN 1 H 60 MIN"
         estado.textContent = h > 0 ? 'EN ' + h + ' H ' + m + ' MIN' : 'EN ' + m + ' MIN';
         estado.classList.add('cuenta');
       }

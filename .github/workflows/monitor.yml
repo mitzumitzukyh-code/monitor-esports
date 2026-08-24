@@ -170,11 +170,11 @@ jobs:
         run: node salida/telegram-esports.mjs dota2 cs2 lol valorant
 
       # 4. Regenerar el panel y publicarlo en GitHub Pages.
-      # UN SOLO generador: salida/web/generar.mjs rellena disenio.dc.html
-      # (el archivo que sale de claude.ai/design) con datos reales del
-      # backtest. No necesita credenciales — sale de datos/historico.json,
-      # versionado — por eso corre aunque un paso anterior haya fallado.
-      # Ver CLAUDE.md, "La interfaz web: un solo diseño, y es este".
+      # UN SOLO generador: salida/web/generar.mjs lee disenos/A-sala-de-control.html
+      # y llena sus zonas <!--ZONA:*--> con datos reales de eslo_predicciones.
+      # Sin credenciales la página sale vacía pero válida — por eso corre
+      # aunque un paso anterior haya fallado.
+      # Ver CLAUDE.md y el encabezado del propio generador.
       - name: Generar el panel desde el diseño
         if: always()
         run: node salida/web/generar.mjs

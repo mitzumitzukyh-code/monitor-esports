@@ -1,197 +1,69 @@
-// Genera el panel a partir de `disenio.dc.html`, el archivo que sale de
-// claude.ai/design tal cual.
+// Genera la SALA DE CONTROL a partir de disenos/A-sala-de-control.html.
 //
-//   node salida/web/generar.mjs
+//   node --env-file=.env salida/web/generar.mjs
 //
-// Escribe:
-//   index.html        el panel: Inicio, Predicciones, Clasificación,
-//                     Calidad, Cambios y las cuatro estáticas
-//   serie-<id>.html   la ficha de cada una de las últimas series juzgadas,
-//                     con URL propia y compartible
+// Escribe UN SOLO archivo: salida/web/index.html. Las fichas serie-*.html del
+// panel viejo ya no se generan (y se borran si quedaran de una corrida
+// anterior): el diseño nuevo no tiene vista de ficha.
 //
-// No necesita credenciales: todo sale de datos/historico.json, versionado.
+// Cómo funciona: el diseño lleva zonas marcadas con <!--ZONA:NOMBRE--> ...
+// <!--/ZONA:NOMBRE--> que en la maqueta contienen datos de ejemplo. Acá se
+// reemplaza el contenido de cada zona por datos REALES de eslo_predicciones.
+// El resto del archivo no se toca -- misma disciplina que con disenio.dc.html:
+// el diseño manda, el generador sólo inyecta.
 //
-// EL DISEÑO NO SE TOCA. Si hay que cambiar un color o una caja, se cambia en
-// claude.ai/design, se baja el archivo encima de disenio.dc.html y se vuelve
-// a generar. Ver CLAUDE.md, "La interfaz web: un solo diseño, y es este".
+// Sin credenciales la página TAMBIÉN se genera, con las zonas vacías y las
+// fuentes apagadas: es lo que permite correr este paso en CI sin secretos
+// sin tumbar el pipeline.
 
 import { readFile, writeFile, readdir, unlink, mkdir, copyFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
-import { resumen } from './datos.mjs';
-import { valores, C } from './valores.mjs';
-import { proximasSeries, hayCredenciales } from './vivo.mjs';
-import { renderizar, partesDelDisenio, envolverVista, esc } from './plantilla.mjs';
-import { pulir } from './pulir.mjs';
+import { seleccionar } from '../../datos/supabase.mjs';
+import { datosDeEquipos } from '../../datos/juegos/bo3.mjs';
+import {
+  JUEGOS,
+  esc,
+  estadisticasPorJuego,
+  filaSerie,
+  tarjetaJuego,
+  tarjetaCalidad,
+  lineaJuicio,
+  fuentesHtml,
+  botonVivo,
+} from './sala.mjs';
 
 const AQUI = new URL('./', import.meta.url);
 const RAIZ = new URL('../../', import.meta.url);
-const FICHAS = 60; // cuántas series recientes llevan página propia
+const DISENIO = new URL('disenos/A-sala-de-control.html', RAIZ);
 
-// Marca real del repo. El diseño apunta a ./logo-monitor.png, que no está en
-// este proyecto; el logotipo bueno vive en assets/.
-async function logoIncrustado() {
-  // El mark solo: el diseño ya pone "MONITOR eSPORTS" en texto al lado, y el
-  // logotipo horizontal trae el nombre dentro — juntos se ve duplicado.
-  for (const nombre of ['logo-mark.svg', 'logo-mark-simple.svg']) {
+// Ventana rodante de la tabla, igual que los avisos: lo que salió hace más
+// de 24 h o falta más de 24 h no entra. Tope duro de filas para que una
+// jornada loca no haga una página de 3 MB.
+const VENTANA_HORAS = 24;
+const MAX_FILAS = 40;
+const CUANTOS_JUICIOS = 5;
+
+function zona(html, nombre, contenido) {
+  const patron = new RegExp(`<!--ZONA:${nombre}-->[\\s\\S]*?<!--/ZONA:${nombre}-->`);
+  if (!patron.test(html)) throw new Error(`generar: el diseño no trae la zona ${nombre}`);
+  return html.replace(patron, `<!--ZONA:${nombre}-->${contenido}<!--/${nombre}-->`);
+}
+
+async function copiarLogosDelRail() {
+  const destino = new URL('logos/', AQUI);
+  await mkdir(destino, { recursive: true });
+  let n = 0;
+  for (const cfg of JUEGOS) {
     try {
-      const svg = await readFile(new URL(`assets/${nombre}`, RAIZ), 'utf8');
-      return 'data:image/svg+xml;base64,' + Buffer.from(svg, 'utf8').toString('base64');
-    } catch { /* siguiente */ }
+      await copyFile(new URL(`disenos/${cfg.logo}`, RAIZ), new URL(cfg.logo, AQUI));
+      n += 1;
+    } catch { /* sin logo, la tarjeta queda sin imagen pero no revienta */ }
   }
-  return null;
+  return n;
 }
 
-// Lo que el diseño resuelve con `style-hover` y con su runtime, acá va como
-// CSS de verdad. Es lo único que se agrega al estilo del diseño.
-const ESTILO_EXTRA = `
-  html { background: ${C.fondo}; }
-  body { min-width: 1440px; }
-  [data-accion] { cursor: pointer; }
-  [data-accion]:hover { filter: brightness(1.18); }
-  [data-vista][hidden] { display: none !important; }
-  a { color: inherit; text-decoration: none; }
-  /* Foco visible: el diseño no trae ninguno y sin esto el panel no se puede
-     recorrer con el teclado. */
-  [data-accion]:focus-visible { outline: 2px solid ${C.acento}; outline-offset: 2px; border-radius: 6px; }
-  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
-`;
-
-// Cada vista del diseño vive dentro de su propio <sc-if>. Acá se le pone el
-// ancla que usa el script para mostrar una a la vez.
-const VISTAS = [
-  ['viewHome', 'home'], ['viewPreds', 'preds'], ['viewBoard', 'board'],
-  ['viewCalidad', 'calidad'], ['viewNews', 'news'], ['viewMatch', 'match'],
-  ['viewAbout', 'about'], ['viewFaq', 'faq'], ['viewTerms', 'terms'],
-  ['viewContacto', 'contacto'],
-];
-
-function marcarVistas(plantilla) {
-  let out = plantilla;
-  for (const [clave, nombre] of VISTAS) out = envolverVista(out, clave, nombre);
-  return out;
-}
-
-const CLIENTE = `
-(function(){
-  'use strict';
-  var vistas = document.querySelectorAll('[data-vista]');
-  function ir(v){
-    for (var i=0;i<vistas.length;i++) vistas[i].hidden = vistas[i].getAttribute('data-vista') !== v;
-    try { history.replaceState(null,'','#'+v); } catch(e){}
-    window.scrollTo(0,0);
-    // el rail y la nav se repintan marcando el activo
-    var botones = document.querySelectorAll('[data-accion^="ir:"]');
-    for (var j=0;j<botones.length;j++){
-      var destino = botones[j].getAttribute('data-accion').slice(3);
-      botones[j].setAttribute('aria-current', destino===v ? 'page' : 'false');
-    }
-  }
-  var filtro='todos', orden='cierra';
-  function filas(){ return Array.prototype.slice.call(document.querySelectorAll('[data-fila]')); }
-  function aplicar(){
-    var f = filas();
-    f.forEach(function(el){
-      var ok = filtro==='todos' || el.getAttribute('data-juego')===filtro;
-      el.hidden = !ok;
-    });
-    var visibles = f.filter(function(el){ return !el.hidden; });
-    var clave = { edge:'data-edge', motor:'data-motor', cierra:'data-cierra' }[orden];
-    visibles.sort(function(a,b){
-      var va=a.getAttribute(clave), vb=b.getAttribute(clave);
-      if (orden==='cierra') return vb.localeCompare(va);
-      return parseFloat(vb)-parseFloat(va);
-    });
-    var padre = visibles[0] && visibles[0].parentNode;
-    if (padre) visibles.forEach(function(el){ padre.appendChild(el); });
-  }
-  document.addEventListener('click', function(ev){
-    var el = ev.target.closest('[data-accion]');
-    if (!el) return;
-    var a = el.getAttribute('data-accion');
-    if (a.indexOf('ir:')===0){ ev.preventDefault(); ir(a.slice(3)); return; }
-    if (a.indexOf('ficha:')===0){ location.href = 'serie-'+a.slice(6)+'.html'; return; }
-    if (a.indexOf('filtro:')===0){ filtro = a.slice(7); aplicar(); return; }
-    if (a.indexOf('orden:')===0){ orden = a.slice(6); aplicar(); return; }
-  });
-  document.addEventListener('keydown', function(ev){
-    if (ev.key!=='Enter' && ev.key!==' ') return;
-    var el = ev.target.closest('[data-accion]');
-    if (el){ ev.preventDefault(); el.click(); }
-  });
-  var inicial = (location.hash||'#home').slice(1);
-  ir(document.querySelector('[data-vista="'+inicial+'"]') ? inicial : 'home');
-})();
-`;
-
-function documento({ cuerpo, estiloDisenio, titulo, conCliente }) {
-  return `<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(titulo)}</title>
-<meta name="description" content="Predicciones de esports calificadas contra el resultado real. No apuesta ni recomienda apostar.">
-<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<style>${estiloDisenio}${ESTILO_EXTRA}</style>
-</head>
-<body>
-${cuerpo}
-${conCliente ? `<script>${CLIENTE}</script>` : ''}
-</body>
-</html>
-`;
-}
-
-// Las filas de la tabla llevan los datos que el filtro y el orden necesitan.
-// El estilo viene serializado por estiloATexto, que escribe SIN espacio
-// después de los dos puntos ("grid-template-columns:minmax(...)"), así que el
-// patrón acepta cualquier espacio en blanco ahí -- con espacio literal
-// quedaba sin anotar la tabla entera y los filtros no movían nada.
-function anotarFilas(html, filas) {
-  let i = 0;
-  return html.replace(/<div data-accion="ficha:(\d+)" style="([^"]*grid-template-columns:\s*minmax\(0, 1\.7fr\)[^"]*)"/g, (m, id, estilo) => {
-    const f = filas[i++];
-    if (!f) return m;
-    // data-edge es la CONFIANZA (qué tan por debajo de la base ingenua quedó
-    // el Brier de esa serie) y data-motor la probabilidad: antes iban las dos
-    // con el mismo valor y "más confiable" ordenaba por probabilidad.
-    const edge = f._edge != null ? f._edge : f._pa;
-    return `<div data-fila data-juego="${esc(f.juego)}" data-edge="${esc(edge)}" data-motor="${esc(f._pa)}" data-cierra="${esc(f.cierra)}" data-accion="ficha:${id}" style="${estilo}"`;
-  });
-}
-
-// El arte propio del dueño: assets/arte-<juego>.(jpg|jpeg|png|webp). Se
-// copia a salida/web/assets/ y se referencia por URL -- NO se incrusta en
-// base64: cuatro splashes inline multiplicaban el peso de la página por el
-// número de tarjetas. Si un juego no tiene archivo, su banda cae al
-// degradado (valores.mjs).
-const SLUGS_ARTE = { 'DOTA 2': 'dota2', CS2: 'cs2', LOL: 'lol', VALORANT: 'valorant' };
-const EXTENSIONES_ARTE = ['.jpg', '.jpeg', '.png', '.webp'];
-
-async function artePorJuego() {
-  const arte = {};
-  // En un checkout limpio de CI la carpeta no existe (está en .gitignore):
-  // sin este mkdir el copyFile revienta en silencio y la banda queda en
-  // degradado -- exactamente lo que pasó en producción el 2026-08-23.
-  await mkdir(new URL('assets/', AQUI), { recursive: true });
-  for (const [juego, slug] of Object.entries(SLUGS_ARTE)) {
-    for (const ext of EXTENSIONES_ARTE) {
-      try {
-        await copyFile(new URL(`assets/arte-${slug}${ext}`, RAIZ), new URL(`assets/arte-${slug}${ext}`, AQUI));
-        arte[juego] = `assets/arte-${slug}${ext}`;
-        break;
-      } catch { /* siguiente extensión */ }
-    }
-  }
-  return arte;
-}
-
-// El artefacto de Pages es SÓLO salida/web, así que lo que se quede en la
-// raíz del repo no llega al sitio. Se copian los iconos al generar en vez de
-// versionar una segunda copia: el original manda y no hay dos verdades.
+// Los iconos del sitio (favicon etc.) viven en assets/ de la raíz; el
+// artefacto de Pages es SÓLO salida/web, así que se copian al generar.
 const ICONOS = ['favicon.svg', 'favicon.ico', 'favicon-32.png', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png'];
 
 async function copiarIconos() {
@@ -213,52 +85,123 @@ async function limpiarFichasViejas() {
 }
 
 async function main() {
-  const archivo = await readFile(new URL('disenio.dc.html', AQUI), 'utf8');
-  const { cuerpo: plantilla, estiloHelmet } = partesDelDisenio(archivo);
+  let plantilla = await readFile(DISENIO, 'utf8');
 
-  const r = await resumen();
-  const [logo, arte, proximas] = await Promise.all([logoIncrustado(), artePorJuego(), proximasSeries()]);
-
-  // El diseño enlaza ./logo-monitor.png, que no existe en este repo.
-  const conLogo = marcarVistas(
-    pulir(logo
-      ? plantilla.replace(/src="\.\/logo-monitor\.png"/g, `src="${logo}"`)
-      : plantilla.replace(/<img src="\.\/logo-monitor\.png"[^>]*>/g, ''))
-  );
-
-  await limpiarFichasViejas();
-
-  // --- panel ---
-  const v = valores(r, { vista: 'home', arte, proximas });
-  let cuerpo = anotarFilas(renderizar(conLogo, v), v.tabla);
-  await writeFile(new URL('index.html', AQUI), documento({
-    cuerpo, estiloDisenio: estiloHelmet, titulo: 'Monitor eSports', conCliente: true,
-  }));
-
-  // --- fichas, una por serie reciente ---
-  const recientes = r.series.slice(-FICHAS);
-  for (const s of recientes) {
-    const vf = valores(r, { vista: 'match', serie: s, arte, proximas });
-    const cf = renderizar(conLogo, vf);
-    await writeFile(new URL(`serie-${s.seriesId}.html`, AQUI), documento({
-      cuerpo: cf, estiloDisenio: estiloHelmet, titulo: `${s.nombreA} vs ${s.nombreB} · Monitor eSports`, conCliente: true,
-    }));
+  // --- datos ---------------------------------------------------------------
+  let todas = [];
+  let supabaseOk = false;
+  try {
+    todas = await seleccionar('eslo_predicciones', '?select=*&order=match_id.asc');
+    supabaseOk = true;
+  } catch (e) {
+    console.log(`eslo_predicciones: sin datos (${String(e.message).slice(0, 80)}) — la página sale vacía, no rota.`);
   }
 
-  const iconos = await copiarIconos();
+  const ahoraMs = Date.now();
+  const desde = ahoraMs - VENTANA_HORAS * 3600 * 1000;
+  const hasta = ahoraMs + VENTANA_HORAS * 3600 * 1000;
 
-  const g = r.calidad.global;
-  console.log(`index.html + ${recientes.length} fichas · ${iconos} iconos`);
-  console.log(`${g.cantidad} series · brier ${g.brier.toFixed(4)} vs base ${g.base.toFixed(4)} · acierto ${(g.acierto * 100).toFixed(2)} %`);
-  console.log(`logotipo: ${logo ? 'assets/logo-mark.svg' : 'no encontrado'} · arte: ${Object.keys(arte).length ? Object.keys(arte).join(', ') : 'degradado (falta assets/arte-<juego>.jpg)'}`);
-  if (!hayCredenciales()) console.log('próximas series: sin credenciales (corre con --env-file=.env si tienes uno)');
-  else if (proximas && proximas.error) console.log(`próximas series: Supabase no respondió (${proximas.error})`);
-  else console.log(`próximas series: ${proximas.length}`);
+  const enVentana = todas
+    .filter((f) => {
+      const t = new Date(f.inicio_programado).getTime();
+      return Number.isFinite(t) && t >= desde && t <= hasta;
+    })
+    .sort((a, b) => new Date(a.inicio_programado) - new Date(b.inicio_programado))
+    .slice(0, MAX_FILAS);
+
+  const juicios = todas
+    .filter((f) => f.resultado_real)
+    .sort((a, b) => new Date(b.calificada_en ?? 0) - new Date(a.calificada_en ?? 0))
+    .slice(0, CUANTOS_JUICIOS);
+
+  // Nombres de equipo contra bo3.gg, agrupados por juego para pedir por
+  // disciplina (sin el filtro devuelve vacío, ver bo3.mjs). Sólo los ids que
+  // aparecen en pantalla.
+  const nombres = new Map();
+  const nombre = (id) => nombres.get(id)?.nombre ?? `#${id}`;
+  for (const cfg of JUEGOS) {
+    const filasDeJuego = [...enVentana, ...juicios].filter((f) => f.juego === cfg.id);
+    const ids = filasDeJuego.flatMap((f) => [f.equipo_a, f.equipo_b]).filter(Boolean);
+    if (ids.length === 0) continue;
+    try {
+      const datos = await datosDeEquipos(ids, { juego: cfg.id });
+      for (const [id, v] of datos) nombres.set(id, v);
+    } catch (e) {
+      console.log(`nombres ${cfg.id}: no resolvieron (${String(e.message).slice(0, 60)}) — salen los ids.`);
+    }
+  }
+
+  // --- zonas ----------------------------------------------------------------
+  const stats = estadisticasPorJuego(todas);
+  const proximasPorJuego = new Map();
+  for (const f of todas) {
+    if (f.resultado_real) continue;
+    const t = new Date(f.inicio_programado).getTime();
+    if (t > ahoraMs && t <= hasta) proximasPorJuego.set(f.juego, (proximasPorJuego.get(f.juego) ?? 0) + 1);
+  }
+
+  const htmlFilas =
+    enVentana.length > 0
+      ? enVentana.map((f) => filaSerie(f, nombre)).join('\n      ')
+      : '<tr><td colspan="7" class="mono" style="text-align:center; color:var(--apag); padding:22px">sin series en la ventana de 24 horas</td></tr>';
+
+  plantilla = zona(plantilla, 'FILAS', htmlFilas);
+  plantilla = zona(
+    plantilla,
+    'RAIL',
+    JUEGOS.map((cfg) => tarjetaJuego(cfg, stats.get(cfg.id), proximasPorJuego.get(cfg.id) ?? 0)).join('\n    '),
+  );
+  plantilla = zona(
+    plantilla,
+    'CALIDAD',
+    `<div class="calidad">\n        ${JUEGOS.map((cfg) => tarjetaCalidad(cfg, stats.get(cfg.id))).join('\n        ')}\n      </div>`,
+  );
+  plantilla = zona(
+    plantilla,
+    'JUICIOS',
+    juicios.length > 0 ? juicios.map((c) => lineaJuicio(c, nombre)).join('\n      ') : '<div class="juicio"><span>— todavía no hay series juzgadas —</span></div>',
+  );
+
+  const ultimaActividad = Math.max(
+    0,
+    ...todas.map((f) => Math.max(new Date(f.creada_en ?? 0).getTime(), new Date(f.calificada_en ?? 0).getTime())),
+  );
+  const vivo = supabaseOk && ultimaActividad > 0 && ahoraMs - ultimaActividad < 60 * 60 * 1000;
+
+  plantilla = zona(
+    plantilla,
+    'FUENTES',
+    fuentesHtml({
+      supabaseOk,
+      discordOk: Boolean(process.env.DISCORD_WEBHOOK),
+      telegramOk: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID),
+    }),
+  );
+  plantilla = zona(plantilla, 'VIVO', botonVivo(vivo));
+
+  // La maqueta se presentaba como propuesta; publicado ya, el banner dice la
+  // verdad. Y el título deja de decir "A ·".
+  plantilla = plantilla.replace(
+    /<div class="aviso-demo">[\s\S]*?<\/div>/,
+    '<div class="aviso-demo">DATOS REALES · CICLO CADA 10 MINUTOS · HORA DE VENEZUELA</div>',
+  );
+  plantilla = plantilla.replace(/<title>[\s\S]*?<\/title>/, '<title>Monitor eSports — Sala de Control</title>');
+
+  await writeFile(new URL('index.html', AQUI), plantilla);
+
+  await limpiarFichasViejas();
+  const iconos = await copiarIconos();
+  const logos = await copiarLogosDelRail();
+
+  console.log(`index.html (sala de control) · ${enVentana.length} series en ventana · ${juicios.length} juicios · ${iconos} iconos · ${logos} logos`);
+  for (const cfg of JUEGOS) {
+    const s = stats.get(cfg.id);
+    console.log(
+      `${cfg.etiqueta}: juzgadas ${s?.juzgadas ?? 0} · brier ${s?.brier != null ? s.brier.toFixed(4) : '—'} · próximas 24h ${proximasPorJuego.get(cfg.id) ?? 0}`,
+    );
+  }
 }
 
-// El guard de siempre, pero con pathToFileURL: la comparación pelada
-// `file://${argv[1]}` nunca cuadra en Windows (ruta con `\` y sin el
-// triple slash) y el generador se moría callado al correrlo en local.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
 
-export { documento, marcarVistas, anotarFilas };
+export { zona, main as generarPanel };
