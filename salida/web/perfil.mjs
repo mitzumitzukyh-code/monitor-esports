@@ -407,3 +407,51 @@ export function encabezado(f, { nombreA, nombreB, etiqueta, chip, logoDe = null,
     `${quien}${parejo}</p>`
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// 7 · El directo.
+// ─────────────────────────────────────────────────────────────────────────
+
+// El dominio donde vive el sitio. Twitch EXIGE ?parent=<dominio> o el
+// reproductor se niega a cargar, y bo3.gg no lo incluye en su embed_url
+// porque su propio front se lo agrega. localhost va también para poder
+// probarlo con salida/web/servir.mjs sin tocar nada.
+const DOMINIOS = ['mitzumitzukyh-code.github.io', 'localhost'];
+
+export function urlDeEmbed(s) {
+  if (!s?.embed) return null;
+  if (s.plataforma !== 'twitch') return s.embed;
+  const sep = s.embed.includes('?') ? '&' : '?';
+  return `${s.embed}${sep}${DOMINIOS.map((d) => `parent=${d}`).join('&')}`;
+}
+
+const ETIQUETA_PLATAFORMA = { twitch: 'Twitch', youtube: 'YouTube', kick: 'Kick' };
+
+// Un reproductor y, debajo, los demás canales para cambiar de uno a otro.
+// Los canales son enlaces de verdad al canal: sin JavaScript se abre el
+// stream en su sitio, y con JavaScript se cambia el reproductor sin salir.
+export function bloqueStream(streams, { enCurso = false } = {}) {
+  const utiles = (streams ?? []).filter((s) => urlDeEmbed(s));
+  if (utiles.length === 0) return '';
+
+  const primero = utiles[0];
+  const tarjeta = (s, i) => (
+    `<a class="canal${i === 0 ? ' activo' : ''}" href="${esc(s.url ?? '#')}" ` +
+    `data-embed="${esc(urlDeEmbed(s))}" target="_blank" rel="noopener noreferrer">` +
+    `<span class="plat ${esc(s.plataforma)}">${esc(ETIQUETA_PLATAFORMA[s.plataforma] ?? s.plataforma)}</span>` +
+    `<span class="nom">${esc(s.nombre || s.plataforma)}</span>` +
+    `<span class="meta mono">${s.oficial ? 'oficial · ' : ''}` +
+    `${s.espectadores > 0 ? `${s.espectadores.toLocaleString('es-VE')} viendo` : 'sin conteo'}` +
+    `${s.idioma ? ` · ${esc(s.idioma)}` : ''}</span></a>`
+  );
+
+  return (
+    `<div class="marco"><iframe id="reproductor" src="${esc(urlDeEmbed(primero))}" ` +
+    `title="Transmisión de la serie" allowfullscreen loading="lazy" ` +
+    'referrerpolicy="origin" allow="autoplay; fullscreen; encrypted-media; picture-in-picture"></iframe></div>' +
+    `<div class="canales">${utiles.map(tarjeta).join('')}</div>` +
+    `<p class="pie">${enCurso ? 'La serie está en curso.' : 'El canal ya está al aire.'} ` +
+    'La transmisión es de terceros: la trae bo3.gg y no pasa por acá. ' +
+    'Los canales de arriba cambian el reproductor sin salir de la página.</p>'
+  );
+}

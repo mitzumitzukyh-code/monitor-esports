@@ -22,6 +22,7 @@ import {
   bloqueVeredicto,
   historialDeEquipo,
   bloqueForma,
+  bloqueStream,
 } from './perfil.mjs';
 
 function zona(html, nombre, contenido) {
@@ -32,7 +33,7 @@ function zona(html, nombre, contenido) {
 
 const POR_JUEGO = new Map(JUEGOS.map((j) => [j.id, j]));
 
-export function unPerfil(plantilla, f, { todas, stats, capturas, nombre, logoDe, slugDe, ahoraMs }) {
+export function unPerfil(plantilla, f, { todas, stats, capturas, nombre, logoDe, slugDe, streamsDe = null, ahoraMs }) {
   const cfg = POR_JUEGO.get(f.juego);
   const nombreA = nombre(f.equipo_a);
   const nombreB = nombre(f.equipo_b);
@@ -50,6 +51,14 @@ export function unPerfil(plantilla, f, { todas, stats, capturas, nombre, logoDe,
     slug: slugDe ? slugDe(f.match_id) : null,
     fase,
   }));
+  // El directo va antes que todo lo demás: si la serie está al aire, es lo
+  // que la persona vino a ver. Sólo aparece si de verdad hay canal.
+  const streams = streamsDe ? streamsDe(f.match_id) : null;
+  const stream = bloqueStream(streams, { enCurso: fase === 'curso' });
+  html = zona(html, 'STREAM', stream
+    ? `<section class="directo-seccion"><h2>El directo<small>lo que está transmitiendo el torneo ahora mismo</small></h2>${stream}</section>`
+    : '');
+
   html = zona(html, 'VERIFICACION', bloqueVerificacion(v, nombreA, nombreB));
   html = zona(html, 'RATINGS', graficoRatings(v, nombreA, nombreB));
 
@@ -69,7 +78,7 @@ export function unPerfil(plantilla, f, { todas, stats, capturas, nombre, logoDe,
   const formaB = bloqueForma(historialDeEquipo(todas, f.equipo_b, { excluir: f.match_id }), f.equipo_b, nombreB, nombre);
   html = zona(html, 'FORMA', formaA + formaB);
 
-  return { html, tieneMercado: Boolean(mercado), verificado: Boolean(v && v.exacta) };
+  return { html, tieneMercado: Boolean(mercado), verificado: Boolean(v && v.exacta), tieneStream: Boolean(stream) };
 }
 
 export async function generarPerfiles({
@@ -79,6 +88,7 @@ export async function generarPerfiles({
   nombre,
   logoDe,
   slugDe,
+  streamsDe = null,
   destino,
   disenio,
   ahoraMs = Date.now(),
@@ -88,16 +98,18 @@ export async function generarPerfiles({
   let escritos = 0;
   let conMercado = 0;
   let verificados = 0;
+  let conStream = 0;
 
   for (const f of todas) {
     if (!f.match_id) continue;
-    const { html, tieneMercado, verificado } = unPerfil(plantilla, f, {
+    const { html, tieneMercado, verificado, tieneStream } = unPerfil(plantilla, f, {
       todas,
       stats,
       capturas: cuotasPorPartido.get(f.match_id) ?? [],
       nombre,
       logoDe,
       slugDe,
+      streamsDe,
       ahoraMs,
     });
     const archivo = `serie-${f.match_id}.html`;
@@ -106,7 +118,8 @@ export async function generarPerfiles({
     escritos += 1;
     if (tieneMercado) conMercado += 1;
     if (verificado) verificados += 1;
+    if (tieneStream) conStream += 1;
   }
 
-  return { archivos, escritos, conMercado, verificados };
+  return { archivos, escritos, conMercado, verificados, conStream };
 }

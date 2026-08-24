@@ -98,6 +98,26 @@ h1 .pierde { color:var(--tintaS); }
 .numero .parejo { font-size:var(--t1); font-weight:700; letter-spacing:.04em; color:var(--tintaM);
   border:1px solid var(--lineaM); background:var(--interior); border-radius:var(--r1); padding:2px var(--e2); }
 
+/* ═══ EL DIRECTO ═══
+   El reproductor es de terceros (Twitch, YouTube o Kick, según lo que traiga
+   bo3.gg). Va en 16:9 con aspect-ratio, que es lo único que mantiene la
+   proporción sin trucos de padding. */
+.marco { position:relative; aspect-ratio:16/9; background:#000; border-radius:var(--r2);
+  overflow:hidden; border:1px solid var(--linea); margin-top:var(--e4); }
+.marco iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+.canales { display:flex; gap:var(--e2); flex-wrap:wrap; margin-top:var(--e3); }
+.canal { display:grid; gap:2px; text-decoration:none; border:1px solid var(--linea);
+  border-radius:var(--r2); background:var(--interior); padding:var(--e2) var(--e3); min-width:0; }
+.canal:hover { border-color:var(--lineaM); background:var(--hover); }
+.canal.activo { border-color:var(--acento); }
+.canal .plat { font-size:var(--t1); font-weight:800; letter-spacing:.06em; }
+.canal .plat.twitch { color:#A970FF; }
+.canal .plat.youtube { color:#FF4E45; }
+.canal .plat.kick { color:#53FC18; }
+.canal .nom { font-size:var(--t2); font-weight:700; overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; max-width:34ch; }
+.canal .meta { font-size:var(--t1); color:var(--tintaS); }
+
 /* ═══ SECCIONES ═══ */
 main { padding:var(--e5) var(--canal) var(--e6); display:grid; gap:var(--e3); }
 /* min-width:0 no es adorno: un hijo de grid mide "auto" por defecto y se
@@ -177,7 +197,23 @@ footer a { color:var(--tintaS); }
   /* Con el bloque en dos renglones el "=" quedaba solo, colgando a la
      derecha. Es decorativo (aria-hidden), así que se va. */
   .verifica .igual { display:none; }
-  header { padding-top:var(--e5); }
+  header { padding-top:var(--e4); padding-bottom:var(--e4); }
+
+  /* El enfrentamiento, uno encima del otro. En línea se partía en tres
+     renglones con el "vs" colgando en medio de un nombre: "Evil Geniuses /
+     GC vs 7VEN STARS". Así cada equipo es su propio renglón. */
+  h1 { font-size:var(--t6); line-height:1.25; }
+  h1 .vs { display:block; margin:var(--e1) 0; font-size:var(--t2); letter-spacing:.1em;
+    text-transform:uppercase; }
+  .escudo { width:22px; height:22px; vertical-align:-4px; }
+
+  .numero { margin-top:var(--e4); gap:var(--e2); }
+  .numero .gordo { font-size:44px; }
+  main { padding-top:var(--e4); gap:var(--e2); }
+  section { padding:var(--e4) var(--e3) var(--e4); }
+  /* Una tarjeta por renglón: en dos columnas el nombre del canal no cabía. */
+  .canal { width:100%; }
+  .canal .nom { max-width:none; }
 }
 </style>
 </head>
@@ -197,6 +233,8 @@ footer a { color:var(--tintaS); }
 </header>
 
 <main>
+  <!--ZONA:STREAM--><!--/ZONA:STREAM-->
+
   <section>
     <h2>De dónde sale el número<small>el motor guarda con qué predijo, así que la cuenta se puede repetir</small></h2>
     <!--ZONA:VERIFICACION-->
@@ -264,6 +302,26 @@ footer a { color:var(--tintaS); }
   };
   refrescar();
   setInterval(refrescar, 20000);
+})();
+</script>
+
+<script>
+(() => {
+  'use strict';
+  /* Los canales son enlaces de verdad al canal: sin JavaScript se abre el
+     stream en su sitio, que es mejor que un botón muerto. Con JavaScript el
+     clic cambia el reproductor y no se sale de la página. */
+  const marco = document.getElementById('reproductor');
+  const canales = [...document.querySelectorAll('.canal[data-embed]')];
+  if (!marco || canales.length < 2) return;
+  for (const c of canales) {
+    c.addEventListener('click', (ev) => {
+      if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button !== 0) return;
+      ev.preventDefault();
+      marco.src = c.dataset.embed;
+      canales.forEach((o) => o.classList.toggle('activo', o === c));
+    });
+  }
 })();
 </script>
 </body>

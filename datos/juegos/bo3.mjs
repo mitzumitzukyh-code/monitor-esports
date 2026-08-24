@@ -337,3 +337,35 @@ export async function slugsDePartidas(ids, { juego = 'cs2', fetchImpl = fetchCon
 
   return porId;
 }
+
+// Plataformas de transmisión, tal como las numera bo3.gg. Verificado con
+// llamadas reales el 2026-08-24 mirando el host de cada embed_url.
+export const PLATAFORMAS = { 1: 'twitch', 2: 'youtube', 3: 'kick' };
+
+// Los streams de UNA partida. Ojo: esto NO está en el listado /matches --
+// que fue lo que me hizo decir que no se podía-- sino en el detalle
+// /matches/<slug>, que además trae el embed_url ya armado.
+//
+// Es una petición por partida (no hay filtro por lote), así que el llamador
+// tiene que pedir sólo las que de verdad pueden tener transmisión: las que
+// están en curso o a punto de empezar.
+export async function streamsDePartida(slug, { fetchImpl = fetchConReintentos } = {}) {
+  if (!slug) return [];
+  const datos = await pedir(`${BASE}/matches/${encodeURIComponent(slug)}`, fetchImpl);
+  const crudos = datos?.streams ?? [];
+  return crudos
+    // `blocked` es de ellos y se respeta: si dicen que no se puede incrustar,
+    // no se incrusta.
+    .filter((s) => s && !s.blocked && s.embed_url)
+    .map((s) => ({
+      nombre: s.name ?? '',
+      plataforma: PLATAFORMAS[s.platform] ?? 'otra',
+      embed: s.embed_url,
+      url: s.raw_url ?? null,
+      espectadores: Number.isFinite(Number(s.viewers_number)) ? Number(s.viewers_number) : 0,
+      idioma: s.language ?? null,
+      oficial: Boolean(s.official),
+    }))
+    // El que va primero: el oficial, y entre iguales el más visto.
+    .sort((a, b) => (b.oficial ? 1 : 0) - (a.oficial ? 1 : 0) || b.espectadores - a.espectadores);
+}

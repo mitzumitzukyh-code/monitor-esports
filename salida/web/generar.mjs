@@ -19,10 +19,11 @@
 import { readFile, writeFile, readdir, unlink, mkdir, copyFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { seleccionar } from '../../datos/supabase.mjs';
-import { datosDeEquipos, slugsDePartidas } from '../../datos/juegos/bo3.mjs';
+import { datosDeEquipos, slugsDePartidas, streamsDePartida } from '../../datos/juegos/bo3.mjs';
 import {
   JUEGOS,
   estadisticasPorJuego,
+  faseDe,
   favoritoDe,
   filaSerie,
   tarjetaJuego,
@@ -51,6 +52,8 @@ const VENTANA_HORAS = 24;
 const MAX_FILAS = 90;
 const CUANTOS_JUICIOS = 5;
 const CUANTAS_EN_CINTA = 25;
+// Cuánto antes del inicio se busca la transmisión de una serie.
+const HORAS_DE_STREAM = 3;
 // La última tanda de capturas de cuotas cubre todos los partidos vivos
 // (comparten capturado_en): con 200 filas y "primera aparición gana" se
 // obtiene la captura más reciente de cada partido, con su max_coeff histórico.
@@ -223,6 +226,32 @@ async function main() {
     }
   }
   const slugDe = (id) => slugs.get(id)?.slug ?? null;
+
+  // Los streams son UNA petición por partida (no hay filtro por lote), así
+  // que sólo se piden los de las series que de verdad pueden estar al aire:
+  // en curso, o que arrancan dentro de las próximas HORAS_DE_STREAM. Pedirlos
+  // para las 90 de la ventana sería gastar 90 peticiones para que 84 salieran
+  // vacías.
+  const streams = new Map();
+  const candidatas = enVentana.filter((f) => {
+    if (f.resultado_real) return false;
+    const fase = faseDe(f, ahoraMs);
+    if (fase === 'curso') return true;
+    const t = new Date(f.inicio_programado).getTime();
+    return fase === 'proxima' && t - ahoraMs <= HORAS_DE_STREAM * 3600 * 1000;
+  });
+  for (const f of candidatas) {
+    const slug = slugDe(f.match_id);
+    if (!slug) continue;
+    try {
+      const lista = await streamsDePartida(slug);
+      if (lista.length > 0) streams.set(f.match_id, lista);
+    } catch (e) {
+      console.log(`streams ${f.match_id}: ${String(e.message).slice(0, 50)} — ese perfil sale sin reproductor.`);
+    }
+  }
+  const streamsDe = (id) => streams.get(id) ?? null;
+  console.log(`streams: ${streams.size} series con transmisión de ${candidatas.length} candidatas`);
   // La cuota que se muestra es la del FAVORITO (el mismo equipo del
   // porcentaje de MOTOR): max_coeff (lo mejor que pagó) con respaldo en la
   // cuota puntual de la última captura.
@@ -306,6 +335,7 @@ async function main() {
     nombre,
     logoDe,
     slugDe,
+    streamsDe,
     destino: AQUI,
     disenio: DISENIO_PERFIL,
     ahoraMs,
@@ -318,7 +348,7 @@ async function main() {
   const logos = await copiarLogosDelRail();
 
   console.log(`index.html (sala de control) · ${enVentana.length} series en ventana · ${juicios.length} juicios · ${iconos} iconos · ${logos} logos`);
-  console.log(`perfiles: ${perfiles.escritos} escritos · ${perfiles.conMercado} con gráfico de mercado · ${perfiles.verificados} con el número recalculado · ${sobraron} borrados por viejos`);
+  console.log(`perfiles: ${perfiles.escritos} escritos · ${perfiles.conStream} con directo · ${perfiles.conMercado} con gráfico de mercado · ${perfiles.verificados} con el número recalculado · ${sobraron} borrados por viejos`);
   for (const cfg of JUEGOS) {
     const s = stats.get(cfg.id);
     console.log(

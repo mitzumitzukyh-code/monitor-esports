@@ -13,6 +13,8 @@ import {
   cabeza,
   enlaceDirecto,
   encabezado,
+  urlDeEmbed,
+  bloqueStream,
 } from '../salida/web/perfil.mjs';
 
 const nombre = (id) => ({ 1: 'Sentinels', 2: 'Disguised', 3: 'FlyQuest' }[id] ?? `#${id}`);
@@ -219,4 +221,48 @@ test('encabezado: una serie juzgada nace con su veredicto escrito, sin JavaScrip
   assert.match(html, /✓ Acertó/);
   assert.ok(!html.includes('estado-vivo'), 'lo ya jugado no depende del reloj');
   assert.match(html, /<b>Sentinels<\/b>/);
+});
+
+// --- el directo ------------------------------------------------------------------
+const TWITCH = { nombre: 'valorant_br', plataforma: 'twitch', embed: 'https://player.twitch.tv/?channel=valorant_br', url: 'https://www.twitch.tv/valorant_br', espectadores: 996, idioma: 'pt', oficial: true };
+const YT = { nombre: 'EG x 7VEN | Game Changers', plataforma: 'youtube', embed: 'https://www.youtube.com/embed/VoZMuX_6I2A', url: 'https://www.youtube.com/watch?v=vozmux', espectadores: 48, idioma: 'pt', oficial: false };
+const KICK = { nombre: 'epldota_en2', plataforma: 'kick', embed: 'https://player.kick.com/epldota_en2', url: 'https://kick.com/epldota_en2', espectadores: 852, idioma: 'en', oficial: false };
+
+test('urlDeEmbed: Twitch exige parent o el reproductor no carga; los otros van tal cual', () => {
+  const u = urlDeEmbed(TWITCH);
+  assert.match(u, /parent=mitzumitzukyh-code\.github\.io/);
+  assert.match(u, /parent=localhost/, 'para poder probarlo en el servidor local');
+  assert.equal(u.startsWith('https://player.twitch.tv/?channel=valorant_br&'), true);
+  assert.equal(urlDeEmbed(KICK), KICK.embed);
+  assert.equal(urlDeEmbed(YT), YT.embed);
+  assert.equal(urlDeEmbed(null), null);
+  assert.equal(urlDeEmbed({ plataforma: 'kick' }), null);
+});
+
+test('bloqueStream: sin canales no se dibuja una sección vacía', () => {
+  assert.equal(bloqueStream([]), '');
+  assert.equal(bloqueStream(null), '');
+  assert.equal(bloqueStream([{ nombre: 'x', plataforma: 'kick' }]), '', 'sin embed no sirve');
+});
+
+test('bloqueStream: el primero manda en el reproductor y queda marcado', () => {
+  const html = bloqueStream([TWITCH, YT], { enCurso: true });
+  assert.match(html, /<iframe id="reproductor" src="https:\/\/player\.twitch\.tv[^"]*parent=/);
+  assert.match(html, /class="canal activo"/);
+  // data-embed y no class="canal", que también pega con el contenedor .canales
+  assert.equal((html.match(/data-embed="/g) ?? []).length, 2);
+  assert.match(html, /oficial · 996 viendo · pt/);
+  assert.match(html, /La serie está en curso/);
+});
+
+test('bloqueStream: cada canal es un enlace de verdad — sin JavaScript se abre en su sitio', () => {
+  const html = bloqueStream([KICK]);
+  assert.match(html, /href="https:\/\/kick\.com\/epldota_en2"/);
+  assert.match(html, /data-embed="https:\/\/player\.kick\.com\/epldota_en2"/);
+  assert.match(html, /rel="noopener noreferrer"/);
+  assert.match(html, /852 viendo · en/);
+});
+
+test('bloqueStream: un canal sin conteo lo dice, no inventa un cero de espectadores', () => {
+  assert.match(bloqueStream([{ ...KICK, espectadores: 0 }]), /sin conteo/);
 });
