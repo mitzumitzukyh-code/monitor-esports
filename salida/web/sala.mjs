@@ -31,9 +31,49 @@ export const JUEGOS = [
 
 const ETIQUETA = new Map(JUEGOS.map((j) => [j.id, j.etiqueta]));
 
-// Umbral del propio diseño: 55% o menos se lee "MUY PAREJO" y se marca en
-// ámbar. Es presentación, no matemática: el número no cambia.
+// Umbral del propio diseño: 55% o menos se lee "MUY PAREJO". Es
+// presentación, no matemática: el número no cambia.
 const UMBRAL_PAREJO = 0.55;
+
+// Cuánto se estima que dura una serie según su formato, en minutos. Sirve
+// para decidir si una serie que ya empezó sigue en curso o se pasó de la
+// hora sin que nadie la calificara. Minutos redondos: es un estado de
+// pantalla, no una medición.
+//
+// OJO: el <script> del diseño tiene su propia copia de esta tabla, porque
+// allá el estado se recalcula con el reloj del visitante. Si una cambia,
+// cambian las dos.
+export const DURACION_MIN = { bo1: 30, bo2: 90, bo3: 150, bo5: 240 };
+
+// En qué momento de su vida está una serie. El orden de la tabla sale de
+// acá: primero lo que está pasando, después lo que viene, y de último lo
+// que ya murió. Antes la tabla se ordenaba por hora de inicio a secas, así
+// que el panel abría mostrando las vencidas sin calificar -- lo más viejo
+// arriba, que es justo lo que a nadie le sirve.
+export function faseDe(f, ahoraMs = Date.now()) {
+  if (f.resultado_real) return 'juzgada';
+  const ini = new Date(f.inicio_programado).getTime();
+  if (!Number.isFinite(ini)) return 'proxima';
+  if (ini > ahoraMs) return 'proxima';
+  const dura = (DURACION_MIN[f.formato] ?? 150) * 60 * 1000;
+  return ahoraMs <= ini + dura ? 'curso' : 'vencida';
+}
+
+// Orden de la tabla. Dentro de cada fase: las próximas por cercanía (la que
+// arranca primero, arriba) y las vencidas y juzgadas al revés (lo último que
+// pasó, arriba), que es como se lee un historial.
+const PESO_FASE = { curso: 0, proxima: 1, vencida: 2, juzgada: 3 };
+
+export function ordenarParaLaTabla(filas, ahoraMs = Date.now()) {
+  return [...filas].sort((a, b) => {
+    const fa = faseDe(a, ahoraMs);
+    const fb = faseDe(b, ahoraMs);
+    if (fa !== fb) return PESO_FASE[fa] - PESO_FASE[fb];
+    const ta = new Date(a.inicio_programado).getTime() || 0;
+    const tb = new Date(b.inicio_programado).getTime() || 0;
+    return fa === 'proxima' || fa === 'curso' ? ta - tb : tb - ta;
+  });
+}
 
 export function estadisticasPorJuego(filas) {
   const por = new Map();
@@ -172,7 +212,7 @@ export function filaSerie(f, nombre, cuotaDe = null, logoDe = null) {
     ? `<span class="hora-txt">—</span>${
         acerto == null
           ? '<span class="veredicto espera">· 50/50</span>'
-          : `<span class="veredicto ${acerto ? 'ok' : 'no'}">${acerto ? '✓ ACERTÓ' : '✗ FALLÓ'}</span>`
+          : `<span class="veredicto ${acerto ? 'ok' : 'no'}">${acerto ? '✓ Acertó' : '✗ Falló'}</span>`
       }`
     : '<span class="hora-txt">—</span><span class="estado"></span>';
 
@@ -231,7 +271,7 @@ export function tarjetaCalidad(cfg, stats) {
     const mejor = stats.mejora <= 0;
     badge = `<p><span class="mejora ${mejor ? 'bien' : 'mal'}">${formatoPctMejora(stats.mejora)}</span></p>`;
   }
-  const nc = sinDatos ? '' : `<p class="nc${stats.concluyente ? ' si' : ''}">${stats.concluyente ? 'CONCLUYENTE' : 'NO CONCLUYENTE'}</p>`;
+  const nc = sinDatos ? '' : `<p class="nc${stats.concluyente ? ' si' : ''}">${stats.concluyente ? 'Concluyente' : 'No concluyente'}</p>`;
   return (
     `<article class="cq" style="--jc:var(${cfg.css})">` +
     `<p class="nom">${esc(cfg.etiqueta)}</p><p class="big mono">${big}</p><p class="sub">${sub}</p>${badge}${nc}</article>`
@@ -249,7 +289,9 @@ export function lineaJuicio(c, nombre) {
   // Sin favorito (50/50 exacto) no hubo acierto ni fallo que cobrar.
   if (!fav.hay) {
     return (
-      '<p class="juicio"><span class="marca" style="color:var(--aviso)">·</span>' +
+      // Neutral, no ámbar: un 50/50 no es una advertencia, es un empate de
+      // criterio. El ámbar quedó sólo para lo que salió peor de lo esperado.
+      '<p class="juicio"><span class="marca" style="color:var(--tintaM)">·</span>' +
       `<span>50/50 — ganó <b>${esc(ganador)}</b></span>${pie}</p>`
     );
   }
@@ -303,9 +345,9 @@ export function pestanas({ abiertas, juzgadas }) {
   const b = (grupo, texto, n, sel) =>
     `<button class="pestana" type="button" role="tab" aria-selected="${sel}" data-grupo="${grupo}">${texto} <em>${n}</em></button>`;
   return (
-    b('abierta', 'EN VIVO Y PRÓXIMAS', abiertas, true) +
-    b('juzgada', 'JUZGADAS', juzgadas, false) +
-    b('todas', 'TODAS', abiertas + juzgadas, false)
+    b('abierta', 'En vivo y próximas', abiertas, true) +
+    b('juzgada', 'Juzgadas', juzgadas, false) +
+    b('todas', 'Todas', abiertas + juzgadas, false)
   );
 }
 

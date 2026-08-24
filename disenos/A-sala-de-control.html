@@ -129,8 +129,7 @@ b { font-weight:800; }
 .late { animation:latido 1.6s ease-in-out infinite; }
 
 /* ═══ CABECERA ═══ */
-.franja { background:#1c1400; border-bottom:1px solid #4a3600; color:var(--aviso);
-  font-family:var(--mono); font-size:var(--t1); letter-spacing:.06em; padding:var(--e2) var(--canal); }
+.marca .ciclo { font-family:var(--mono); color:var(--apag); letter-spacing:0; }
 header { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:var(--e4);
   padding:var(--e4) var(--canal); border-bottom:1px solid var(--linea); }
 /* El redondeo lo trae el propio rect del SVG (rx 118 de 512 = la esquina de
@@ -138,7 +137,7 @@ header { display:grid; grid-template-columns:auto 1fr auto; align-items:center; 
 .logo { width:48px; height:48px; display:block; }
 .marca h1 { font-size:var(--t6); font-weight:800; letter-spacing:-.01em; line-height:1.1; }
 .marca h1 span { color:var(--acento); }
-.marca p { font-size:var(--t1); color:var(--tintaS); letter-spacing:.12em; margin-top:var(--e1); }
+.marca p { font-size:var(--t2); color:var(--tintaS); margin-top:var(--e1); }
 .derecha { display:flex; align-items:center; gap:var(--e4); }
 .vivo { display:inline-flex; align-items:center; gap:var(--e2); border:1px solid #0C9B60;
   background:rgba(25,230,140,.08); color:var(--ok); border-radius:var(--rp); white-space:nowrap;
@@ -151,15 +150,16 @@ header { display:grid; grid-template-columns:auto 1fr auto; align-items:center; 
    inline y la pantalla decía "2:55 PMHORA DE VENEZUELA", todo pegado. */
 .reloj { text-align:right; }
 .reloj .hora { display:block; font-family:var(--mono); font-size:var(--t6); font-weight:700; line-height:1; }
-.reloj .sub { display:block; font-size:var(--t1); color:var(--apag); letter-spacing:.08em; margin-top:var(--e1); }
+.reloj .sub { display:block; font-size:var(--t1); color:var(--apag); margin-top:var(--e1); }
 
 /* ═══ FIRMA VISUAL · CINTA DE VEREDICTOS ═══
    Lo que diferencia al producto (publicar los fallos) pasa a estar
    en el primer pantallazo, no escondido en una caja de 10px abajo.
    Cada marca lleva el veredicto DENTRO (✓/✗): una fila de cuadros mudos
    obliga a pasar el mouse para saber qué es cada uno. */
+.tira { background:var(--tarjeta); border-bottom:1px solid var(--linea); }
 .cinta { display:grid; grid-template-columns:auto 1fr auto; gap:var(--e4); align-items:center;
-  padding:var(--e3) var(--canal); border-bottom:1px solid var(--linea); background:var(--tarjeta); }
+  padding:var(--e3) var(--canal) var(--e2); }
 .cinta .rotulo { font-size:var(--t1); font-weight:800; letter-spacing:.12em; color:var(--tintaM); }
 .cinta .rotulo b { display:block; font-size:var(--t3); color:var(--tinta); letter-spacing:.02em; }
 .marcas { display:flex; gap:var(--e1); flex-wrap:wrap; }
@@ -172,9 +172,10 @@ header { display:grid; grid-template-columns:auto 1fr auto; align-items:center; 
 .cinta .cuenta b { display:block; font-size:var(--t5); color:var(--tinta); }
 
 /* ═══ ESTADO DEL SISTEMA · una sola línea, no 5 tarjetas iguales ═══ */
-.sistema { display:flex; align-items:center; gap:var(--e5); flex-wrap:wrap;
-  padding:var(--e3) var(--canal); border-bottom:1px solid var(--linea); }
-.sistema h2 { font-size:var(--t2); font-weight:800; letter-spacing:.12em; color:var(--tintaM); }
+.sistema { display:flex; align-items:center; gap:var(--e3) var(--e5); flex-wrap:wrap;
+  padding:0 var(--canal) var(--e3); }
+.sistema h2 { font-size:var(--t1); font-weight:800; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--tintaM); }
 .fuentes { display:flex; gap:var(--e4); flex-wrap:wrap; list-style:none; }
 .fuente { display:flex; align-items:center; gap:var(--e2); font-size:var(--t2); }
 .fuente .dot { width:8px; height:8px; border-radius:var(--rp); flex:none; }
@@ -209,7 +210,7 @@ main { display:grid; grid-template-columns:212px minmax(0,1fr) 320px;
 .juego dl { display:grid; grid-template-columns:1fr auto; gap:2px var(--e2); margin-top:var(--e2); font-size:var(--t1); }
 .juego dt { color:var(--tintaS); }
 .juego dd { font-family:var(--mono); font-weight:700; text-align:right; }
-.pista { font-size:var(--t1); color:var(--aviso); letter-spacing:.06em; font-weight:800; padding:0 var(--e1); }
+.pista { font-size:var(--t1); color:var(--tintaS); font-weight:600; padding:0 var(--e1); }
 .casa { border:1px solid var(--linea); border-left:3px solid var(--acento); border-radius:var(--r2);
   background:var(--tarjeta); padding:var(--e3); font-size:var(--t2); color:var(--tintaS); line-height:1.55; }
 .casa b { display:block; color:var(--tinta); font-size:var(--t1); letter-spacing:.1em; margin-bottom:var(--e1); }
@@ -220,14 +221,19 @@ main { display:grid; grid-template-columns:212px minmax(0,1fr) 320px;
    subrayado del estado activo flotando 9.5px debajo del texto. */
 .pestana { all:unset; box-sizing:border-box; display:inline-flex; align-items:center; cursor:pointer;
   padding:var(--e2) var(--e3); border-radius:var(--r1); white-space:nowrap;
-  font-size:var(--t2); font-weight:800; letter-spacing:.06em; color:var(--tintaS); }
+  font-size:var(--t2); font-weight:700; color:var(--tintaS); }
 .pestana:hover { background:var(--interior); color:var(--tinta); }
 .pestana[aria-selected="true"] { background:var(--interior); color:var(--tinta); box-shadow:inset 0 -2px 0 var(--acento); }
 .pestana em { font-style:normal; font-family:var(--mono); font-weight:500; color:var(--tintaM);
   margin-left:var(--e2); padding:1px var(--e2); border-radius:var(--rp);
   background:var(--interior); font-size:var(--t1); }
 .pestana[aria-selected="true"] em, .pestana:hover em { background:var(--hover); }
-.envoltura { overflow:auto; max-height:calc(100vh - 336px); min-height:320px;
+/* El alto lo MIDE el script al final del archivo y lo escribe en
+   --alto-tabla. El calc(100vh - 336px) que había era un número a mano que no
+   cuadraba con nada: las barras sumaban 235 y la cabecera del panel 87, y
+   cualquier cambio de arriba lo descuadraba en silencio. El calc de acá es
+   sólo el respaldo para el primer pintado. */
+.envoltura { overflow:auto; max-height:var(--alto-tabla, calc(100dvh - 300px)); min-height:320px;
   scrollbar-color:var(--lineaF) transparent; }
 /* fixed + <colgroup>: las proporciones las decide el diseño, no el
    navegador. Antes SERIE medía 172px a 1440 y 489px a 1920 (x2.8), y HORA
@@ -257,15 +263,15 @@ tbody tr:last-child th, tbody tr:last-child td { border-bottom:0; }
 tbody tr.oculta { display:none; }
 .celda-hora { white-space:nowrap; color:var(--tintaM); }
 .celda-hora .hora-txt { display:block; font-size:var(--t2); }
-.estado, .veredicto { display:inline-block; margin-top:var(--e1); font-size:var(--t1); font-weight:800; letter-spacing:.06em; }
+.estado, .veredicto { display:inline-block; margin-top:var(--e1); font-size:var(--t1); font-weight:700; }
 .estado.curso { color:var(--ok); }
 .estado.cuenta { color:var(--tintaM); }
 /* Se pasó de su duración estimada y nadie la calificó: ámbar, no verde. */
 .estado.viejo { color:var(--aviso); }
 .veredicto.ok { color:var(--ok); }
 .veredicto.no { color:var(--acento); }
-/* 50/50 exacto: no se cobró ni acierto ni fallo. Ámbar, que es aviso. */
-.veredicto.espera { color:var(--aviso); }
+/* 50/50 exacto: no se cobró ni acierto ni fallo. Tampoco es una advertencia. */
+.veredicto.espera { color:var(--tintaM); }
 /* Chip: el juego se codifica por color Y por texto Y por borde propio.
    En la v1 el borde era #666 fijo y el color era el único canal. */
 .chip { display:inline-block; font-size:var(--t1); font-weight:800; letter-spacing:.08em;
@@ -285,15 +291,18 @@ tbody tr.oculta { display:none; }
 .fmt { color:var(--tintaS); }
 .motor-fila { display:flex; align-items:baseline; gap:var(--e2); }
 .prob { font-size:var(--t5); font-weight:700; }
-.parejo { font-size:var(--t1); font-weight:800; letter-spacing:.06em; color:var(--aviso);
-  border:1px solid #4a3600; background:rgba(255,176,0,.1); border-radius:var(--r1); padding:1px var(--e1);
-  white-space:nowrap; }
+/* Neutral, no ámbar: que una serie esté pareja no es una advertencia. El
+   ámbar quedó para una sola cosa -- "esto salió peor de lo esperado" -- que
+   es el Brier bajo la moneda y la serie que venció sin calificar. */
+.parejo { font-size:var(--t1); font-weight:700; letter-spacing:.04em; color:var(--tintaM);
+  border:1px solid var(--lineaM); background:var(--interior); border-radius:var(--r1);
+  padding:1px var(--e1); white-space:nowrap; }
 /* El número solo no dice nada: SIEMPRE va pegado al equipo al que se le da.
    Un 50.0% suelto al lado de "A vs B" no se puede leer. */
 .favorito { font-size:var(--t2); color:var(--tintaM); margin-top:2px; line-height:1.35; }
 .favorito b { color:var(--tinta); font-weight:800; }
 .favorito .rel { color:var(--apag); margin-right:var(--e1); }
-.favorito.ninguno { color:var(--aviso); }
+.favorito.ninguno { color:var(--tintaM); }
 /* Reemplaza al anillo SVG: mismo dato, 1 div en vez de 3 nodos SVG por fila */
 .barra { height:4px; border-radius:var(--rp); background:var(--linea); margin-top:var(--e2); overflow:hidden; }
 .barra i { display:block; height:100%; background:var(--tintaM); border-radius:var(--rp); }
@@ -313,7 +322,7 @@ tr.juzgada .prob { color:var(--tintaM); }
   font-weight:700; padding:2px var(--e2); border-radius:var(--r1); }
 .bien { color:var(--ok); border:1px solid #0C9B60; background:rgba(25,230,140,.09); }
 .mal { color:var(--aviso); border:1px solid #4a3600; background:rgba(255,176,0,.09); }
-.nc { font-size:var(--t1); color:var(--apag); letter-spacing:.06em; margin-top:var(--e2); font-weight:800; }
+.nc { font-size:var(--t1); color:var(--apag); margin-top:var(--e2); font-weight:700; }
 .nc.si { color:var(--ok); }
 .juicio { display:flex; gap:var(--e2); align-items:baseline; padding:var(--e3) var(--e4);
   border-bottom:1px solid var(--linea); font-size:var(--t3); }
@@ -339,6 +348,14 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
   .derecha { grid-column:1/-1; justify-content:space-between; }
   .cinta { grid-template-columns:1fr; }
   .cinta .cuenta { text-align:left; }
+  /* En el teléfono la banda se comía 396px: la cinta caía en tres renglones
+     de marcas y las fuentes en cinco. Marcas más chicas y las fuentes en una
+     sola tira que se desliza -- sin esconder nada. */
+  .marcas i { width:20px; height:20px; font-size:var(--t1); }
+  .sistema { flex-wrap:nowrap; overflow-x:auto; gap:var(--e4); }
+  .sistema h2 { flex:none; }
+  .fuentes { flex-wrap:nowrap; }
+  .fuente { white-space:nowrap; }
   main { padding:var(--e3) var(--e4) var(--e5); }
   .calidad { grid-template-columns:1fr 1fr; }
   /* La cabecera del panel se rompía: el subtítulo caía en 11 líneas dentro
@@ -369,8 +386,6 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
 <body>
 <a class="saltar" href="#tabla">Saltar a las series</a>
 
-<p class="franja">DATOS REALES · CICLO CADA 10 MINUTOS · HORA DE VENEZUELA</p>
-
 <header>
   <!-- El rayo es la marca de verdad (assets/logo-mark-mono.svg, que viene en
        currentColor justo para esto). Va en línea, no como <img>, porque un
@@ -389,27 +404,34 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
   </svg>
   <div class="marca">
     <h1>MONITOR <span>eSPORTS</span></h1>
-    <p>CENTRO DE CONTROL · DOTA 2 · CS2 · LOL · VALORANT</p>
+    <!-- Lo que decía la franja ámbar de arriba. Era la barra más brillante de
+         la pantalla, en la primera fila de píxeles, para decir información de
+         mantenimiento. Acá dice lo mismo sin gritar. -->
+    <p>Centro de control · Dota 2 · CS2 · LoL · Valorant
+      <span class="ciclo">· datos reales, ciclo cada 10 minutos</span></p>
   </div>
   <div class="derecha">
     <!--ZONA:VIVO--><p class="vivo" role="status"><i class="late" aria-hidden="true"></i>EN VIVO</p><!--/ZONA:VIVO-->
     <p class="reloj">
       <span class="hora mono" id="reloj" aria-live="off">—</span>
-      <span class="sub">HORA DE VENEZUELA</span>
+      <span class="sub">hora de Venezuela</span>
     </p>
   </div>
 </header>
 
-<section class="cinta" aria-labelledby="t-cinta">
+<!-- Antes esto eran DOS barras a todo lo ancho, cada una con su borde:
+     235px de cabecera (26% de una pantalla de 900) antes del primer dato.
+     Ahora es una sola banda de dos renglones. -->
+<section class="tira" aria-labelledby="t-cinta">
+  <div class="cinta">
   <!--ZONA:CINTA-->
   <p class="rotulo" id="t-cinta">ÚLTIMAS 9 JUZGADAS<b>Aciertos y fallos, sin filtrar</b></p>
   <div class="marcas" role="img" aria-label="9 predicciones juzgadas: 5 aciertos y 4 fallos, de la más vieja a la más nueva"><i class="no" title="Team Heretics 69.9% vs GIANTX — falló">P</i><i class="ok" title="FORZE Reload 66.8% vs Younglings — acertó">V</i><i class="ok" title="RED Canids 74.6% vs Fluxo W7M — acertó">V</i><i class="no" title="BBL Esports 70.3% vs Fire Flux Esports — falló">P</i><i class="no" title="Just Players 58.2% vs ex-Zero Tenacity — falló">P</i><i class="ok" title="ENRAGE 59.2% vs Subtop De France — acertó">V</i><i class="no" title="Shifters 87.4% vs Karmine Corp — falló">P</i><i class="no" title="LOS 56.4% vs LOUD — falló">P</i><i class="no" title="MAYBE 56.1% vs FORZE Reload — falló">P</i></div>
   <p class="cuenta"><b>5/9</b>al favorito</p>
   <!--/ZONA:CINTA-->
-</section>
-
-<section class="sistema" aria-labelledby="t-sistema">
-  <h2 id="t-sistema">ESTADO DEL SISTEMA</h2>
+  </div>
+  <div class="sistema">
+  <h2 id="t-sistema">Estado del sistema</h2>
   <!--ZONA:FUENTES-->
   <ul class="fuentes">
     <li class="fuente viva"><span class="dot" aria-hidden="true"></span><b>bo3.gg</b><span>4/4 juegos</span></li>
@@ -419,6 +441,7 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
     <li class="fuente fria"><span class="dot" aria-hidden="true"></span><b>OpenDota</b><span>solo histórico</span></li>
   </ul>
   <!--/ZONA:FUENTES-->
+  </div>
 </section>
 
 <main>
@@ -451,9 +474,9 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
       <h2 id="t-series">SERIES<small>ventana rodante de 24 h · hora de Venezuela · bajo cada porcentaje va el equipo al que se le da</small></h2>
       <div class="pestanas" role="tablist" aria-label="Filtrar series por estado">
         <!--ZONA:PESTANAS-->
-        <button class="pestana" type="button" role="tab" aria-selected="true" data-grupo="abierta">EN VIVO Y PRÓXIMAS <em>2</em></button>
-        <button class="pestana" type="button" role="tab" aria-selected="false" data-grupo="juzgada">JUZGADAS <em>2</em></button>
-        <button class="pestana" type="button" role="tab" aria-selected="false" data-grupo="todas">TODAS <em>4</em></button>
+        <button class="pestana" type="button" role="tab" aria-selected="true" data-grupo="abierta">En vivo y próximas <em>2</em></button>
+        <button class="pestana" type="button" role="tab" aria-selected="false" data-grupo="juzgada">Juzgadas <em>2</em></button>
+        <button class="pestana" type="button" role="tab" aria-selected="false" data-grupo="todas">Todas <em>4</em></button>
         <!--/ZONA:PESTANAS-->
       </div>
     </header>
@@ -477,7 +500,7 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
         <tbody>
         <!--ZONA:FILAS-->
 <tr class="juzgada" data-grupo="juzgada" data-juego="LOL" data-inicio="2026-08-23T15:00:00+00:00" data-formato="bo3" data-resultado="ganaB" data-acierto="0">
-<th scope="row" class="mono celda-hora"><span class="hora-txt">—</span><span class="veredicto no">✗ FALLÓ</span></th>
+<th scope="row" class="mono celda-hora"><span class="hora-txt">—</span><span class="veredicto no">✗ Falló</span></th>
 <td><span class="chip j-lol">LOL</span></td>
 <td class="equipos"><span class="serie"><b>GIANTX</b><span class="vs">vs</span><span>Team Heretics</span> <span class="marcador mono">2–0</span></span></td>
 <td class="mono fmt">bo3</td>
@@ -513,7 +536,7 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
 <td class="mercado mono">—</td>
 </tr>
 <tr class="juzgada" data-grupo="juzgada" data-juego="CS2" data-inicio="2026-08-23T15:30:00+00:00" data-formato="bo3" data-resultado="ganaA" data-acierto="1">
-<th scope="row" class="mono celda-hora"><span class="hora-txt">—</span><span class="veredicto ok">✓ ACERTÓ</span></th>
+<th scope="row" class="mono celda-hora"><span class="hora-txt">—</span><span class="veredicto ok">✓ Acertó</span></th>
 <td><span class="chip j-cs2">CS2</span></td>
 <td class="equipos"><span class="serie"><b>FORZE Reload</b><span class="vs">vs</span><span>Younglings</span> <span class="marcador mono">2–1</span></span></td>
 <td class="mono fmt">bo3</td>
@@ -537,9 +560,9 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
       <!--ZONA:CALIDAD-->
       <div class="calidad">
         <article class="cq" style="--jc:var(--dota)"><p class="nom">DOTA 2</p><p class="big">—</p><p class="sub">sin series juzgadas aún</p></article>
-        <article class="cq" style="--jc:var(--cs2)"><p class="nom">CS2</p><p class="big">0.235</p><p class="sub">n = 243</p><p><span class="mejora bien">−6.1%</span></p><p class="nc">NO CONCLUYENTE</p></article>
-        <article class="cq" style="--jc:var(--lol)"><p class="nom">LOL</p><p class="big">0.199</p><p class="sub">n = 117</p><p><span class="mejora bien">−20.3%</span></p><p class="nc si">CONCLUYENTE</p></article>
-        <article class="cq" style="--jc:var(--val)"><p class="nom">VALORANT</p><p class="big">0.280</p><p class="sub">n = 47</p><p><span class="mejora mal">+11.8%</span></p><p class="nc">NO CONCLUYENTE</p></article>
+        <article class="cq" style="--jc:var(--cs2)"><p class="nom">CS2</p><p class="big">0.235</p><p class="sub">n = 243</p><p><span class="mejora bien">−6.1%</span></p><p class="nc">No concluyente</p></article>
+        <article class="cq" style="--jc:var(--lol)"><p class="nom">LOL</p><p class="big">0.199</p><p class="sub">n = 117</p><p><span class="mejora bien">−20.3%</span></p><p class="nc si">Concluyente</p></article>
+        <article class="cq" style="--jc:var(--val)"><p class="nom">VALORANT</p><p class="big">0.280</p><p class="sub">n = 47</p><p><span class="mejora mal">+11.8%</span></p><p class="nc">No concluyente</p></article>
       </div>
       <!--/ZONA:CALIDAD-->
       <p class="casa" style="border:0;border-top:1px solid var(--linea);border-radius:0">Estos números vienen del historial completo. La cinta de arriba es solo la ventana de 24 horas, por eso no cuadran.</p>
@@ -585,6 +608,9 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
 
   /* Estados. En la v1 esto recorría 40 filas cada segundo escribiendo texto.
      Nadie necesita ver "EN 3 H 19 MIN" bajar segundo a segundo: 20 s alcanza. */
+  // Copia de DURACION_MIN de salida/web/sala.mjs (allá se usa para ordenar
+  // la tabla al generar; acá para el estado en vivo). Si cambia una, cambian
+  // las dos.
   const DURACION = { bo1:30, bo2:90, bo3:150, bo5:240 };
   const ANCLA = Date.now();
   const inicioDe = (tr) => tr.dataset.inicio ? Date.parse(tr.dataset.inicio) : ANCLA + Number(tr.dataset.offset) * 6e4;
@@ -604,15 +630,15 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
         // Se pasó de su duración y nadie la calificó: se dice, no se adivina.
         // Corto, porque la columna HORA ahora tiene ancho fijo; la frase
         // completa queda en el title, y la hora de al lado ya dice cuándo fue.
-        e.textContent = 'SIN CALIFICAR'; e.title = 'Terminó y todavía no se ha calificado';
+        e.textContent = 'Sin calificar'; e.title = 'Terminó y todavía no se ha calificado';
         e.classList.add('viejo');
       } else if (ini <= ahora) {
-        e.textContent = '● EN CURSO'; e.classList.add('curso', 'late');
+        e.textContent = '● En curso'; e.classList.add('curso', 'late');
       } else {
         const min = (ini - ahora) / 6e4;
         let h = Math.floor(min / 60), m = Math.round(min % 60);
         if (m === 60) { h++; m = 0; }
-        e.textContent = h > 0 ? `EN ${h} H ${m} MIN` : `EN ${m} MIN`;
+        e.textContent = h > 0 ? `en ${h} h ${m} min` : `en ${m} min`;
         e.classList.add('cuenta');
       }
     }
@@ -620,7 +646,62 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
   $$('tbody tr.juzgada .hora-txt').forEach(n => {
     n.textContent = hora(new Date(inicioDe(n.closest('tr'))));
   });
-  refrescar(); setInterval(refrescar, 20000);
+  /* El generador ya deja las filas en orden (en curso · próximas · vencidas
+     · juzgadas), pero la página se queda abierta y el reloj sigue: una serie
+     que estaba en curso cuando se generó se vence sola diez minutos después
+     y quedaría arriba de todo sin serlo. Esto la manda a su sitio. Misma
+     regla que ordenarParaLaTabla() en sala.mjs. */
+  const PESO = { curso:0, proxima:1, vencida:2, juzgada:3 };
+  const faseDeFila = (tr, ahora) => {
+    if (tr.dataset.grupo === 'juzgada') return 'juzgada';
+    const ini = inicioDe(tr);
+    if (ini > ahora) return 'proxima';
+    return ahora <= ini + (DURACION[tr.dataset.formato] ?? 150) * 6e4 ? 'curso' : 'vencida';
+  };
+  const cuerpo = document.querySelector('tbody');
+  function reordenar() {
+    const ahora = Date.now();
+    const actuales = [...cuerpo.children].filter(t => !t.classList.contains('vacia'));
+    if (actuales.length < 2) return;
+    const clave = (t) => {
+      const f = faseDeFila(t, ahora), ini = inicioDe(t);
+      return [PESO[f], f === 'proxima' || f === 'curso' ? ini : -ini];
+    };
+    const ordenadas = actuales
+      .map(t => [clave(t), t])
+      .sort((a, b) => a[0][0] - b[0][0] || a[0][1] - b[0][1])
+      .map(x => x[1]);
+    if (ordenadas.some((t, i) => t !== actuales[i])) cuerpo.append(...ordenadas);
+  }
+
+  refrescar(); reordenar();
+  setInterval(() => { refrescar(); reordenar(); }, 20000);
+
+  /* Alto de la tabla MEDIDO, no adivinado: se mira dónde arranca de verdad
+     la envoltura y se le da lo que queda de pantalla. Antes era
+     calc(100vh - 336px) escrito a mano -- con 6 filas visibles de 51 y sin
+     relación con las barras de arriba, que suman otra cosa. */
+  const envoltura = document.querySelector('.envoltura');
+  let ultimoAlto = 0;
+  function altoDeLaTabla() {
+    const arriba = envoltura.getBoundingClientRect().top + scrollY;
+    const libre = Math.max(320, innerHeight - arriba - 24);
+    if (libre === ultimoAlto) return;
+    ultimoAlto = libre;
+    document.documentElement.style.setProperty('--alto-tabla', libre + 'px');
+  }
+  /* El rAF no es adorno: al redimensionar, el evento puede llegar ANTES de
+     que el navegador rehaga el layout, y entonces se mide la posición vieja
+     -- pasando de escritorio a teléfono la tabla se quedaba en su mínimo de
+     320px y no se recuperaba nunca. */
+  const medir = () => requestAnimationFrame(altoDeLaTabla);
+  // La primera vez va directo, sin rAF: en una pestaña en segundo plano el
+  // rAF no corre, y la tabla se quedaría con el respaldo del CSS hasta que
+  // alguien mire la pestaña.
+  altoDeLaTabla();
+  addEventListener('resize', medir);
+  // Las fuentes llegan después y mueven todo unos píxeles.
+  if (document.fonts) document.fonts.ready.then(medir);
 
   /* Filtro por juego + pestañas por estado, en un solo lugar. */
   const filas = $$('tbody tr');
@@ -667,7 +748,7 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
 
   /* Rótulos para la vista de tarjetas en móvil. La fila de "sin series"
      no es una serie: un rótulo "JUEGO" delante de ese aviso queda absurdo. */
-  const rotulos = ['', 'JUEGO', 'SERIE', 'FORMATO', 'MOTOR', 'MERCADO'];
+  const rotulos = ['', 'juego', 'serie', 'formato', 'motor', 'mercado'];
   filas.forEach(tr => {
     if (tr.classList.contains('vacia')) return;
     [...tr.children].forEach((c, i) => {

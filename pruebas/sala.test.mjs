@@ -10,6 +10,9 @@ import {
   lineaJuicio,
   cintaVeredictos,
   pestanas,
+  faseDe,
+  ordenarParaLaTabla,
+  DURACION_MIN,
   fuentesHtml,
   botonVivo,
   BASE_INGENUA,
@@ -137,7 +140,7 @@ test('filaSerie: 50/50 JUZGADA no se cobra como fallo — veredicto ámbar y sin
   );
   assert.match(html, /class="juzgada"/);
   assert.match(html, /<span class="veredicto espera">· 50\/50<\/span>/);
-  assert.ok(!html.includes('FALLÓ'), 'no hubo apuesta que perder: FALLÓ sería mentira');
+  assert.ok(!html.includes('Falló'), 'no hubo apuesta que perder: FALLÓ sería mentira');
   assert.ok(!html.includes('data-acierto'), 'sin favorito no hay acierto que registrar');
 });
 
@@ -217,7 +220,7 @@ test('filaSerie: con resultado nace juzgada — veredicto en el HTML, ganador y 
   assert.match(html, /class="juzgada" data-grupo="juzgada"/);
   assert.match(html, /data-resultado="ganaB"/);
   assert.match(html, /data-acierto="0"/, 'íbamos con A y ganó B: fallo');
-  assert.match(html, /<span class="veredicto no">✗ FALLÓ<\/span>/);
+  assert.match(html, /<span class="veredicto no">✗ Falló<\/span>/);
   assert.match(html, /<b>FaZe<\/b><span class="vs">vs<\/span><span>NAVI &lt;A&gt;<\/span>/, 'la negrita se la lleva el GANADOR');
   assert.match(html, /<span class="marcador mono">2–0<\/span>/, 'marcador orientado al ganador, no absoluto');
   assert.match(html, /<span class="prob mono">91\.2%<\/span>/); // sin "parejo"
@@ -236,7 +239,7 @@ test('filaSerie: acierto pone data-acierto=1 y sin marcador no hay span inventad
   };
   const html = filaSerie(f, nombre);
   assert.match(html, /data-acierto="1"/);
-  assert.match(html, /<span class="veredicto ok">✓ ACERTÓ<\/span>/);
+  assert.match(html, /<span class="veredicto ok">✓ Acertó<\/span>/);
   assert.match(html, /<b>Team Falcons<\/b>/);
   assert.ok(!html.includes('marcador'), 'sin marcador_a/b no se inventa uno');
 });
@@ -269,13 +272,13 @@ test('tarjetaJuego: botón de verdad (se filtra con el teclado) y KPIs en es-VE'
 test('tarjetaCalidad: mejor que la moneda va en verde, PEOR va en ámbar (no en rojo)', () => {
   const buena = tarjetaCalidad(CS2, { juzgadas: 242, brier: 0.2344, mejora: 0.2344 / 0.25 - 1, concluyente: true });
   assert.match(buena, /class="mejora bien">−6\.2%</);
-  assert.match(buena, /class="nc si">CONCLUYENTE/);
+  assert.match(buena, /class="nc si">Concluyente/);
   assert.match(buena, /n = 242/);
 
   const mala = tarjetaCalidad(CS2, { juzgadas: 47, brier: 0.2795, mejora: 0.2795 / 0.25 - 1, concluyente: false });
   assert.match(mala, /class="mejora mal">\+11\.8%</);
   assert.ok(!mala.includes('--acento'), 'el rojo es la marca, no el error');
-  assert.match(mala, /class="nc">NO CONCLUYENTE/);
+  assert.match(mala, /class="nc">No concluyente/);
 
   const sinDatos = tarjetaCalidad(CS2, { juzgadas: 0, brier: null, mejora: null, concluyente: false });
   assert.match(sinDatos, /<p class="big mono">—<\/p>/);
@@ -347,10 +350,68 @@ test('cintaVeredictos: sin juzgadas lo dice, no dibuja una cinta vacía con núm
 
 test('pestanas: los contadores son las filas que de verdad se pintaron', () => {
   const html = pestanas({ abiertas: 3, juzgadas: 12 });
-  assert.match(html, /data-grupo="abierta">EN VIVO Y PRÓXIMAS <em>3<\/em>/);
-  assert.match(html, /data-grupo="juzgada">JUZGADAS <em>12<\/em>/);
-  assert.match(html, /data-grupo="todas">TODAS <em>15<\/em>/);
+  assert.match(html, /data-grupo="abierta">En vivo y próximas <em>3<\/em>/);
+  assert.match(html, /data-grupo="juzgada">Juzgadas <em>12<\/em>/);
+  assert.match(html, /data-grupo="todas">Todas <em>15<\/em>/);
   assert.equal((html.match(/aria-selected="true"/g) ?? []).length, 1);
+});
+
+// --- orden de la tabla ---------------------------------------------------------
+// Reloj fijo para que la prueba no dependa de cuándo se corre.
+const AHORA = Date.parse('2026-08-24T20:00:00Z');
+const enT = (minutos, extra = {}) => ({
+  juego: 'cs2',
+  formato: 'bo3',
+  inicio_programado: new Date(AHORA + minutos * 60000).toISOString(),
+  ...extra,
+});
+
+test('DURACION_MIN: los cuatro formatos, en minutos redondos', () => {
+  assert.deepEqual(DURACION_MIN, { bo1: 30, bo2: 90, bo3: 150, bo5: 240 });
+});
+
+test('faseDe: en curso mientras no pase su duración; después, vencida', () => {
+  assert.equal(faseDe(enT(30), AHORA), 'proxima'); // arranca en media hora
+  assert.equal(faseDe(enT(0), AHORA), 'curso'); // arranca justo ahora
+  assert.equal(faseDe(enT(-149), AHORA), 'curso'); // bo3 dura 150
+  assert.equal(faseDe(enT(-150), AHORA), 'curso'); // el borde todavía cuenta
+  assert.equal(faseDe(enT(-151), AHORA), 'vencida'); // un minuto más y ya no
+  // bo1 dura 30: a los 31 minutos ya venció, aunque un bo3 seguiría vivo.
+  assert.equal(faseDe(enT(-31, { formato: 'bo1' }), AHORA), 'vencida');
+  assert.equal(faseDe(enT(-31), AHORA), 'curso');
+  // Con resultado no importa el reloj.
+  assert.equal(faseDe(enT(-1000, { resultado_real: 'ganaA' }), AHORA), 'juzgada');
+  // Un formato desconocido cae en los 150 de un bo3, no revienta.
+  assert.equal(faseDe(enT(-149, { formato: null }), AHORA), 'curso');
+});
+
+test('ordenarParaLaTabla: primero lo que está pasando, de último lo que ya murió', () => {
+  const filas = [
+    { ...enT(-1000, { resultado_real: 'ganaA' }), id: 'juzgada-vieja' },
+    { ...enT(-200), id: 'vencida-vieja' },
+    { ...enT(120), id: 'proxima-lejos' },
+    { ...enT(-10), id: 'curso' },
+    { ...enT(-160), id: 'vencida-reciente' },
+    { ...enT(10), id: 'proxima-cerca' },
+    { ...enT(-500, { resultado_real: 'ganaB' }), id: 'juzgada-reciente' },
+  ];
+  const orden = ordenarParaLaTabla(filas, AHORA).map((f) => f.id);
+  assert.deepEqual(orden, [
+    'curso',
+    'proxima-cerca', // las próximas por cercanía: la que arranca antes, arriba
+    'proxima-lejos',
+    'vencida-reciente', // lo vencido al revés: lo último que pasó, arriba
+    'vencida-vieja',
+    'juzgada-reciente',
+    'juzgada-vieja',
+  ]);
+});
+
+test('ordenarParaLaTabla: no toca el arreglo que recibe', () => {
+  const filas = [enT(100), enT(-10)];
+  const copia = [...filas];
+  ordenarParaLaTabla(filas, AHORA);
+  assert.deepEqual(filas, copia);
 });
 
 // --- fuentes y botón ---------------------------------------------------------------

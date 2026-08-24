@@ -7,7 +7,7 @@ ventana, 90 en total), servido en `http://localhost:4322`.
 `getComputedStyle`, contraste WCAG calculado, y capturas a 1440×900, 1920×1080
 y 375×812.
 
-> ## Estado: **Fases A y B aplicadas** (2026-08-24)
+> ## Estado: **fases A, B y C aplicadas** (2026-08-24)
 >
 > Todo lo que sigue describe la pantalla **antes** de la Fase A. Lo que ya
 > cambió, con el número nuevo medido:
@@ -50,8 +50,35 @@ y 375×812.
 > azules**: no se pueden retintar sin regenerarlos. Queda esa decisión
 > pendiente — o se regenera el kit en rojo, o el sitio adopta el azul.
 >
-> Contraste después de los dos cambios: todo sigue en AA o mejor (lo más bajo,
-> 5.07:1). **Falta la fase C.**
+> **Fase C:**
+>
+> | Punto | Antes | Ahora |
+> |---|---|---|
+> | 2.1 Barras antes del primer dato | 4 barras · 235 px | **2 barras · 185 px** |
+> | 2.4 Alto de la tabla | `calc(100vh - 336px)` a mano | **medido**: el borde de abajo queda a 24 px del pie de la pantalla |
+> | 2.5 Primera fila del panel | `TERMINÓ · SIN CALIFICAR` | **las que están en curso**; después próximas, vencidas y juzgadas |
+> | 3.4 Significados del ámbar | 5 | **1**: “salió peor de lo esperado” (Brier bajo la moneda y vencida sin calificar) |
+> | 3.5 Mayúsculas espaciadas | en casi todo rótulo | sólo en los rótulos de sección |
+> | 4.x Banda en el teléfono | 396 px | **217 px** (la primera serie sube de y=792 a y=542) |
+>
+> Dos cosas que no estaban en el plan:
+>
+> - **La tabla se reordena sola.** El generador deja el orden bueno, pero el
+>   panel se queda abierto y el reloj sigue: una serie que estaba en curso al
+>   generar se vence sola diez minutos después y quedaría arriba sin serlo.
+>   Ahora el script la manda a su sitio cada 20 s, con la misma regla que
+>   `ordenarParaLaTabla()`.
+> - **La medición del alto va sin `requestAnimationFrame` la primera vez.** En
+>   una pestaña en segundo plano el rAF no corre, y la tabla se quedaba con el
+>   respaldo del CSS hasta que alguien mirara la pestaña.
+>
+> Y una expectativa que hay que corregir: acá arriba se dijo que se pasaría de
+> **6 a 9 filas** visibles. Son **6.7** a 1440×900. La cuenta original no
+> contaba los 87 px de la cabecera del panel, y las filas pasaron de ~94 px de
+> promedio a 88 fijos, que es menos de lo que parecía. En 1080p son ~7.5.
+>
+> Contraste al cerrar las tres fases: **2291 elementos revisados, 0 reprueban
+> AA** (midiendo cada texto contra el fondo que de verdad tiene detrás).
 
 ---
 

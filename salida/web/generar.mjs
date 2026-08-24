@@ -30,6 +30,7 @@ import {
   lineaJuicio,
   cintaVeredictos,
   pestanas,
+  ordenarParaLaTabla,
   fuentesHtml,
   botonVivo,
 } from './sala.mjs';
@@ -121,13 +122,17 @@ async function main() {
   const desde = ahoraMs - VENTANA_HORAS * 3600 * 1000;
   const hasta = ahoraMs + VENTANA_HORAS * 3600 * 1000;
 
-  const enVentana = todas
-    .filter((f) => {
+  // El orden no es por hora a secas: primero lo que está en curso, después
+  // lo que viene por cercanía, y al final lo vencido sin calificar y lo ya
+  // juzgado. Ver ordenarParaLaTabla() en sala.mjs -- antes el panel abría
+  // mostrando las vencidas, que es lo más viejo y lo que menos sirve.
+  const enVentana = ordenarParaLaTabla(
+    todas.filter((f) => {
       const t = new Date(f.inicio_programado).getTime();
       return Number.isFinite(t) && t >= desde && t <= hasta;
-    })
-    .sort((a, b) => new Date(a.inicio_programado) - new Date(b.inicio_programado))
-    .slice(0, MAX_FILAS);
+    }),
+    ahoraMs,
+  ).slice(0, MAX_FILAS);
 
   // Juzgadas de la más nueva a la más vieja: las primeras 5 son los juicios
   // de la derecha; las primeras 25, al revés, son la cinta de arriba.
