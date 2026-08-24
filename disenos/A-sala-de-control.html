@@ -382,7 +382,9 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
     </linearGradient></defs>
     <rect width="512" height="512" rx="118" fill="url(#marca)"/>
     <g transform="translate(256,256) scale(11.2) translate(-12,-12)">
-      <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" fill="#05070A" fill-opacity=".92"/>
+      <!-- Blanco, no negro: el degradado termina en #8F1220 y un rayo oscuro
+           encima de esa esquina baja a 2.4:1. Blanco no baja de 3.4:1. -->
+      <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" fill="#fff"/>
     </g>
   </svg>
   <div class="marca">

@@ -1,7 +1,7 @@
 # Assets · MONITOR-ESPORTS
 
 Paquete de marca + tarjeta social para el panel. Todo generado a partir de los colores
-y la tipografia que ya usa el sitio (`--blue #2563eb`, `--violet #7c3aed`, `--bg #05080c`, Inter).
+y la tipografia que ya usa el sitio (`--rojo #FF2638`, `--vino #8F1220`, `--bg #05070A`, Manrope).
 
 ## Como instalarlo
 
