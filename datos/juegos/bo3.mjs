@@ -309,3 +309,31 @@ export async function proximasPartidasConNombres(juego, { fetchImpl = fetchConRe
     tier: cruda.tier ?? null,
   }));
 }
+
+// El slug de cada partida, por lotes. Sirve para enlazar a la página de la
+// partida en bo3.gg, que es donde están los reproductores del directo: la
+// API dice si HAY cobertura (live_coverage) pero nunca dónde verla, así que
+// mandar a su página es lo más cerca que se puede llegar sin inventar un
+// link. Mismo patrón que datosDeEquipos: filtro por disciplina obligatorio.
+export async function slugsDePartidas(ids, { juego = 'cs2', fetchImpl = fetchConReintentos } = {}) {
+  const disciplinaId = DISCIPLINAS[juego];
+  if (!disciplinaId) throw new Error(`juego desconocido: ${juego}`);
+
+  const porId = new Map();
+  const unicos = [...new Set(ids)].filter(Boolean);
+
+  for (let i = 0; i < unicos.length; i += POR_PAGINA) {
+    const lote = unicos.slice(i, i + POR_PAGINA);
+    const datos = await pedir(
+      `${BASE}/matches?page[limit]=${POR_PAGINA}&filter[matches.discipline_id][eq]=${disciplinaId}` +
+        `&filter[matches.id][in]=${lote.join(',')}`,
+      fetchImpl,
+    );
+    for (const m of datos.results ?? []) {
+      if (m?.id && m?.slug) porId.set(m.id, { slug: m.slug, cobertura: Boolean(m.live_coverage) });
+    }
+    if (i + POR_PAGINA < unicos.length) await espera(MS_ENTRE_PETICIONES);
+  }
+
+  return porId;
+}

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es-VE">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!--ZONA:CABEZA-->
+<title>Summer Bear vs Ducksquad · Monitor eSports</title>
+<meta name="description" content="La predicción del motor para esta serie, con los números con los que se hizo y su calificación contra el resultado real.">
+<link rel="canonical" href="https://mitzumitzukyh-code.github.io/monitor-esports/serie-0.html">
+<meta property="og:title" content="Summer Bear vs Ducksquad">
+<meta property="og:description" content="50.0% · sin favorito.">
+<!--/ZONA:CABEZA-->
+
+<meta name="robots" content="index,follow">
+<meta name="theme-color" content="#05070A">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="alternate icon" href="assets/favicon.ico">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta property="og:type" content="article">
+<meta property="og:locale" content="es_VE">
+<meta property="og:site_name" content="Monitor eSports">
+<meta property="og:image" content="https://mitzumitzukyh-code.github.io/monitor-esports/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;800&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap">
+
+<style>
+/* ═══ TOKENS ═══
+   Son los MISMOS de disenos/A-sala-de-control.html. Si cambian allá, cambian
+   acá: las dos pantallas son el mismo producto. */
+:root {
+  --fondo:#05070A; --tarjeta:#0D1015; --interior:#11141A; --hover:#151920;
+  --linea:#242933; --lineaM:#333A47; --lineaF:#4A5364;
+  --tinta:#F2F4F7; --tintaM:#A7ADB8; --tintaS:#8B95A5; --apag:#828B99;
+  --acento:#FF2638; --ok:#19E68C; --aviso:#FFB000;
+  --dota:#B478FF; --cs2:#F5C400; --lol:#00CFFF; --val:#23F28A;
+  --e1:4px; --e2:8px; --e3:12px; --e4:16px; --e5:24px; --e6:32px;
+  --t1:12px; --t2:13px; --t3:14px; --t4:16px; --t5:20px; --t6:24px; --t7:30px;
+  --r1:6px; --r2:10px; --r3:14px; --rp:999px;
+  --sombra-1:0 1px 2px rgba(0,0,0,.5);
+  --canal:max(var(--e5), (100% - 1100px) / 2);
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--fondo); color:var(--tinta);
+  font:500 var(--t3)/1.6 Manrope,system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+.mono { font-family:var(--mono); font-variant-numeric:tabular-nums; font-weight:400; }
+b { font-weight:800; }
+a { color:inherit; }
+:focus-visible { outline:2px solid var(--tinta); outline-offset:2px; border-radius:var(--r1); }
+@media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } }
+@keyframes latido { 0%,100%{opacity:1} 50%{opacity:.25} }
+.late { animation:latido 1.6s ease-in-out infinite; }
+
+/* ═══ CABECERA ═══ */
+.volver { display:block; padding:var(--e3) var(--canal); border-bottom:1px solid var(--linea);
+  font-size:var(--t2); color:var(--tintaS); text-decoration:none; }
+.volver:hover { color:var(--tinta); }
+.volver b { color:var(--acento); font-weight:800; }
+
+header { padding:var(--e6) var(--canal) var(--e5); border-bottom:1px solid var(--linea); }
+.donde { display:flex; align-items:center; gap:var(--e2); flex-wrap:wrap;
+  font-size:var(--t1); color:var(--tintaS); margin-bottom:var(--e3); }
+.chip { display:inline-block; font-size:var(--t1); font-weight:800; letter-spacing:.08em;
+  padding:var(--e1) var(--e2); border-radius:var(--r1); border:1px solid currentColor;
+  background:color-mix(in srgb,currentColor 12%,transparent); }
+.j-dota { color:var(--dota) } .j-cs2 { color:var(--cs2) }
+.j-lol { color:var(--lol) } .j-val { color:var(--val) }
+h1 { font-size:clamp(var(--t6),4.5vw,var(--t7)); font-weight:800; letter-spacing:-.02em;
+  line-height:1.15; text-wrap:balance; }
+h1 .vs { color:var(--apag); font-weight:500; margin:0 var(--e2); }
+h1 .pierde { color:var(--tintaS); }
+.escudo { width:26px; height:26px; border-radius:var(--r1); object-fit:cover; background:#000;
+  vertical-align:-5px; margin-right:var(--e2); border:1px solid var(--linea); }
+.estado-linea { display:flex; align-items:center; gap:var(--e3); flex-wrap:wrap; margin-top:var(--e3);
+  font-size:var(--t2); color:var(--tintaM); }
+.estado-linea .curso { color:var(--ok); font-weight:800; }
+.estado-linea .viejo { color:var(--aviso); font-weight:800; }
+.directo { display:inline-flex; align-items:center; gap:var(--e2); text-decoration:none;
+  border:1px solid var(--lineaM); border-radius:var(--rp); padding:var(--e1) var(--e3);
+  font-size:var(--t2); font-weight:700; color:var(--tinta); }
+.directo:hover { background:var(--hover); border-color:var(--lineaF); }
+.directo.vivo { border-color:#0C9B60; color:var(--ok); background:rgba(25,230,140,.08); }
+.directo i { width:8px; height:8px; border-radius:var(--rp); background:currentColor; }
+
+/* ═══ EL NÚMERO ═══ */
+.numero { display:flex; align-items:baseline; gap:var(--e3); flex-wrap:wrap; margin-top:var(--e5); }
+.numero .gordo { font-family:var(--mono); font-size:clamp(40px,9vw,64px); font-weight:700;
+  line-height:1; letter-spacing:-.03em; }
+.numero .aquien { font-size:var(--t4); color:var(--tintaM); }
+.numero .aquien b { color:var(--tinta); }
+.numero .parejo { font-size:var(--t1); font-weight:700; letter-spacing:.04em; color:var(--tintaM);
+  border:1px solid var(--lineaM); background:var(--interior); border-radius:var(--r1); padding:2px var(--e2); }
+
+/* ═══ SECCIONES ═══ */
+main { padding:var(--e5) var(--canal) var(--e6); display:grid; gap:var(--e3); }
+/* min-width:0 no es adorno: un hijo de grid mide "auto" por defecto y se
+   estira con su contenido, así que el gráfico de 440px empujaba la PÁGINA en
+   vez de deslizarse dentro de su caja. */
+section { border:1px solid var(--linea); border-radius:var(--r3); background:var(--tarjeta);
+  box-shadow:var(--sombra-1); padding:var(--e4) var(--e4) var(--e5); min-width:0; }
+h2 { font-size:var(--t4); font-weight:800; letter-spacing:.02em; margin-bottom:var(--e1); }
+h2 small { display:block; font-size:var(--t1); color:var(--tintaS); font-weight:500;
+  letter-spacing:.02em; margin-top:2px; }
+.pie { font-size:var(--t2); color:var(--tintaS); margin-top:var(--e3); max-width:64ch; }
+.pie b { color:var(--tintaM); }
+.sin-dato { font-size:var(--t2); color:var(--apag); margin-top:var(--e3); }
+
+/* verificación */
+.verifica { display:flex; align-items:center; gap:var(--e4); flex-wrap:wrap; margin-top:var(--e4); }
+.verifica .cuenta { display:flex; flex-direction:column; gap:2px; }
+.verifica .rotulo { font-size:var(--t1); color:var(--tintaS); }
+.verifica .cuenta b { font-size:var(--t6); font-weight:700; }
+.verifica .igual { font-size:var(--t5); color:var(--apag); }
+.sello { font-size:var(--t1); font-weight:800; letter-spacing:.06em; padding:var(--e1) var(--e2);
+  border-radius:var(--r1); border:1px solid currentColor; }
+.sello.ok { color:var(--ok); background:rgba(25,230,140,.09); }
+.sello.aviso { color:var(--aviso); background:rgba(255,176,0,.09); }
+.sello.mal { color:var(--acento); background:rgba(255,38,56,.09); }
+
+/* gráficos · en pantallas chicas el SVG se encogía hasta dejar los rótulos
+   en 7px. Antes que eso, que se deslice y se lea. */
+.desliza { overflow-x:auto; margin-top:var(--e4); }
+.desliza .grafico { min-width:440px; margin-top:0; }
+.grafico { display:block; width:100%; height:auto; margin-top:var(--e4); }
+.grafico .eje { font-family:var(--mono); font-size:11px; fill:var(--apag); }
+.grafico .cifra { font-family:var(--mono); font-size:12px; fill:var(--tintaM); }
+.grafico .cifra.motor { fill:var(--acento); }
+
+/* veredicto */
+.resultado { font-size:var(--t4); margin-top:var(--e3); }
+.resultado.ok { color:var(--ok); } .resultado.mal { color:var(--acento); }
+.resultado.espera { color:var(--tintaM); }
+.resultado b { color:var(--tinta); }
+.marcador { color:var(--tinta); font-weight:700; margin-left:var(--e2); }
+.cifra-grande { font-size:var(--t7); font-weight:700; line-height:1.1; margin-top:var(--e4); }
+.cifra-grande span { display:block; font-family:Manrope,sans-serif; font-size:var(--t1);
+  font-weight:500; color:var(--tintaS); letter-spacing:.02em; margin-top:var(--e1); }
+.brier { margin-top:var(--e4); }
+.brier .via { position:relative; height:8px; border-radius:var(--rp); background:var(--interior);
+  border:1px solid var(--linea); }
+.brier .via i { position:absolute; top:-4px; width:14px; height:14px; margin-left:-7px;
+  border-radius:var(--rp); background:var(--tinta); border:2px solid var(--fondo); }
+.brier .via u { position:absolute; top:-5px; width:2px; height:16px; margin-left:-1px;
+  background:var(--lineaF); }
+.brier-pies { display:flex; justify-content:space-between; font-family:var(--mono);
+  font-size:var(--t1); color:var(--apag); margin-top:var(--e2); }
+
+/* forma */
+.formas { display:grid; grid-template-columns:1fr 1fr; gap:var(--e4); margin-top:var(--e4); }
+.forma h3 { font-size:var(--t3); font-weight:800; }
+.forma h3 small { font-family:var(--mono); font-weight:400; color:var(--tintaS); margin-left:var(--e2); }
+.forma ul { list-style:none; margin-top:var(--e2); }
+.forma li { display:grid; grid-template-columns:auto 1fr auto auto; gap:var(--e2); align-items:center;
+  padding:var(--e2) 0; border-bottom:1px solid var(--linea); font-size:var(--t2); }
+.forma li:last-child { border-bottom:0; }
+.forma .gp { width:20px; height:20px; display:grid; place-items:center; border-radius:var(--r1);
+  font-size:var(--t1); font-weight:700; }
+.forma .gano .gp { color:var(--ok); border:1px solid #0C9B60; background:rgba(25,230,140,.13); }
+.forma .perdio .gp { color:var(--acento); border:1px solid var(--acento); background:rgba(255,38,56,.1); }
+.forma .rival { color:var(--tintaM); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.forma .suya { color:var(--tintaS); }
+.forma .tino.ok { color:var(--ok); } .forma .tino.mal { color:var(--acento); }
+
+footer { padding:var(--e5) var(--canal) var(--e6); border-top:1px solid var(--linea);
+  font-size:var(--t2); color:var(--apag); }
+footer a { color:var(--tintaS); }
+
+@media (max-width:720px) {
+  .formas { grid-template-columns:1fr; }
+  /* Con el bloque en dos renglones el "=" quedaba solo, colgando a la
+     derecha. Es decorativo (aria-hidden), así que se va. */
+  .verifica .igual { display:none; }
+  header { padding-top:var(--e5); }
+}
+</style>
+</head>
+<body>
+
+<a class="volver" href="index.html">← <b>Monitor eSports</b> · volver a la sala de control</a>
+
+<header>
+  <!--ZONA:ENCABEZADO-->
+  <p class="donde"><span class="chip j-dota">DOTA 2</span><span>bo3</span><span>·</span><span>torneo 5091</span></p>
+  <h1><b>Summer Bear</b><span class="vs">vs</span><span class="pierde">Ducksquad</span></h1>
+  <p class="estado-linea"><span class="hora mono">9:00 AM</span><span class="viejo">Sin calificar</span></p>
+  <p class="numero"><span class="gordo">50.0%</span>
+    <span class="aquien">sin favorito · moneda al aire</span>
+    <span class="parejo">MUY PAREJO</span></p>
+  <!--/ZONA:ENCABEZADO-->
+</header>
+
+<main>
+  <section>
+    <h2>De dónde sale el número<small>el motor guarda con qué predijo, así que la cuenta se puede repetir</small></h2>
+    <!--ZONA:VERIFICACION-->
+    <p class="sin-dato">— ejemplo de maqueta —</p>
+    <!--/ZONA:VERIFICACION-->
+    <!--ZONA:RATINGS--><!--/ZONA:RATINGS-->
+  </section>
+
+  <section>
+    <h2>El mercado contra el motor<small>lo que pagaban las casas mientras el motor no se movía</small></h2>
+    <!--ZONA:MERCADO-->
+    <p class="sin-dato">— ejemplo de maqueta —</p>
+    <!--/ZONA:MERCADO-->
+  </section>
+
+  <section>
+    <h2>El veredicto<small>qué pasó de verdad y cuánto costó equivocarse</small></h2>
+    <!--ZONA:VEREDICTO-->
+    <p class="sin-dato">— ejemplo de maqueta —</p>
+    <!--/ZONA:VEREDICTO-->
+  </section>
+
+  <section>
+    <h2>Cómo vienen los dos<small>sus últimas series calificadas, y si el motor les atinó</small></h2>
+    <div class="formas">
+      <!--ZONA:FORMA--><!--/ZONA:FORMA-->
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>Sin apuestas · sin cuotas para apostar · solo cálculo.
+    <a href="https://github.com/mitzumitzukyh-code/monitor-esports">Código abierto</a>.</p>
+</footer>
+
+<script>
+(() => {
+  'use strict';
+  /* Misma regla de la sala: la hora va absoluta en el HTML y el reloj del
+     visitante la pasa a hora de Venezuela y decide el estado. */
+  const fmt = new Intl.DateTimeFormat('es-VE', { day:'numeric', month:'short', hour:'numeric', minute:'2-digit', hour12:true, timeZone:'America/Caracas' });
+  const nodo = document.querySelector('.hora[data-inicio]');
+  if (!nodo) return;
+  const ini = Date.parse(nodo.dataset.inicio);
+  if (!Number.isFinite(ini)) return;
+  const p = fmt.formatToParts(new Date(ini));
+  const t = (x) => p.find(q => q.type === x)?.value ?? '';
+  nodo.textContent = `${t('day')} ${t('month')} · ${t('hour')}:${t('minute')} ${t('dayPeriod').replace(/[.\s]/g,'').toUpperCase()}`;
+
+  const e = document.querySelector('.estado-vivo');
+  if (!e) return;
+  const DURACION = { bo1:30, bo2:90, bo3:150, bo5:240 };
+  const dura = (DURACION[e.dataset.formato] ?? 150) * 6e4;
+  const refrescar = () => {
+    const ahora = Date.now();
+    e.className = 'estado-vivo';
+    if (ahora > ini + dura) { e.textContent = 'Sin calificar'; e.classList.add('viejo'); }
+    else if (ini <= ahora) { e.textContent = '● En curso'; e.classList.add('curso', 'late'); }
+    else {
+      const min = (ini - ahora) / 6e4;
+      let h = Math.floor(min / 60), m = Math.round(min % 60);
+      if (m === 60) { h++; m = 0; }
+      e.textContent = h > 0 ? `en ${h} h ${m} min` : `en ${m} min`;
+    }
+  };
+  refrescar();
+  setInterval(refrescar, 20000);
+})();
+</script>
+</body>
+</html>

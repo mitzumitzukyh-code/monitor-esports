@@ -228,10 +228,11 @@ export function filaSerie(f, nombre, cuotaDe = null, logoDe = null) {
     // El .serie de adentro es el que se puede recortar: una celda de tabla
     // crece con su contenido pase lo que pase, así que sin este envoltorio
     // un nombre como "Gamespace Mediterranean College Esports" estiraba la
-    // fila y rompía la altura única.
-    `<td class="equipos"><span class="serie">${escudo(idIzq)}${equipo(izq, negritaIzq === true)}` +
+    // fila y rompía la altura única. Y es un <a>: cada serie tiene su perfil
+    // en serie-<match_id>.html, con los números con los que se predijo.
+    `<td class="equipos"><a class="serie" href="serie-${esc(f.match_id)}.html">${escudo(idIzq)}${equipo(izq, negritaIzq === true)}` +
     `<span class="vs">vs</span>${escudo(idDer)}${equipo(der, negritaIzq === false)}` +
-    `${marcador ? ` <span class="marcador mono">${esc(marcador)}</span>` : ''}</span></td>` +
+    `${marcador ? ` <span class="marcador mono">${esc(marcador)}</span>` : ''}</a></td>` +
     `<td class="mono fmt">${esc(f.formato ?? '')}</td>` +
     `<td class="celda-motor">${motor}</td>` +
     `<td class="mercado mono">${mercado}</td>` +

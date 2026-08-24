@@ -19,7 +19,7 @@
 import { readFile, writeFile, readdir, unlink, mkdir, copyFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { seleccionar } from '../../datos/supabase.mjs';
-import { datosDeEquipos } from '../../datos/juegos/bo3.mjs';
+import { datosDeEquipos, slugsDePartidas } from '../../datos/juegos/bo3.mjs';
 import {
   JUEGOS,
   estadisticasPorJuego,
@@ -34,10 +34,12 @@ import {
   fuentesHtml,
   botonVivo,
 } from './sala.mjs';
+import { generarPerfiles } from './perfiles.mjs';
 
 const AQUI = new URL('./', import.meta.url);
 const RAIZ = new URL('../../', import.meta.url);
 const DISENIO = new URL('disenos/A-sala-de-control.html', RAIZ);
+const DISENIO_PERFIL = new URL('disenos/B-perfil-de-serie.html', RAIZ);
 
 // Ventana rodante de la tabla, igual que los avisos: lo que salió hace más
 // de 24 h o falta más de 24 h no entra. Tope duro de filas para que una
@@ -100,9 +102,15 @@ async function copiarIconos() {
   return n;
 }
 
-async function limpiarFichasViejas() {
+// Los serie-*.html que sobren de una corrida anterior (partidos que ya no
+// están en la base) se borran; los que toca generar se reescriben. Antes esta
+// función los borraba TODOS porque el diseño no tenía vista de ficha -- ahora
+// la ficha es la mitad del producto.
+async function limpiarFichasQueSobran(vigentes) {
   const archivos = await readdir(AQUI);
-  await Promise.all(archivos.filter((a) => /^serie-\d+\.html$/.test(a)).map((a) => unlink(new URL(a, AQUI))));
+  const sobran = archivos.filter((a) => /^serie-\d+\.html$/.test(a) && !vigentes.has(a));
+  await Promise.all(sobran.map((a) => unlink(new URL(a, AQUI))));
+  return sobran.length;
 }
 
 async function main() {
@@ -148,8 +156,11 @@ async function main() {
   const nombres = new Map();
   const nombre = (id) => nombres.get(id)?.nombre ?? `#${id}`;
   const logoDe = (id) => nombres.get(id)?.logo ?? null;
+  // TODOS los equipos de la base, no sólo los de la ventana: cada predicción
+  // tiene su perfil y un perfil que dice "#16807 vs #22155" no sirve de nada.
+  // Se piden por lotes de 100 por juego, así que son unas pocas peticiones.
   for (const cfg of JUEGOS) {
-    const filasDeJuego = [...enVentana, ...juicios, ...cinta].filter((f) => f.juego === cfg.id);
+    const filasDeJuego = todas.filter((f) => f.juego === cfg.id);
     const ids = filasDeJuego.flatMap((f) => [f.equipo_a, f.equipo_b]).filter(Boolean);
     if (ids.length === 0) continue;
     try {
@@ -176,6 +187,42 @@ async function main() {
   } catch (e) {
     console.log(`eslo_cuotas: sin datos (${String(e.message).slice(0, 60)}) — MERCADO sale «—».`);
   }
+
+  // La serie COMPLETA de capturas, agrupada por partido: es lo que dibuja el
+  // gráfico de "mercado contra motor" en cada perfil. Son decenas de miles de
+  // filas (mediana de 41 capturas por partido, máximo 317) pero pesan poco --
+  // cuatro columnas -- y se piden en una sola consulta paginada. El muestreo
+  // para el gráfico se hace en memoria, no acá.
+  const cuotasPorPartido = new Map();
+  try {
+    const serie = await seleccionar(
+      'eslo_cuotas',
+      '?select=match_id,capturado_en,prob_a,margen&order=match_id.asc,capturado_en.asc',
+    );
+    for (const c of serie) {
+      let lista = cuotasPorPartido.get(c.match_id);
+      if (!lista) { lista = []; cuotasPorPartido.set(c.match_id, lista); }
+      lista.push(c);
+    }
+    console.log(`eslo_cuotas: ${serie.length} capturas en ${cuotasPorPartido.size} partidos`);
+  } catch (e) {
+    console.log(`eslo_cuotas (serie completa): ${String(e.message).slice(0, 60)} — los perfiles salen sin gráfico de mercado.`);
+  }
+
+  // Slug de bo3.gg para poder enlazar al directo. Se piden por lotes y sólo
+  // los de los partidos que todavía pueden tener transmisión (la ventana):
+  // pedir los 659 sería gastar peticiones en partidos de hace semanas.
+  const slugs = new Map();
+  for (const cfg of JUEGOS) {
+    const ids = enVentana.filter((f) => f.juego === cfg.id).map((f) => f.match_id);
+    if (ids.length === 0) continue;
+    try {
+      for (const [id, v] of await slugsDePartidas(ids, { juego: cfg.id })) slugs.set(id, v);
+    } catch (e) {
+      console.log(`slugs ${cfg.id}: no resolvieron (${String(e.message).slice(0, 50)}) — sin botón de directo.`);
+    }
+  }
+  const slugDe = (id) => slugs.get(id)?.slug ?? null;
   // La cuota que se muestra es la del FAVORITO (el mismo equipo del
   // porcentaje de MOTOR): max_coeff (lo mejor que pagó) con respaldo en la
   // cuota puntual de la última captura.
@@ -251,11 +298,27 @@ async function main() {
   // zona.
   await writeFile(new URL('index.html', AQUI), plantilla);
 
-  await limpiarFichasViejas();
+  // --- un perfil por serie ---------------------------------------------------
+  const perfiles = await generarPerfiles({
+    todas,
+    stats,
+    cuotasPorPartido,
+    nombre,
+    logoDe,
+    slugDe,
+    destino: AQUI,
+    disenio: DISENIO_PERFIL,
+    ahoraMs,
+  });
+  // Sólo se borra si de verdad hubo datos: en una corrida sin credenciales
+  // `todas` viene vacía, y sin este guardia el paso de limpieza barrería los
+  // 659 perfiles y dejaría la tabla llena de enlaces rotos.
+  const sobraron = supabaseOk ? await limpiarFichasQueSobran(perfiles.archivos) : 0;
   const iconos = await copiarIconos();
   const logos = await copiarLogosDelRail();
 
   console.log(`index.html (sala de control) · ${enVentana.length} series en ventana · ${juicios.length} juicios · ${iconos} iconos · ${logos} logos`);
+  console.log(`perfiles: ${perfiles.escritos} escritos · ${perfiles.conMercado} con gráfico de mercado · ${perfiles.verificados} con el número recalculado · ${sobraron} borrados por viejos`);
   for (const cfg of JUEGOS) {
     const s = stats.get(cfg.id);
     console.log(
