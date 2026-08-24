@@ -275,7 +275,9 @@ export function cintaVeredictos(juzgadas, nombre) {
     const favorito = fav.ladoA ? nombre(c.equipo_a) : nombre(c.equipo_b);
     const otro = fav.ladoA ? nombre(c.equipo_b) : nombre(c.equipo_a);
     const titulo = `${favorito} ${pct1(fav.prob)}% vs ${otro} — ${acerto ? 'acertó' : 'falló'}`;
-    marcas.push(`<i class="${acerto ? 'ok' : 'no'}" title="${esc(titulo)}"></i>`);
+    // El veredicto va DENTRO de la marca: una fila de cuadros mudos obliga a
+    // pasar el mouse para saber qué es cada uno.
+    marcas.push(`<i class="${acerto ? 'ok' : 'no'}" title="${esc(titulo)}">${acerto ? '✓' : '✗'}</i>`);
   }
   const n = marcas.length;
   const aria =
