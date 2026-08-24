@@ -76,7 +76,9 @@ export function anilloConfianza(prob) {
 
 // Una fila de la tabla. La fecha va ABSOLUTA (data-inicio ISO): el reloj del
 // navegador la convierte a hora de Venezuela y decide el estado. El resultado,
-// si ya se calificó, va en data-resultado para que la fila nazca TERMINADA.
+// si ya se calificó, va en data-resultado + data-acierto: la fila nace
+// TERMINADA, con el GANADOR en negrita, el marcador al lado y ✓/✗ según le
+// hayamos atinado -- un "TERMINÓ" pelado no le dice a nadie qué pasó.
 export function filaSerie(f, nombre) {
   const pa = Number(f.prob_a);
   const etiqueta = ETIQUETA.get(f.juego) ?? String(f.juego).toUpperCase();
@@ -84,16 +86,32 @@ export function filaSerie(f, nombre) {
   const nombreB = nombre(f.equipo_b);
   const tieneProb = Number.isFinite(pa);
 
+  const decidido = f.resultado_real === 'ganaA' || f.resultado_real === 'ganaB';
+  const ganoA = f.resultado_real === 'ganaA';
+  // Con resultado, la negrita se la lleva el GANADOR (no el equipo A).
+  const izq = decidido ? (ganoA ? nombreA : nombreB) : nombreA;
+  const der = decidido ? (ganoA ? nombreB : nombreA) : nombreB;
+  // Marcador orientado al ganador (los columnas vienen absolutas: A y B).
+  const marcador =
+    decidido && f.marcador_a != null && f.marcador_b != null
+      ? ganoA
+        ? `${f.marcador_a}–${f.marcador_b}`
+        : `${f.marcador_b}–${f.marcador_a}`
+      : null;
+  const acerto = decidido ? (pa >= 0.5) === ganoA : null;
+
   const motor = tieneProb
     ? `<span class="prob">${(Math.max(pa, 1 - pa) * 100).toFixed(1)}%</span>${Math.max(pa, 1 - pa) <= UMBRAL_PAREJO ? ' <span class="parejo">MUY PAREJO</span>' : ''}`
     : '<span class="prob">—</span>';
   const confianza = tieneProb ? anilloConfianza(Math.max(pa, 1 - pa)) : '<span class="cuota mono">—</span>';
 
+  const atributos = decidido ? ` data-resultado="${esc(f.resultado_real)}" data-acierto="${acerto ? 1 : 0}"` : '';
+
   return (
-    `<tr data-inicio="${esc(f.inicio_programado)}" data-formato="${esc(f.formato)}"${f.resultado_real ? ` data-resultado="${esc(f.resultado_real)}"` : ''}>` +
+    `<tr data-inicio="${esc(f.inicio_programado)}" data-formato="${esc(f.formato)}"${atributos}>` +
     `<td class="mono"><span class="hora-txt">—</span><br><span class="estado"></span></td>` +
     `<td data-juego="${esc(etiqueta)}"><span class="chip" style="color:var(${cssDe(f.juego)}); border-color:#666">${esc(etiqueta)}</span></td>` +
-    `<td class="equipos"><b>${esc(nombreA)}</b><span class="vs">VS</span><span>${esc(nombreB)}</span></td>` +
+    `<td class="equipos"><b>${esc(izq)}</b><span class="vs">VS</span><span>${esc(der)}</span>${marcador ? ` <span class="marcador mono">${esc(marcador)}</span>` : ''}</td>` +
     `<td class="mono">${esc(f.formato ?? '')}</td>` +
     `<td>${motor}</td>` +
     `<td>${confianza}</td>` +

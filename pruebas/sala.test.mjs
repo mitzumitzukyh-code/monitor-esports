@@ -90,21 +90,41 @@ test('filaSerie: fecha absoluta en data-inicio, favorito con un decimal, parejo 
   assert.match(html, /<b>Team Falcons<\/b><span class="vs">VS<\/span><span>Gaimin Gladiators<\/span>/);
 });
 
-test('filaSerie: con resultado la fila nace TERMINADA y los nombres se escapan', () => {
+test('filaSerie: con resultado nace TERMINADA — ganador en negrita, marcador orientado y data-acierto', () => {
   const f = {
     juego: 'cs2',
     equipo_a: 1,
     equipo_b: 2,
     inicio_programado: '2026-08-24T11:00:00+00:00',
     formato: 'bo1',
-    prob_a: 0.912,
-    resultado_real: 'ganaB',
+    prob_a: 0.912, // íbamos con A
+    resultado_real: 'ganaB', // ganó B: fallo
+    marcador_a: 0,
+    marcador_b: 2,
   };
   const html = filaSerie(f, (id) => (id === 1 ? 'NAVI <A>' : 'FaZe'));
   assert.match(html, /data-resultado="ganaB"/);
-  assert.match(html, /<b>NAVI &lt;A&gt;<\/b>/);
+  assert.match(html, /data-acierto="0"/, 'íbamos con A y ganó B: fallo');
+  assert.match(html, /<b>FaZe<\/b><span class="vs">VS<\/span><span>NAVI &lt;A&gt;<\/span>/, 'la negrita se la lleva el GANADOR');
+  assert.match(html, /<span class="marcador mono">2–0<\/span>/, 'marcador orientado al ganador, no absoluto');
   assert.match(html, /<span class="prob">91\.2%<\/span>/); // sin "parejo"
   assert.match(html, /stroke="#19E68C"/);
+});
+
+test('filaSerie: acierto pone data-acierto=1 y sin marcador no hay span inventado', () => {
+  const f = {
+    juego: 'lol',
+    equipo_a: 111,
+    equipo_b: 222,
+    inicio_programado: '2026-08-25T16:00:00+00:00',
+    formato: 'bo3',
+    prob_a: 0.699,
+    resultado_real: 'ganaA',
+  };
+  const html = filaSerie(f, nombre);
+  assert.match(html, /data-acierto="1"/);
+  assert.match(html, /<b>Team Falcons<\/b>/);
+  assert.ok(!html.includes('marcador'), 'sin marcador_a/b no se inventa uno');
 });
 
 // --- tarjetas --------------------------------------------------------------------
