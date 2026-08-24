@@ -368,7 +368,7 @@ export function enlaceDirecto(slug, { enCurso = false } = {}) {
   );
 }
 
-export function encabezado(f, { nombreA, nombreB, etiqueta, chip, logoDe = null, slug = null, fase = 'proxima' }) {
+export function encabezado(f, { nombreA, nombreB, etiqueta, chip, logoDe = null, slug = null, fase = 'proxima', conReproductor = false }) {
   const fav = favoritoDe(f);
   const decidido = f.resultado_real === 'ganaA' || f.resultado_real === 'ganaB';
   const ganoA = f.resultado_real === 'ganaA';
@@ -402,7 +402,10 @@ export function encabezado(f, { nombreA, nombreB, etiqueta, chip, logoDe = null,
     `<h1>${escudo(idIzq)}${fuerte ? `<b>${esc(izq)}</b>` : `<span>${esc(izq)}</span>`}` +
     `<span class="vs">vs</span>${escudo(idDer)}<span class="pierde">${esc(der)}</span></h1>` +
     `<p class="estado-linea"><span class="hora mono" data-inicio="${esc(f.inicio_programado)}">—</span>` +
-    `${estado}${enlaceDirecto(slug, { enCurso: fase === 'curso' })}</p>` +
+    // Con el reproductor incrustado abajo, el botón sobra: dos cosas para lo
+    // mismo, y encima medía 31px de alto -- por debajo de los 44 que hace
+    // falta para tocar cómodo con el dedo.
+    `${estado}${conReproductor ? '' : enlaceDirecto(slug, { enCurso: fase === 'curso' })}</p>` +
     `<p class="numero"><span class="gordo">${fav.prob == null ? '—' : `${pct1(fav.prob)}%`}</span>` +
     `${quien}${parejo}</p>`
   );

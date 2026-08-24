@@ -40,6 +40,11 @@ export function unPerfil(plantilla, f, { todas, stats, capturas, nombre, logoDe,
   const v = verificacion(f);
   const fase = faseDe(f, ahoraMs);
 
+  // El directo se resuelve PRIMERO porque el encabezado necesita saber si
+  // va a haber reproductor: con uno abajo, el botón "Ver el directo" sobra.
+  const streams = streamsDe ? streamsDe(f.match_id) : null;
+  const stream = bloqueStream(streams, { enCurso: fase === 'curso' });
+
   let html = plantilla;
   html = zona(html, 'CABEZA', `\n${cabeza(f, nombreA, nombreB)}\n`);
   html = zona(html, 'ENCABEZADO', encabezado(f, {
@@ -50,11 +55,8 @@ export function unPerfil(plantilla, f, { todas, stats, capturas, nombre, logoDe,
     logoDe,
     slug: slugDe ? slugDe(f.match_id) : null,
     fase,
+    conReproductor: Boolean(stream),
   }));
-  // El directo va antes que todo lo demás: si la serie está al aire, es lo
-  // que la persona vino a ver. Sólo aparece si de verdad hay canal.
-  const streams = streamsDe ? streamsDe(f.match_id) : null;
-  const stream = bloqueStream(streams, { enCurso: fase === 'curso' });
   html = zona(html, 'STREAM', stream
     ? `<section class="directo-seccion"><h2>El directo<small>lo que está transmitiendo el torneo ahora mismo</small></h2>${stream}</section>`
     : '');

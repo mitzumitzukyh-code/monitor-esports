@@ -214,6 +214,15 @@ footer a { color:var(--tintaS); }
   /* Una tarjeta por renglón: en dos columnas el nombre del canal no cabía. */
   .canal { width:100%; }
   .canal .nom { max-width:none; }
+
+  /* El reproductor, de borde a borde. Metido en la sección medía 301px de
+     ancho en una pantalla de 375: un cuarto de la imagen desperdiciado en
+     márgenes. La sección entera se sale del canal y el marco se sale de la
+     sección, y el título se queda con su sangría. */
+  .directo-seccion { margin-inline:calc(-1 * var(--canal)); border-radius:0;
+    border-left:0; border-right:0; padding-left:var(--e4); padding-right:var(--e4); }
+  .directo-seccion .marco { margin-inline:calc(-1 * var(--e4)); border-radius:0;
+    border-left:0; border-right:0; }
 }
 </style>
 </head>
