@@ -54,9 +54,9 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap"></noscript>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;800&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;800&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;800&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap"></noscript>
 
 <style>
 /* ═══ TOKENS · rejilla de 4pt, escala tipográfica cerrada ═══ */
@@ -79,12 +79,21 @@
 }
 *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
 html { scroll-behavior:smooth; }
+/* Los pesos que se piden a Google Fonts son 400/500/600/800 (Manrope) y
+   400/500/700 (mono), y son EXACTAMENTE los que se usan. Antes el body
+   estaba en 600: todo elemento .mono heredaba un peso que no se había
+   descargado y el navegador lo resolvía con la cara de 700 -- o sea, cada
+   número secundario salía en negrita sin que nadie lo pidiera. Ahora el
+   texto normal habla bajo y la negrita significa algo. */
 body {
   background:var(--fondo); color:var(--tinta);
-  font:600 var(--t3)/1.5 Manrope,system-ui,sans-serif;
+  font:500 var(--t3)/1.5 Manrope,system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;
 }
-.mono { font-family:var(--mono); font-variant-numeric:tabular-nums; }
+.mono { font-family:var(--mono); font-variant-numeric:tabular-nums; font-weight:400; }
+/* Sin esto, un <b> sin regla propia computa 900 (el "bolder" del navegador
+   se suma al 800 del padre). Manrope 900 no existe en lo que se descargó. */
+b { font-weight:800; }
 
 /* Accesibilidad base: foco visible en todo, movimiento opcional */
 :focus-visible { outline:2px solid var(--tinta); outline-offset:2px; border-radius:var(--r1); }
@@ -111,14 +120,17 @@ header { display:grid; grid-template-columns:auto 1fr auto; align-items:center; 
 .marca p { font-size:var(--t1); color:var(--tintaS); letter-spacing:.12em; margin-top:var(--e1); }
 .derecha { display:flex; align-items:center; gap:var(--e4); }
 .vivo { display:inline-flex; align-items:center; gap:var(--e2); border:1px solid #0C9B60;
-  background:rgba(25,230,140,.08); color:var(--ok); border-radius:var(--rp);
+  background:rgba(25,230,140,.08); color:var(--ok); border-radius:var(--rp); white-space:nowrap;
   padding:var(--e2) var(--e3); font-size:var(--t2); font-weight:800; letter-spacing:.08em; }
 .vivo i { width:8px; height:8px; border-radius:var(--rp); background:currentColor; flex:none; }
 /* Ciclo callado: el mismo botón, pero apagado. Un verde que late sin ciclo
    detrás sería el primer número vendedor de la pantalla. */
 .vivo.pausa { border-color:var(--lineaM); background:transparent; color:var(--tintaM); }
-.reloj .hora { font-family:var(--mono); font-size:var(--t6); font-weight:700; line-height:1; }
-.reloj .sub { font-size:var(--t1); color:var(--apag); letter-spacing:.08em; margin-top:var(--e1); }
+/* block, no inline: el margin-top del rótulo no hacía NADA sobre un span
+   inline y la pantalla decía "2:55 PMHORA DE VENEZUELA", todo pegado. */
+.reloj { text-align:right; }
+.reloj .hora { display:block; font-family:var(--mono); font-size:var(--t6); font-weight:700; line-height:1; }
+.reloj .sub { display:block; font-size:var(--t1); color:var(--apag); letter-spacing:.08em; margin-top:var(--e1); }
 
 /* ═══ FIRMA VISUAL · CINTA DE VEREDICTOS ═══
    Lo que diferencia al producto (publicar los fallos) pasa a estar
@@ -178,21 +190,42 @@ main { display:grid; grid-template-columns:212px minmax(0,1fr) 320px;
 .casa b { display:block; color:var(--tinta); font-size:var(--t1); letter-spacing:.1em; margin-bottom:var(--e1); }
 
 /* ═══ TABLA ═══ */
-.pestanas { display:flex; gap:var(--e1); }
-.pestana { all:unset; box-sizing:border-box; display:inline-block; cursor:pointer; padding:var(--e2) var(--e3); border-radius:var(--r1);
+.pestanas { display:flex; gap:var(--e1); align-items:center; }
+/* nowrap: "EN VIVO Y PRÓXIMAS 51" se partía en dos líneas y dejaba el
+   subrayado del estado activo flotando 9.5px debajo del texto. */
+.pestana { all:unset; box-sizing:border-box; display:inline-flex; align-items:center; cursor:pointer;
+  padding:var(--e2) var(--e3); border-radius:var(--r1); white-space:nowrap;
   font-size:var(--t2); font-weight:800; letter-spacing:.06em; color:var(--tintaS); }
 .pestana:hover { background:var(--interior); color:var(--tinta); }
 .pestana[aria-selected="true"] { background:var(--interior); color:var(--tinta); box-shadow:inset 0 -2px 0 var(--acento); }
-.pestana em { font-style:normal; font-family:var(--mono); color:var(--apag); margin-left:var(--e1); }
+.pestana em { font-style:normal; font-family:var(--mono); font-weight:500; color:var(--tintaM);
+  margin-left:var(--e2); padding:1px var(--e2); border-radius:var(--rp);
+  background:var(--interior); font-size:var(--t1); }
+.pestana[aria-selected="true"] em, .pestana:hover em { background:var(--hover); }
 .envoltura { overflow:auto; max-height:calc(100vh - 336px); min-height:320px;
   scrollbar-color:var(--lineaF) transparent; }
-table { width:100%; border-collapse:collapse; }
+/* fixed + <colgroup>: las proporciones las decide el diseño, no el
+   navegador. Antes SERIE medía 172px a 1440 y 489px a 1920 (x2.8), y HORA
+   era la columna más ancha de la tabla -- la jerarquía al revés. */
+table { width:100%; border-collapse:collapse; table-layout:fixed; }
 caption { text-align:left; padding:var(--e2) var(--e4); font-size:var(--t1); color:var(--apag); }
 thead th { position:sticky; top:0; z-index:2; background:var(--tarjeta);
   text-align:left; font-size:var(--t1); letter-spacing:.1em; color:var(--tintaM); font-weight:800;
   padding:var(--e2) var(--e3); border-bottom:1px solid var(--lineaM); white-space:nowrap; }
 tbody th, td { padding:var(--e3); border-bottom:1px solid var(--linea); font-size:var(--t3);
-  vertical-align:middle; text-align:left; font-weight:600; }
+  vertical-align:middle; text-align:left; font-weight:500; }
+/* UNA altura de fila. Antes había 8 distintas (86.5 → 121.6 px) porque
+   cualquier nombre largo partía una línea y estiraba la fila. Lo que no
+   cabe se recorta con puntos suspensivos y se puede leer con el mouse. */
+tbody tr { height:88px; }
+/* SERIE es la columna del producto: los nombres se envuelven y usan el alto
+   que la fila fija ya reserva (cabían 3 líneas en 88px). Recortarlos con
+   puntos habría dejado 33 de 90 nombres a medias. Lo que sí es de una sola
+   línea es la línea del favorito, que es corta por definición. */
+.equipos { line-height:1.35; }
+.equipos .serie { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3;
+  overflow:hidden; max-height:57px; }
+.favorito { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 tbody tr:hover th, tbody tr:hover td { background:var(--hover); }
 tbody tr:last-child th, tbody tr:last-child td { border-bottom:0; }
 tbody tr.oculta { display:none; }
@@ -224,11 +257,11 @@ tbody tr.oculta { display:none; }
 .vs { color:var(--apag); font-size:var(--t1); letter-spacing:.1em; margin:0 var(--e2); text-transform:uppercase; }
 .marcador { color:var(--tinta); font-weight:700; margin-left:var(--e2); }
 .fmt { color:var(--tintaS); }
-.celda-motor { min-width:168px; }
 .motor-fila { display:flex; align-items:baseline; gap:var(--e2); }
 .prob { font-size:var(--t5); font-weight:700; }
 .parejo { font-size:var(--t1); font-weight:800; letter-spacing:.06em; color:var(--aviso);
-  border:1px solid #4a3600; background:rgba(255,176,0,.1); border-radius:var(--r1); padding:1px var(--e1); }
+  border:1px solid #4a3600; background:rgba(255,176,0,.1); border-radius:var(--r1); padding:1px var(--e1);
+  white-space:nowrap; }
 /* El número solo no dice nada: SIEMPRE va pegado al equipo al que se le da.
    Un 50.0% suelto al lado de "A vs B" no se puede leer. */
 .favorito { font-size:var(--t2); color:var(--tintaM); margin-top:2px; line-height:1.35; }
@@ -282,10 +315,21 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
   .cinta .cuenta { text-align:left; }
   main { padding:var(--e3) var(--e4) var(--e5); }
   .calidad { grid-template-columns:1fr 1fr; }
+  /* La cabecera del panel se rompía: el subtítulo caía en 11 líneas dentro
+     de 65px de ancho y las pestañas se salían de la pantalla (el borde de
+     "TODAS 90" quedaba en x=387 con el teléfono en 375). */
+  .panel > header { flex-wrap:wrap; }
+  .panel h2 small { display:none; }
+  .pestanas { width:100%; overflow-x:auto; padding-bottom:var(--e1); }
   /* La tabla se vuelve tarjetas: nada de scroll horizontal en el teléfono */
   .envoltura { max-height:none; min-height:0; overflow:visible; }
   thead { display:none; }
   table, tbody, tbody tr, tbody th, tbody td { display:block; width:100%; }
+  /* En tarjeta manda el contenido: ni altura fija ni recorte con puntos. */
+  tbody tr { height:auto; }
+  .equipos, .favorito { overflow:visible; white-space:normal; text-overflow:clip; }
+  .equipos { line-height:1.5; }
+  .equipos .serie { display:inline; max-height:none; overflow:visible; }
   tbody tr { border:1px solid var(--linea); border-radius:var(--r1); margin-bottom:var(--e2); padding:var(--e3); }
   tbody th, tbody td { border:0; padding:2px 0; }
   tbody td::before { content:attr(data-rotulo) " "; font-size:var(--t1); color:var(--apag);
@@ -376,6 +420,14 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
     <div class="envoltura">
       <table>
         <caption class="solo-lector">Series de eSports con la probabilidad del motor para el equipo favorito</caption>
+        <!-- Anchos medidos, no adivinados: HORA cabe "SIN CALIFICAR" (103px
+             de texto), JUEGO cabe el chip VALORANT (89px de caja), MOTOR cabe
+             "50.0% MUY PAREJO" en una línea, y SERIE se queda con lo que
+             sobre, que es la columna que de verdad crece con la pantalla. -->
+        <colgroup>
+          <col style="width:136px"><col style="width:120px"><col>
+          <col style="width:56px"><col style="width:192px"><col style="width:92px">
+        </colgroup>
         <thead>
           <tr>
             <th scope="col">HORA</th><th scope="col">JUEGO</th><th scope="col">SERIE</th>
@@ -387,7 +439,7 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
 <tr class="juzgada" data-grupo="juzgada" data-juego="LOL" data-inicio="2026-08-23T15:00:00+00:00" data-formato="bo3" data-resultado="ganaB" data-acierto="0">
 <th scope="row" class="mono celda-hora"><span class="hora-txt">—</span><span class="veredicto no">✗ FALLÓ</span></th>
 <td><span class="chip j-lol">LOL</span></td>
-<td class="equipos"><b>GIANTX</b><span class="vs">vs</span><span>Team Heretics</span> <span class="marcador mono">2–0</span></td>
+<td class="equipos"><span class="serie"><b>GIANTX</b><span class="vs">vs</span><span>Team Heretics</span> <span class="marcador mono">2–0</span></span></td>
 <td class="mono fmt">bo3</td>
 <td class="celda-motor">
   <div class="motor-fila"><span class="prob mono">69.9%</span></div>
@@ -399,7 +451,7 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
 <tr class="abierta" data-grupo="abierta" data-juego="CS2" data-inicio="2026-08-23T16:00:00+00:00" data-formato="bo1">
 <th scope="row" class="mono celda-hora"><span class="hora-txt">—</span><span class="estado"></span></th>
 <td><span class="chip j-cs2">CS2</span></td>
-<td class="equipos"><img class="escudo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Crect width='18' height='18' rx='4' fill='%23333A47'/%3E%3Ctext x='9' y='13' font-size='9' font-family='monospace' fill='%23A7ADB8' text-anchor='middle'%3ER%3C/text%3E%3C/svg%3E" alt="" width="18" height="18"><b>ROUNDS</b><span class="vs">vs</span><img class="escudo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Crect width='18' height='18' rx='4' fill='%23333A47'/%3E%3Ctext x='9' y='13' font-size='9' font-family='monospace' fill='%23A7ADB8' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E" alt="" width="18" height="18"><span>PURE</span></td>
+<td class="equipos"><span class="serie"><img class="escudo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Crect width='18' height='18' rx='4' fill='%23333A47'/%3E%3Ctext x='9' y='13' font-size='9' font-family='monospace' fill='%23A7ADB8' text-anchor='middle'%3ER%3C/text%3E%3C/svg%3E" alt="" width="18" height="18"><b>ROUNDS</b><span class="vs">vs</span><img class="escudo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Crect width='18' height='18' rx='4' fill='%23333A47'/%3E%3Ctext x='9' y='13' font-size='9' font-family='monospace' fill='%23A7ADB8' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E" alt="" width="18" height="18"><span>PURE</span></span></td>
 <td class="mono fmt">bo1</td>
 <td class="celda-motor">
   <div class="motor-fila"><span class="prob mono">55.9%</span></div>
@@ -411,7 +463,7 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
 <tr class="abierta" data-grupo="abierta" data-juego="DOTA 2" data-inicio="2026-08-23T17:30:00+00:00" data-formato="bo3">
 <th scope="row" class="mono celda-hora"><span class="hora-txt">—</span><span class="estado"></span></th>
 <td><span class="chip j-dota">DOTA 2</span></td>
-<td class="equipos"><b>Summer Bear</b><span class="vs">vs</span><span>Ducksquad</span></td>
+<td class="equipos"><span class="serie"><b>Summer Bear</b><span class="vs">vs</span><span>Ducksquad</span></span></td>
 <td class="mono fmt">bo3</td>
 <td class="celda-motor">
   <div class="motor-fila"><span class="prob mono">50.0%</span> <span class="parejo">MUY PAREJO</span></div>
@@ -423,7 +475,7 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
 <tr class="juzgada" data-grupo="juzgada" data-juego="CS2" data-inicio="2026-08-23T15:30:00+00:00" data-formato="bo3" data-resultado="ganaA" data-acierto="1">
 <th scope="row" class="mono celda-hora"><span class="hora-txt">—</span><span class="veredicto ok">✓ ACERTÓ</span></th>
 <td><span class="chip j-cs2">CS2</span></td>
-<td class="equipos"><b>FORZE Reload</b><span class="vs">vs</span><span>Younglings</span> <span class="marcador mono">2–1</span></td>
+<td class="equipos"><span class="serie"><b>FORZE Reload</b><span class="vs">vs</span><span>Younglings</span> <span class="marcador mono">2–1</span></span></td>
 <td class="mono fmt">bo3</td>
 <td class="celda-motor">
   <div class="motor-fila"><span class="prob mono">66.8%</span></div>
@@ -510,7 +562,10 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
       e.className = 'estado';
       if (ahora > ini + (DURACION[tr.dataset.formato] ?? 150) * 6e4) {
         // Se pasó de su duración y nadie la calificó: se dice, no se adivina.
-        e.textContent = 'TERMINÓ · SIN CALIFICAR'; e.classList.add('viejo');
+        // Corto, porque la columna HORA ahora tiene ancho fijo; la frase
+        // completa queda en el title, y la hora de al lado ya dice cuándo fue.
+        e.textContent = 'SIN CALIFICAR'; e.title = 'Terminó y todavía no se ha calificado';
+        e.classList.add('viejo');
       } else if (ini <= ahora) {
         e.textContent = '● EN CURSO'; e.classList.add('curso', 'late');
       } else {
@@ -565,6 +620,9 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
   if (celdas.length && celdas.every(c => c.textContent.trim() === '—')) {
     celdas.forEach(c => c.remove());
     document.querySelectorAll('thead th')[5]?.remove();
+    // Y su <col>, o con table-layout:fixed las anchuras quedan corridas
+    // una columna respecto a los encabezados.
+    document.querySelectorAll('colgroup col')[5]?.remove();
   }
 
   /* Rótulos para la vista de tarjetas en móvil. La fila de "sin series"

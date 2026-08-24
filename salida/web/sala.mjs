@@ -185,8 +185,13 @@ export function filaSerie(f, nombre, cuotaDe = null, logoDe = null) {
     ` data-juego="${esc(etiqueta)}" data-inicio="${esc(f.inicio_programado)}" data-formato="${esc(f.formato)}"${atributos}>` +
     `<th scope="row" class="mono celda-hora">${hora}</th>` +
     `<td><span class="chip ${cfg?.chip ?? ''}">${esc(etiqueta)}</span></td>` +
-    `<td class="equipos">${escudo(idIzq)}${equipo(izq, negritaIzq === true)}<span class="vs">vs</span>${escudo(idDer)}${equipo(der, negritaIzq === false)}` +
-    `${marcador ? ` <span class="marcador mono">${esc(marcador)}</span>` : ''}</td>` +
+    // El .serie de adentro es el que se puede recortar: una celda de tabla
+    // crece con su contenido pase lo que pase, así que sin este envoltorio
+    // un nombre como "Gamespace Mediterranean College Esports" estiraba la
+    // fila y rompía la altura única.
+    `<td class="equipos"><span class="serie">${escudo(idIzq)}${equipo(izq, negritaIzq === true)}` +
+    `<span class="vs">vs</span>${escudo(idDer)}${equipo(der, negritaIzq === false)}` +
+    `${marcador ? ` <span class="marcador mono">${esc(marcador)}</span>` : ''}</span></td>` +
     `<td class="mono fmt">${esc(f.formato ?? '')}</td>` +
     `<td class="celda-motor">${motor}</td>` +
     `<td class="mercado mono">${mercado}</td>` +
