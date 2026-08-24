@@ -77,7 +77,14 @@ async function copiarLogosDelRail() {
 
 // Los iconos del sitio (favicon etc.) viven en assets/ de la raíz; el
 // artefacto de Pages es SÓLO salida/web, así que se copian al generar.
-const ICONOS = ['favicon.svg', 'favicon.ico', 'favicon-32.png', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png'];
+// og-image.png y site.webmanifest se copiaban... no, no se copiaban: la
+// página los pedía y el artefacto de Pages no los llevaba. icon-maskable
+// entra porque el manifest lo nombra y sin él Android recorta el rayo.
+const ICONOS = [
+  'favicon.svg', 'favicon.ico', 'favicon-32.png', 'apple-touch-icon.png',
+  'icon-192.png', 'icon-512.png', 'icon-maskable-512.png',
+  'og-image.png', 'site.webmanifest',
+];
 
 async function copiarIconos() {
   const destino = new URL('assets/', AQUI);

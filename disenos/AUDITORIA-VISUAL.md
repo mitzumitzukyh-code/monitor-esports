@@ -7,7 +7,7 @@ ventana, 90 en total), servido en `http://localhost:4322`.
 `getComputedStyle`, contraste WCAG calculado, y capturas a 1440×900, 1920×1080
 y 375×812.
 
-> ## Estado: **Fase A aplicada** (2026-08-24)
+> ## Estado: **Fases A y B aplicadas** (2026-08-24)
 >
 > Todo lo que sigue describe la pantalla **antes** de la Fase A. Lo que ya
 > cambió, con el número nuevo medido:
@@ -29,8 +29,29 @@ y 375×812.
 > `SIN CALIFICAR` en vez de `TERMINÓ · SIN CALIFICAR` (182 px de texto no
 > cabían en la columna). La frase completa quedó en el `title`.
 >
-> Contraste después del cambio: todo sigue en AA o mejor (lo más bajo, 5.54:1).
-> **Faltan las fases B y C.**
+> **Fase B:**
+>
+> | Punto | Antes | Ahora |
+> |---|---|---|
+> | 3.1 Sombras en la página | 1 | escala de 2 + el `thead` pegajoso se despega |
+> | 3.2 Logo | una “M” escrita a mano | el rayo de la marca, en línea, en el rojo del sitio |
+> | 3.2 Tarjeta social | `icon-512.png` cuadrado | `og-image.png` 1200×630 con `alt` y `summary_large_image` |
+> | 3.2 Manifest | no enlazado | enlazado, con rutas relativas y el negro del sitio |
+> | 3.2 Copiados por el generador | 6 archivos | 9 (entran `og-image`, manifest y el icono maskable) |
+> | 2.2 Ancho del contenido | 1905 px a 1920, sin tope | **tope de 1600 px**, con las barras a sangre |
+> | 3.3 Radios | 6px ×303 · 10px ×4 | anidados: panel 14 → tarjeta 10 → chip 6 |
+>
+> **Ojo con la marca:** el kit de `assets/` es de una versión anterior del
+> sitio, con paleta **azul/violeta** (`#2563eb → #7c3aed`) y tipografía Inter,
+> como dice su propio README. El sitio de hoy es rojo (`#FF2638`) con Manrope.
+> Por eso el logo de la cabecera usa la **forma** de la marca (el rayo de
+> `logo-mark-mono.svg`, que viene en `currentColor` justo para esto) pero en el
+> rojo del sitio. Los PNG (favicon, iconos PWA, `og-image`) **siguen siendo
+> azules**: no se pueden retintar sin regenerarlos. Queda esa decisión
+> pendiente — o se regenera el kit en rojo, o el sitio adopta el azul.
+>
+> Contraste después de los dos cambios: todo sigue en AA o mejor (lo más bajo,
+> 5.07:1). **Falta la fase C.**
 
 ---
 

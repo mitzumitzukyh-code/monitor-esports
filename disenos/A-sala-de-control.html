@@ -14,6 +14,8 @@
 <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="alternate icon" href="assets/favicon.ico">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="assets/site.webmanifest">
+<meta name="apple-mobile-web-app-title" content="Monitor">
 
 <meta property="og:type" content="website">
 <meta property="og:locale" content="es_VE">
@@ -21,11 +23,18 @@
 <meta property="og:url" content="https://mitzumitzukyh-code.github.io/monitor-esports/">
 <meta property="og:title" content="Monitor eSports · Predicciones que no se pueden editar">
 <meta property="og:description" content="Predicciones de Dota 2, CS2, LoL y Valorant calificadas con Brier contra la moneda. Sin apuestas, sin cuotas, sin LLM tocando los números.">
-<meta property="og:image" content="https://mitzumitzukyh-code.github.io/monitor-esports/assets/icon-512.png">
-<meta name="twitter:card" content="summary">
+<!-- La tarjeta social de 1200x630 ya estaba hecha en assets/ y nadie la
+     enlazaba: se estaba mandando el icono cuadrado de 512. Y va absoluta a
+     propósito -- con ruta relativa WhatsApp, X, Discord y Telegram no
+     muestran nada. -->
+<meta property="og:image" content="https://mitzumitzukyh-code.github.io/monitor-esports/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Monitor eSports: el motor predice, la realidad califica.">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Monitor eSports · Predicciones que no se pueden editar">
 <meta name="twitter:description" content="Brier contra la moneda, en vivo, para 4 juegos. Los fallos se publican igual que los aciertos.">
-<meta name="twitter:image" content="https://mitzumitzukyh-code.github.io/monitor-esports/assets/icon-512.png">
+<meta name="twitter:image" content="https://mitzumitzukyh-code.github.io/monitor-esports/assets/og-image.png">
 
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
@@ -74,7 +83,18 @@
      la nariz pegada al monitor. t1 11→12 · t2 12→13 · t3 13→14 · t4 15→16
      · t5 18→20 · t6 22→24 · t7 28→30. */
   --t1:12px; --t2:13px; --t3:14px; --t4:16px; --t5:20px; --t6:24px; --t7:30px;
-  --r1:6px; --r2:10px; --rp:999px;
+  /* Radios ANIDADOS: panel 14 → tarjeta de adentro 10 → chip 6. Antes el
+     6px se usaba 303 veces y el 10px cuatro: el panel y el chip que vive
+     dentro tenían el mismo redondeo, y eso aplana la jerarquía. */
+  --r1:6px; --r2:10px; --r3:14px; --rp:999px;
+  /* La página tenía UNA sombra en total (el subrayado de una pestaña). Sin
+     profundidad todo se lee como terminal, no como pantalla diseñada. */
+  --sombra-1:0 1px 2px rgba(0,0,0,.5);
+  --sombra-2:0 10px 30px -12px rgba(0,0,0,.8);
+  /* Canaleta: el fondo y las líneas siguen cruzando toda la pantalla, pero
+     el CONTENIDO no pasa de 1600px. Antes a 1920 el main medía 1905 y en un
+     monitor de 2560 se estiraba igual, sin tope. */
+  --canal:max(var(--e5), (100% - 1600px) / 2);
   --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
@@ -110,11 +130,12 @@ b { font-weight:800; }
 
 /* ═══ CABECERA ═══ */
 .franja { background:#1c1400; border-bottom:1px solid #4a3600; color:var(--aviso);
-  font-family:var(--mono); font-size:var(--t1); letter-spacing:.06em; padding:var(--e2) var(--e5); }
+  font-family:var(--mono); font-size:var(--t1); letter-spacing:.06em; padding:var(--e2) var(--canal); }
 header { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:var(--e4);
-  padding:var(--e4) var(--e5); border-bottom:1px solid var(--linea); }
-.logo { width:48px; height:48px; border-radius:var(--r2); display:grid; place-items:center;
-  background:linear-gradient(135deg,var(--acento),#8f1220); font-size:var(--t6); font-weight:800; }
+  padding:var(--e4) var(--canal); border-bottom:1px solid var(--linea); }
+/* El redondeo lo trae el propio rect del SVG (rx 118 de 512 = la esquina de
+   la marca). Un border-radius acá no recortaría nada. */
+.logo { width:48px; height:48px; display:block; }
 .marca h1 { font-size:var(--t6); font-weight:800; letter-spacing:-.01em; line-height:1.1; }
 .marca h1 span { color:var(--acento); }
 .marca p { font-size:var(--t1); color:var(--tintaS); letter-spacing:.12em; margin-top:var(--e1); }
@@ -138,7 +159,7 @@ header { display:grid; grid-template-columns:auto 1fr auto; align-items:center; 
    Cada marca lleva el veredicto DENTRO (✓/✗): una fila de cuadros mudos
    obliga a pasar el mouse para saber qué es cada uno. */
 .cinta { display:grid; grid-template-columns:auto 1fr auto; gap:var(--e4); align-items:center;
-  padding:var(--e3) var(--e5); border-bottom:1px solid var(--linea); background:var(--tarjeta); }
+  padding:var(--e3) var(--canal); border-bottom:1px solid var(--linea); background:var(--tarjeta); }
 .cinta .rotulo { font-size:var(--t1); font-weight:800; letter-spacing:.12em; color:var(--tintaM); }
 .cinta .rotulo b { display:block; font-size:var(--t3); color:var(--tinta); letter-spacing:.02em; }
 .marcas { display:flex; gap:var(--e1); flex-wrap:wrap; }
@@ -152,7 +173,7 @@ header { display:grid; grid-template-columns:auto 1fr auto; align-items:center; 
 
 /* ═══ ESTADO DEL SISTEMA · una sola línea, no 5 tarjetas iguales ═══ */
 .sistema { display:flex; align-items:center; gap:var(--e5); flex-wrap:wrap;
-  padding:var(--e3) var(--e5); border-bottom:1px solid var(--linea); }
+  padding:var(--e3) var(--canal); border-bottom:1px solid var(--linea); }
 .sistema h2 { font-size:var(--t2); font-weight:800; letter-spacing:.12em; color:var(--tintaM); }
 .fuentes { display:flex; gap:var(--e4); flex-wrap:wrap; list-style:none; }
 .fuente { display:flex; align-items:center; gap:var(--e2); font-size:var(--t2); }
@@ -165,8 +186,9 @@ header { display:grid; grid-template-columns:auto 1fr auto; align-items:center; 
 
 /* ═══ LAYOUT ═══ */
 main { display:grid; grid-template-columns:212px minmax(0,1fr) 320px;
-  gap:var(--e3); padding:var(--e4) var(--e5) var(--e6); align-items:start; }
-.panel { border:1px solid var(--linea); border-radius:var(--r2); background:var(--tarjeta); overflow:hidden; }
+  gap:var(--e3); padding:var(--e4) var(--canal) var(--e6); align-items:start; }
+.panel { border:1px solid var(--linea); border-radius:var(--r3); background:var(--tarjeta); overflow:hidden;
+  box-shadow:var(--sombra-1); }
 .panel > header { display:flex; align-items:center; justify-content:space-between; gap:var(--e3);
   padding:var(--e3) var(--e4); border-bottom:1px solid var(--linea); }
 .panel h2 { font-size:var(--t4); font-weight:800; letter-spacing:.02em; }
@@ -176,16 +198,19 @@ main { display:grid; grid-template-columns:212px minmax(0,1fr) 320px;
 .rail { display:flex; flex-direction:column; gap:var(--e2); position:sticky; top:var(--e3); }
 .rail h2 { font-size:var(--t2); font-weight:800; letter-spacing:.12em; color:var(--tintaM); margin-bottom:var(--e1); }
 .juego { all:unset; box-sizing:border-box; display:block; cursor:pointer; border:1px solid var(--linea); border-left:3px solid var(--jc);
-  border-radius:var(--r1); background:var(--tarjeta); padding:var(--e3); transition:background .15s,border-color .15s; }
-.juego:hover { background:var(--hover); border-color:var(--lineaM); border-left-color:var(--jc); }
-.juego[aria-pressed="true"] { background:color-mix(in srgb,var(--jc) 10%,var(--tarjeta)); border-color:var(--jc); }
+  border-radius:var(--r2); background:var(--tarjeta); padding:var(--e3);
+  transition:background .15s,border-color .15s,box-shadow .15s; }
+.juego:hover { background:var(--hover); border-color:var(--lineaM); border-left-color:var(--jc);
+  box-shadow:var(--sombra-1); }
+.juego[aria-pressed="true"] { background:color-mix(in srgb,var(--jc) 10%,var(--tarjeta)); border-color:var(--jc);
+  box-shadow:var(--sombra-2); }
 .juego .nom { display:flex; align-items:center; gap:var(--e2); font-size:var(--t3); font-weight:800; color:var(--jc); letter-spacing:.03em; }
 .juego .nom img { width:20px; height:20px; border-radius:var(--r1); object-fit:cover; background:#000; flex:none; }
 .juego dl { display:grid; grid-template-columns:1fr auto; gap:2px var(--e2); margin-top:var(--e2); font-size:var(--t1); }
 .juego dt { color:var(--tintaS); }
 .juego dd { font-family:var(--mono); font-weight:700; text-align:right; }
 .pista { font-size:var(--t1); color:var(--aviso); letter-spacing:.06em; font-weight:800; padding:0 var(--e1); }
-.casa { border:1px solid var(--linea); border-left:3px solid var(--acento); border-radius:var(--r1);
+.casa { border:1px solid var(--linea); border-left:3px solid var(--acento); border-radius:var(--r2);
   background:var(--tarjeta); padding:var(--e3); font-size:var(--t2); color:var(--tintaS); line-height:1.55; }
 .casa b { display:block; color:var(--tinta); font-size:var(--t1); letter-spacing:.1em; margin-bottom:var(--e1); }
 
@@ -210,6 +235,7 @@ main { display:grid; grid-template-columns:212px minmax(0,1fr) 320px;
 table { width:100%; border-collapse:collapse; table-layout:fixed; }
 caption { text-align:left; padding:var(--e2) var(--e4); font-size:var(--t1); color:var(--apag); }
 thead th { position:sticky; top:0; z-index:2; background:var(--tarjeta);
+  box-shadow:0 1px 0 var(--lineaM), 0 8px 12px -10px rgba(0,0,0,.9);
   text-align:left; font-size:var(--t1); letter-spacing:.1em; color:var(--tintaM); font-weight:800;
   padding:var(--e2) var(--e3); border-bottom:1px solid var(--lineaM); white-space:nowrap; }
 tbody th, td { padding:var(--e3); border-bottom:1px solid var(--linea); font-size:var(--t3);
@@ -278,7 +304,7 @@ tr.juzgada .prob { color:var(--tintaM); }
 /* ═══ COLUMNA DERECHA ═══ */
 .col { display:flex; flex-direction:column; gap:var(--e3); }
 .calidad { display:grid; grid-template-columns:1fr 1fr; gap:var(--e2); padding:var(--e3); }
-.cq { border:1px solid var(--linea); border-top:2px solid var(--jc); border-radius:var(--r1);
+.cq { border:1px solid var(--linea); border-top:2px solid var(--jc); border-radius:var(--r2);
   background:var(--interior); padding:var(--e3); }
 .cq .nom { font-size:var(--t1); font-weight:800; letter-spacing:.1em; color:var(--jc); }
 .cq .big { font-family:var(--mono); font-size:var(--t6); font-weight:700; margin-top:var(--e1); }
@@ -296,7 +322,7 @@ tr.juzgada .prob { color:var(--tintaM); }
 .juicio small { color:var(--apag); margin-left:auto; font-family:var(--mono); font-size:var(--t1); white-space:nowrap; }
 
 footer { display:flex; flex-wrap:wrap; gap:var(--e3) var(--e5); justify-content:space-between;
-  padding:var(--e4) var(--e5); border-top:1px solid var(--linea); font-size:var(--t2); color:var(--apag); }
+  padding:var(--e4) var(--canal); border-top:1px solid var(--linea); font-size:var(--t2); color:var(--apag); }
 footer a { color:var(--tintaS); }
 footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
 
@@ -346,7 +372,19 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
 <p class="franja">DATOS REALES · CICLO CADA 10 MINUTOS · HORA DE VENEZUELA</p>
 
 <header>
-  <div class="logo" aria-hidden="true">M</div>
+  <!-- El rayo es la marca de verdad (assets/logo-mark-mono.svg, que viene en
+       currentColor justo para esto). Va en línea, no como <img>, porque un
+       <img> no hereda el color de la página. Antes acá había una "M" escrita
+       a mano dentro de una caja con degradado: un placeholder que se quedó. -->
+  <svg class="logo" viewBox="0 0 512 512" width="48" height="48" role="img" aria-label="Monitor eSports">
+    <defs><linearGradient id="marca" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FF2638"/><stop offset="1" stop-color="#8F1220"/>
+    </linearGradient></defs>
+    <rect width="512" height="512" rx="118" fill="url(#marca)"/>
+    <g transform="translate(256,256) scale(11.2) translate(-12,-12)">
+      <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" fill="#05070A" fill-opacity=".92"/>
+    </g>
+  </svg>
   <div class="marca">
     <h1>MONITOR <span>eSPORTS</span></h1>
     <p>CENTRO DE CONTROL · DOTA 2 · CS2 · LOL · VALORANT</p>
