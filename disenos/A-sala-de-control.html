@@ -209,6 +209,11 @@ tbody tr.oculta { display:none; }
 .j-lol { color:var(--lol) } .j-val { color:var(--val) }
 .equipos b { font-weight:800; }
 .equipos span { color:var(--tintaS); }
+/* Escudo del equipo: 18px, alineado con el texto. Enlazado al CDN de la
+   fuente -- si no carga, onerror lo elimina y queda el nombre, que es lo
+   que identifica de verdad. */
+.equipos .escudo { width:18px; height:18px; border-radius:var(--r1); object-fit:cover;
+  background:#000; vertical-align:-4px; margin-right:var(--e1); border:1px solid var(--linea); }
 .vs { color:var(--apag); font-size:var(--t1); letter-spacing:.1em; margin:0 var(--e2); text-transform:uppercase; }
 .marcador { color:var(--tinta); font-weight:700; margin-left:var(--e2); }
 .fmt { color:var(--tintaS); }
@@ -387,7 +392,7 @@ footer nav { display:flex; gap:var(--e4); flex-wrap:wrap; }
 <tr class="abierta" data-grupo="abierta" data-juego="CS2" data-inicio="2026-08-23T16:00:00+00:00" data-formato="bo1">
 <th scope="row" class="mono celda-hora"><span class="hora-txt">—</span><span class="estado"></span></th>
 <td><span class="chip j-cs2">CS2</span></td>
-<td class="equipos"><b>ROUNDS</b><span class="vs">vs</span><span>PURE</span></td>
+<td class="equipos"><img class="escudo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Crect width='18' height='18' rx='4' fill='%23333A47'/%3E%3Ctext x='9' y='13' font-size='9' font-family='monospace' fill='%23A7ADB8' text-anchor='middle'%3ER%3C/text%3E%3C/svg%3E" alt="" width="18" height="18"><b>ROUNDS</b><span class="vs">vs</span><img class="escudo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Crect width='18' height='18' rx='4' fill='%23333A47'/%3E%3Ctext x='9' y='13' font-size='9' font-family='monospace' fill='%23A7ADB8' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E" alt="" width="18" height="18"><span>PURE</span></td>
 <td class="mono fmt">bo1</td>
 <td class="celda-motor">
   <div class="motor-fila"><span class="prob mono">55.9%</span></div>

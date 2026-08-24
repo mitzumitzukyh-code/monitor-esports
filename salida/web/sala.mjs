@@ -92,7 +92,7 @@ const pct1 = (p) => (p * 100).toFixed(1);
 // Negrita en la columna SERIE = el protagonista de la fila: el ganador si ya
 // terminó, el favorito si todavía no. Y en MOTOR va el nombre del equipo al
 // que pertenece el porcentaje, siempre.
-export function filaSerie(f, nombre, cuotaDe = null) {
+export function filaSerie(f, nombre, cuotaDe = null, logoDe = null) {
   const fav = favoritoDe(f);
   const etiqueta = ETIQUETA.get(f.juego) ?? String(f.juego).toUpperCase();
   const cfg = JUEGOS.find((j) => j.id === f.juego);
@@ -118,6 +118,18 @@ export function filaSerie(f, nombre, cuotaDe = null) {
     negritaIzq = fav.hay ? fav.ladoA : null; // null = 50/50, nadie en negrita
   }
   const equipo = (txt, fuerte) => (fuerte ? `<b>${esc(txt)}</b>` : `<span>${esc(txt)}</span>`);
+
+  // Escudo de cada equipo, enlazado al CDN de bo3.gg (no incrustado: decenas
+  // por página). alt="" porque el nombre va al lado -- no hay que anunciarlo
+  // dos veces. Si el CDN falla, la imagen se elimina sola y queda el texto.
+  const idIzq = decidido ? (ganoA ? f.equipo_a : f.equipo_b) : f.equipo_a;
+  const idDer = decidido ? (ganoA ? f.equipo_b : f.equipo_a) : f.equipo_b;
+  const escudo = (id) => {
+    const url = logoDe ? logoDe(id) : null;
+    return url
+      ? `<img class="escudo" src="${esc(url)}" alt="" width="18" height="18" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">`
+      : '';
+  };
 
   const marcador =
     decidido && f.marcador_a != null && f.marcador_b != null
@@ -173,7 +185,7 @@ export function filaSerie(f, nombre, cuotaDe = null) {
     ` data-juego="${esc(etiqueta)}" data-inicio="${esc(f.inicio_programado)}" data-formato="${esc(f.formato)}"${atributos}>` +
     `<th scope="row" class="mono celda-hora">${hora}</th>` +
     `<td><span class="chip ${cfg?.chip ?? ''}">${esc(etiqueta)}</span></td>` +
-    `<td class="equipos">${equipo(izq, negritaIzq === true)}<span class="vs">vs</span>${equipo(der, negritaIzq === false)}` +
+    `<td class="equipos">${escudo(idIzq)}${equipo(izq, negritaIzq === true)}<span class="vs">vs</span>${escudo(idDer)}${equipo(der, negritaIzq === false)}` +
     `${marcador ? ` <span class="marcador mono">${esc(marcador)}</span>` : ''}</td>` +
     `<td class="mono fmt">${esc(f.formato ?? '')}</td>` +
     `<td class="celda-motor">${motor}</td>` +

@@ -142,8 +142,7 @@ test('filaSerie: 50/50 JUZGADA no se cobra como fallo — veredicto ámbar y sin
 });
 
 // --- mercado ---------------------------------------------------------------------
-test('filaSerie: MERCADO muestra la cuota del FAVORITO con dos decimales; si no hay, «—»', () => {
-  const f = {
+test('filaSerie: MERCADO muestra la cuota del FAVORITO con dos decimales; si no hay, «—»', () => {  const f = {
     juego: 'cs2',
     equipo_a: 111,
     equipo_b: 222,
@@ -164,6 +163,42 @@ test('filaSerie: MERCADO muestra la cuota del FAVORITO con dos decimales; si no 
   // Cuota inservible (0, negativa, NaN) también es «—»: nunca un cero mentiroso.
   const rota = filaSerie(f, nombre, () => 0);
   assert.match(rota, /<td class="mercado mono">—<\/td>/);
+});
+
+// --- escudos ----------------------------------------------------------------------
+test('filaSerie: escudo enlazado por equipo y respetando el orden en pantalla', () => {
+  const f = {
+    juego: 'cs2',
+    equipo_a: 111,
+    equipo_b: 222,
+    inicio_programado: '2026-08-25T16:00:00+00:00',
+    formato: 'bo3',
+    prob_a: 0.3, // favorito B
+    resultado_real: 'ganaB', // ganó B: la fila muestra B primero
+    marcador_a: 0,
+    marcador_b: 2,
+  };
+  const logos = new Map([
+    [111, 'https://cdn.ejemplo/a.webp?x=1&y=2'],
+    [222, 'https://cdn.ejemplo/b.webp'],
+  ]);
+  const html = filaSerie(f, nombre, null, (id) => logos.get(id) ?? null);
+  // El escudo de B (ganador, va a la izquierda) es el de id 222.
+  const escudos = html.match(/<img class="escudo" src="([^"]+)"/g) ?? [];
+  assert.equal(escudos.length, 2);
+  assert.match(html, /<img class="escudo" src="https:\/\/cdn\.ejemplo\/b\.webp"[^>]*><b>Gaimin Gladiators<\/b>/);
+  assert.match(html, /src="https:\/\/cdn\.ejemplo\/a\.webp\?x=1&amp;y=2"/, 'el & de la URL se escapa en el atributo');
+  assert.match(html, /onerror="this\.remove\(\)"/, 'si el CDN falla, la imagen se quita sola');
+  assert.match(html, /referrerpolicy="no-referrer"/);
+});
+
+test('filaSerie: sin logoDe o con equipo sin logo, no hay img rota — sólo el nombre', () => {
+  const f = { juego: 'cs2', equipo_a: 111, equipo_b: 222, inicio_programado: '2026-08-25T16:00:00+00:00', formato: 'bo3', prob_a: 0.7 };
+  const sinFuncion = filaSerie(f, nombre);
+  assert.ok(!sinFuncion.includes('escudo'));
+  const conHueco = filaSerie(f, nombre, null, (id) => (id === 111 ? 'https://cdn.ejemplo/a.webp' : null));
+  assert.equal((conHueco.match(/class="escudo"/g) ?? []).length, 1, 'el equipo sin logo no genera img');
+  assert.match(conHueco, /<span>Gaimin Gladiators<\/span>/);
 });
 
 test('filaSerie: con resultado nace juzgada — veredicto en el HTML, ganador y marcador orientado', () => {

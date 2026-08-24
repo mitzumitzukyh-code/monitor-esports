@@ -135,6 +135,7 @@ async function main() {
   // aparecen en pantalla.
   const nombres = new Map();
   const nombre = (id) => nombres.get(id)?.nombre ?? `#${id}`;
+  const logoDe = (id) => nombres.get(id)?.logo ?? null;
   for (const cfg of JUEGOS) {
     const filasDeJuego = [...enVentana, ...juicios, ...cinta].filter((f) => f.juego === cfg.id);
     const ids = filasDeJuego.flatMap((f) => [f.equipo_a, f.equipo_b]).filter(Boolean);
@@ -185,7 +186,7 @@ async function main() {
 
   const htmlFilas =
     enVentana.length > 0
-      ? enVentana.map((f) => filaSerie(f, nombre, cuotaDe)).join('\n')
+      ? enVentana.map((f) => filaSerie(f, nombre, cuotaDe, logoDe)).join('\n')
       : '<tr class="vacia"><td colspan="6" class="mono" style="text-align:center; color:var(--apag); padding:22px">sin series en la ventana de 24 horas</td></tr>';
 
   plantilla = zona(plantilla, 'FILAS', htmlFilas);
