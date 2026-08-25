@@ -40,6 +40,20 @@ function discordAHtml(s) {
     .replace(/_([^_\n]+)_/g, '<i>$1</i>');
 }
 
+// Un emoji por juego, en vez de la misma bola de cristal para los cuatro.
+//
+// Por qué no el logo de verdad: Telegram sólo deja meter imágenes en el
+// texto con emoji personalizados (<tg-emoji>), y eso está reservado a los
+// bots que compraron un nombre de usuario en Fragment. Un bot normal sólo
+// puede escribir emoji estándar, y no existe uno de LoL ni de CS2. El logo
+// de verdad sí aparece: es la miniatura de la tarjeta, que sale del og:image
+// del perfil.
+//
+// La elección es la seña de cada juego, no una letra: la bomba de CS, el
+// escudo de Dota, las espadas de LoL y la mira de Valorant.
+export const EMOJI_JUEGO = { cs2: '💣', dota2: '🛡️', lol: '⚔️', valorant: '🎯' };
+const emojiDe = (juego) => EMOJI_JUEGO[juego] ?? '🔮';
+
 // La línea de una partida por venir: la misma que arma Discord para su
 // resumen, pero sola, porque cada mensaje de Telegram se tiene que entender
 // sin el anterior. La TARJETA de abajo repite el enfrentamiento y el número
@@ -54,7 +68,7 @@ export function lineaPrediccion(p, { juego, nombre, ahora = new Date() }) {
   const aviso = rdMax >= 150 ? ' — poco historial, mucha incertidumbre' : prob <= 55 ? ' — muy parejo' : '';
   const { fecha, hora } = enVenezuela(p.inicio_programado);
   const dia = diaEnPalabras(fecha, ahora);
-  return `🔮 <b>${esc(NOMBRE_JUEGO[juego] ?? juego)}</b> · ${esc(dia.toLowerCase())}` +
+  return `${emojiDe(juego)} <b>${esc(NOMBRE_JUEGO[juego] ?? juego)}</b> · ${esc(dia.toLowerCase())}` +
     `
 <code>${esc(hora12(hora))}</code>  <b>${esc(fav)}</b> ${prob}% vs ${esc(otro)} ${100 - prob}%${esc(aviso)}`;
 }

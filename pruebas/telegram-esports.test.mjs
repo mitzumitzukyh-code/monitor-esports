@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { avisarTelegram, lineaPrediccion, lineaResultado } from '../salida/telegram-esports.mjs';
+import { avisarTelegram, lineaPrediccion, lineaResultado, EMOJI_JUEGO } from '../salida/telegram-esports.mjs';
 
 process.env.SUPABASE_URL = 'https://prueba.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'llave-de-prueba';
@@ -95,7 +95,7 @@ const VIENE = {
 
 test('lineaPrediccion: juego, día, hora y el favorito con su número', () => {
   const l = lineaPrediccion(VIENE, { juego: 'cs2', nombre: nombreEq, ahora: AHORA });
-  assert.match(l, /^🔮 <b>CS2<\/b> · mañana/);
+  assert.match(l, /^💣 <b>CS2<\/b> · mañana/);
   assert.match(l, /<code>10 am<\/code>  <b>Natus Vincere<\/b> 78% vs M80 22%/);
 });
 
@@ -121,4 +121,16 @@ test('lineaResultado: ✅ cuando le atinamos, ❌ cuando no, con marcador orient
 test('lineaResultado: sin marcador no se inventa uno', () => {
   const l = lineaResultado({ ...VIENE, resultado_real: 'ganaA', marcador_a: null }, { juego: 'cs2', nombre: nombreEq });
   assert.match(l, /<b>Natus Vincere<\/b> le ganó a M80/);
+});
+test('EMOJI_JUEGO: cada juego con su seña, no la misma bola de cristal para los cuatro', () => {
+  const nombreX = (id) => `#${id}`;
+  const vistos = new Set();
+  for (const juego of ['cs2', 'dota2', 'lol', 'valorant']) {
+    const l = lineaPrediccion({ ...VIENE, juego }, { juego, nombre: nombreX, ahora: AHORA });
+    assert.ok(l.startsWith(EMOJI_JUEGO[juego]), `${juego} no abre con su emoji`);
+    vistos.add(EMOJI_JUEGO[juego]);
+  }
+  assert.equal(vistos.size, 4, 'dos juegos comparten emoji: no se distinguen');
+  // Un juego que no esté en la tabla no rompe el aviso.
+  assert.match(lineaPrediccion({ ...VIENE, juego: 'rocket' }, { juego: 'rocket', nombre: nombreX, ahora: AHORA }), /^🔮/);
 });
