@@ -27,7 +27,7 @@ export const TIERS_QUE_SE_AVISAN = new Set(['s', 'a']);
 // Lo de pasado mañana se anuncia mañana, en su propio mensaje.
 export const HORAS_DE_ANTICIPACION = 24;
 
-const NOMBRE_JUEGO = { cs2: 'CS2', lol: 'LoL', valorant: 'Valorant', dota2: 'Dota 2' };
+export const NOMBRE_JUEGO = { cs2: 'CS2', lol: 'LoL', valorant: 'Valorant', dota2: 'Dota 2' };
 
 // Los mismos colores por juego del panel web: una tarjeta de Dota se ve de
 // Dota sin leer una sola palabra.

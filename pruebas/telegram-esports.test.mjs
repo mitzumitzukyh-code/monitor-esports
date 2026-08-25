@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { avisarTelegram } from '../salida/telegram-esports.mjs';
+import { avisarTelegram, lineaPrediccion, lineaResultado } from '../salida/telegram-esports.mjs';
 
 process.env.SUPABASE_URL = 'https://prueba.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'llave-de-prueba';
@@ -62,8 +62,9 @@ test('avisarTelegram: manda por Telegram y marca SUS columnas, no las de Discord
     },
   });
 
-  // UN mensaje, no dos ni doce: el logo va de previa chiquita, no de foto.
-  assert.equal(llamadas.telegram.length, 1, 'un solo mensaje por tanda');
+  // UN mensaje POR PARTIDA, cada uno con la tarjeta de su perfil. Con una
+  // sola partida en el mock, un solo mensaje.
+  assert.equal(llamadas.telegram.length, 1, 'una tarjeta por partida');
   assert.match(llamadas.telegram[0].url, /bot.*\/sendMessage/);
   assert.match(llamadas.telegram[0].body.text, /Team Falcons/);
   assert.equal(llamadas.telegram[0].body.link_preview_options.prefer_small_media, true);
@@ -83,3 +84,41 @@ test('avisarTelegram: manda por Telegram y marca SUS columnas, no las de Discord
 // botó: en Telegram toda imagen ocupa el ancho completo del mensaje, así
 // que un álbum de escudos era una pared de logos gigantes. El logo del
 // juego sobrevive como previa pequeña y los escudos de equipo no van.
+
+// --- las líneas de cada tarjeta -------------------------------------------------
+const nombreEq = (id) => ({ 111: 'Natus Vincere', 222: 'M80' }[id] ?? `#${id}`);
+const AHORA = new Date('2026-08-25T12:00:00Z');
+const VIENE = {
+  juego: 'cs2', equipo_a: 111, equipo_b: 222, prob_a: 0.78,
+  rd_a: 60, rd_b: 70, inicio_programado: '2026-08-26T14:00:00Z',
+};
+
+test('lineaPrediccion: juego, día, hora y el favorito con su número', () => {
+  const l = lineaPrediccion(VIENE, { juego: 'cs2', nombre: nombreEq, ahora: AHORA });
+  assert.match(l, /^🔮 <b>CS2<\/b> · mañana/);
+  assert.match(l, /<code>10 am<\/code>  <b>Natus Vincere<\/b> 78% vs M80 22%/);
+});
+
+test('lineaPrediccion: avisa cuando hay poco historial o está muy parejo', () => {
+  const inseguro = lineaPrediccion({ ...VIENE, rd_a: 200 }, { juego: 'cs2', nombre: nombreEq, ahora: AHORA });
+  assert.match(inseguro, /poco historial, mucha incertidumbre/);
+  const parejo = lineaPrediccion({ ...VIENE, prob_a: 0.53 }, { juego: 'cs2', nombre: nombreEq, ahora: AHORA });
+  assert.match(parejo, /muy parejo/);
+  // 78% con poca incertidumbre no lleva coletilla.
+  assert.ok(!/—/.test(lineaPrediccion(VIENE, { juego: 'cs2', nombre: nombreEq, ahora: AHORA })));
+});
+
+test('lineaResultado: ✅ cuando le atinamos, ❌ cuando no, con marcador orientado', () => {
+  const bien = lineaResultado({ ...VIENE, resultado_real: 'ganaA', marcador_a: 2, marcador_b: 0 }, { juego: 'cs2', nombre: nombreEq });
+  assert.match(bien, /^✅/);
+  assert.match(bien, /<b>Natus Vincere<\/b> 2–0 le ganó a M80 · le dábamos 78%/);
+
+  const mal = lineaResultado({ ...VIENE, resultado_real: 'ganaB', marcador_a: 0, marcador_b: 2 }, { juego: 'cs2', nombre: nombreEq });
+  assert.match(mal, /^❌/);
+  assert.match(mal, /<b>M80<\/b> 2–0 le ganó a Natus Vincere · íbamos con Natus Vincere, 78%/);
+});
+
+test('lineaResultado: sin marcador no se inventa uno', () => {
+  const l = lineaResultado({ ...VIENE, resultado_real: 'ganaA', marcador_a: null }, { juego: 'cs2', nombre: nombreEq });
+  assert.match(l, /<b>Natus Vincere<\/b> le ganó a M80/);
+});
