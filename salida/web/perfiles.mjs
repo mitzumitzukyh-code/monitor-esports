@@ -11,7 +11,7 @@
 // de hace un mes siga abriendo es parte del punto.
 
 import { readFile, writeFile } from 'node:fs/promises';
-import { JUEGOS, faseDe } from './sala.mjs';
+import { JUEGOS, faseDe, logoDeJuegoUrl } from './sala.mjs';
 import { enVenezuela, hora12 } from '../formato.mjs';
 import {
   cabeza,
@@ -52,7 +52,7 @@ export function unPerfil(plantilla, f, { todas, stats, capturas, nombre, logoDe,
   html = zona(html, 'CABEZA', `
 ${cabeza(f, nombreA, nombreB, {
     etiqueta: cfg?.etiqueta ?? String(f.juego).toUpperCase(),
-    logoDe,
+    logoJuego: logoDeJuegoUrl(f.juego),
     hora,
   })}
 `);

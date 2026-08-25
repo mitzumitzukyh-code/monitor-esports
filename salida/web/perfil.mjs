@@ -342,7 +342,7 @@ const SITIO = 'https://mitzumitzukyh-code.github.io/monitor-esports';
 // og:site_name = el juego, og:title = el enfrentamiento, og:description = la
 // línea del motor y og:image = el escudo del protagonista, sale casi igual a
 // la tarjeta de Discord -- y de paso el enlace lleva al perfil.
-export function cabeza(f, nombreA, nombreB, { etiqueta = null, logoDe = null, hora = null } = {}) {
+export function cabeza(f, nombreA, nombreB, { etiqueta = null, logoJuego = null, hora = null } = {}) {
   const fav = favoritoDe(f);
   const quien = fav.hay ? (fav.ladoA ? nombreA : nombreB) : null;
   const decidido = f.resultado_real === 'ganaA' || f.resultado_real === 'ganaB';
@@ -362,12 +362,13 @@ export function cabeza(f, nombreA, nombreB, { etiqueta = null, logoDe = null, ho
       ? `${hora ? `${hora} → ` : ''}${quien} ${Math.round(fav.prob * 100)}%`
       : `${hora ? `${hora} · ` : ''}50/50, sin favorito`;
 
-  // El escudo del protagonista: el favorito antes de jugarse, el ganador
-  // después. Es la miniatura de la tarjeta, igual que el thumbnail de Discord.
-  const idProta = decidido
-    ? (ganoA ? f.equipo_a : f.equipo_b)
-    : fav.hay ? (fav.ladoA ? f.equipo_a : f.equipo_b) : f.equipo_a;
-  const escudo = logoDe ? logoDe(idProta) : null;
+  // La miniatura de la tarjeta es el LOGO DEL JUEGO. Antes era el escudo del
+  // equipo protagonista, pero en el aviso de Telegram esa miniatura es el
+  // único logo que se puede mostrar -- el texto sólo admite emoji estándar,
+  // y los logos de verdad ahí necesitan emoji personalizados, que la API
+  // reserva a bots con nombre comprado en Fragment. Los equipos no se
+  // pierden: van en el og:title.
+  const escudo = logoJuego;
 
   const titulo = `${nombreA} vs ${nombreB} · Monitor eSports`;
   const desc = `${resumen} La predicción quedó congelada antes de la serie y acá están los números con los que se hizo.`;
