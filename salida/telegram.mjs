@@ -26,6 +26,7 @@ export function recortar(texto, limite = LIMITE) {
 }
 
 export async function enviar(texto, {
+  previa = null,
   fetchImpl = fetch,
   token = process.env.TELEGRAM_BOT_TOKEN,
   chatId = process.env.TELEGRAM_CHAT_ID,
@@ -40,9 +41,15 @@ export async function enviar(texto, {
       chat_id: chatId,
       text: recortar(texto),
       parse_mode: 'HTML',
-      // Igual que en Discord: los nombres vienen de terceros y no queremos
-      // que un "@todos" de un equipo pingue al canal entero.
-      link_preview_options: { is_disabled: true },
+      // La previa es la ÚNICA forma de que Telegram muestre una imagen
+      // pequeña: sendPhoto la pinta siempre a todo el ancho del mensaje,
+      // que con un logo de 200px se ve enorme y feo. Con prefer_small_media
+      // queda una miniatura al lado del texto, que es lo que hace el
+      // thumbnail de Discord. Sin previa, apagada: los nombres vienen de
+      // terceros y no queremos que un enlace suyo se despliegue solo.
+      link_preview_options: previa?.url
+        ? { url: previa.url, prefer_small_media: true, show_above_text: false }
+        : { is_disabled: true },
     }),
   });
   if (!res.ok) {
@@ -51,35 +58,9 @@ export async function enviar(texto, {
   return { enviado: true };
 }
 
-// Grupo de fotos (sendMediaGroup): hasta 10, cada una con su caption en
-// HTML. Telegram no permite imágenes dentro de un mensaje de texto -- un
-// álbum al final del aviso es lo más cerca que se está. Sin items no es un
-// fallo: es que hoy no hay logos que mandar.
-export async function enviarFotos(items, {
-  fetchImpl = fetch,
-  token = process.env.TELEGRAM_BOT_TOKEN,
-  chatId = process.env.TELEGRAM_CHAT_ID,
-} = {}) {
-  if (!token || !chatId) {
-    return { enviado: false, razon: 'faltan TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID' };
-  }
-  if (!Array.isArray(items) || items.length === 0) {
-    return { enviado: true };
-  }
-  const res = await fetchImpl(`https://api.telegram.org/bot${token}/sendMediaGroup`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      media: items.slice(0, 10).map((i) => ({
-        type: 'photo',
-        media: i.url,
-        ...(i.caption ? { caption: i.caption, parse_mode: 'HTML' } : {}),
-      })),
-    }),
-  });
-  if (!res.ok) {
-    return { enviado: false, razon: `Telegram respondió ${res.status}: ${await res.text()}` };
-  }
-  return { enviado: true };
-}
+// Acá VIVÍA enviarFoto(), que mandaba una sendPhoto por partida. Se botó:
+// era exactamente el problema. Telegram no tiene miniatura ni imagen
+// dentro del texto -- una foto ocupa el ancho completo del mensaje -- así
+// que un escudo de equipo por partida convertía el canal en una pared de
+// logos gigantes. Lo que queda es un mensaje por tanda con el logo del
+// juego de previa chiquita.

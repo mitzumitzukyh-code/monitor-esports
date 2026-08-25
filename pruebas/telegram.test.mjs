@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { enviar, enviarFotos, esc, recortar } from '../salida/telegram.mjs';
+import { enviar, esc, recortar } from '../salida/telegram.mjs';
 
 test('esc: neutraliza lo que rompería el HTML de Telegram', () => {
   assert.equal(esc('Team <Rojo> & Cía.'), 'Team &lt;Rojo&gt; &amp; Cía.');
@@ -51,39 +51,41 @@ test('enviar: un 429 de Telegram se reporta y no se traga', async () => {
   assert.match(r.razon, /429/);
 });
 
-test('enviarFotos: manda el álbum a sendMediaGroup con parse_mode HTML por item', async () => {
-  let captura = {};
-  const r = await enviarFotos(
-    [
-      { url: 'https://cdn.ejemplo/juego.png', caption: '🔮 <b>CS2</b>' },
-      { url: 'https://cdn.ejemplo/equipo.webp', caption: '3 pm → <b>Falcons</b> 70% vs GG' },
-    ],
-    {
-      fetchImpl: async (url, opts) => {
-        captura = { url, body: JSON.parse(opts.body) };
-        return { ok: true };
-      },
-      token: '123:ABC',
-      chatId: '@x',
-    },
-  );
+// --- la previa chiquita -----------------------------------------------------
+// Acá vivían las pruebas de enviarFoto(). La función se botó porque era el
+// problema: sendPhoto pinta la imagen a todo el ancho del mensaje.
+
+test('enviar: con previa manda el logo como miniatura, no como foto', async () => {
+  const vistas = [];
+  const r = await enviar('hola', {
+    previa: { url: 'https://ejemplo/logo-cs2.jpg' },
+    fetchImpl: async (url, o) => { vistas.push({ url: String(url), body: JSON.parse(o.body) }); return { ok: true }; },
+    token: '123:ABC', chatId: '@x',
+  });
   assert.equal(r.enviado, true);
-  assert.match(captura.url, /sendMediaGroup/);
-  assert.equal(captura.body.chat_id, '@x');
-  assert.equal(captura.body.media.length, 2);
-  assert.equal(captura.body.media[0].type, 'photo');
-  assert.equal(captura.body.media[0].parse_mode, 'HTML');
-  assert.equal(captura.body.media[1].caption, '3 pm → <b>Falcons</b> 70% vs GG');
+  assert.match(vistas[0].url, /\/sendMessage$/, 'sigue siendo un mensaje de texto, no una foto');
+  assert.deepEqual(vistas[0].body.link_preview_options, {
+    url: 'https://ejemplo/logo-cs2.jpg',
+    prefer_small_media: true,
+    show_above_text: false,
+  });
 });
 
-test('enviarFotos: sin items no es un fallo y no toca la red; sin token avisa', async () => {
-  let llamado = 0;
-  const ok = await enviarFotos([], { fetchImpl: async () => { llamado++; return { ok: true }; }, token: '123:ABC', chatId: '@x' });
-  assert.equal(ok.enviado, true);
-  assert.equal(llamado, 0);
+test('enviar: sin previa la vista se apaga — un enlace de tercero no se despliega solo', async () => {
+  const vistas = [];
+  await enviar('mira https://loquesea', {
+    fetchImpl: async (url, o) => { vistas.push(JSON.parse(o.body)); return { ok: true }; },
+    token: '123:ABC', chatId: '@x',
+  });
+  assert.deepEqual(vistas[0].link_preview_options, { is_disabled: true });
+});
 
-  const sinToken = await enviarFotos([{ url: 'x' }], { fetchImpl: async () => { llamado++; return { ok: true }; }, token: '', chatId: '@x' });
-  assert.equal(sinToken.enviado, false);
-  assert.match(sinToken.razon, /TELEGRAM_BOT_TOKEN/);
-  assert.equal(llamado, 0);
+test('enviar: una previa sin url no enciende nada', async () => {
+  const vistas = [];
+  await enviar('hola', {
+    previa: {},
+    fetchImpl: async (url, o) => { vistas.push(JSON.parse(o.body)); return { ok: true }; },
+    token: '123:ABC', chatId: '@x',
+  });
+  assert.deepEqual(vistas[0].link_preview_options, { is_disabled: true });
 });
