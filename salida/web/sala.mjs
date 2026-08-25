@@ -41,6 +41,13 @@ export function logoDeJuegoUrl(juego) {
   return cfg ? BASE_PUBLICA + cfg.logo : null;
 }
 
+// La URL pública del perfil de una serie. La usa el aviso de Telegram para
+// que su previa de enlace dibuje la tarjeta -- el perfil lleva los og: que
+// la describen -- y de paso el aviso deja de ser un callejón sin salida.
+export function perfilUrl(matchId) {
+  return `${BASE_PUBLICA}serie-${matchId}.html`;
+}
+
 // Umbral del propio diseño: 55% o menos se lee "MUY PAREJO". Es
 // presentación, no matemática: el número no cambia.
 const UMBRAL_PAREJO = 0.55;

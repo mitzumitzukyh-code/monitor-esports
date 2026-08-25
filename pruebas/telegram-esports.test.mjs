@@ -67,7 +67,9 @@ test('avisarTelegram: manda por Telegram y marca SUS columnas, no las de Discord
   assert.match(llamadas.telegram[0].url, /bot.*\/sendMessage/);
   assert.match(llamadas.telegram[0].body.text, /Team Falcons/);
   assert.equal(llamadas.telegram[0].body.link_preview_options.prefer_small_media, true);
-  assert.match(llamadas.telegram[0].body.link_preview_options.url, /logo-dota2\.png$/);
+  // La previa apunta al PERFIL de la partida, no a una imagen suelta: es el
+  // perfil el que trae los og: que dibujan la tarjeta.
+  assert.match(llamadas.telegram[0].body.link_preview_options.url, /\/serie-900\.html$/);
   assert.ok(!llamadas.telegram.some((l) => /sendPhoto|sendMediaGroup/.test(l.url)),
     'ni una foto: es lo que se veía enorme en el teléfono');
   assert.equal(llamadas.parches.length, 1, 'debió marcar la fila');

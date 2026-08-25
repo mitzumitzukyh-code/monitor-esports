@@ -335,26 +335,61 @@ const SITIO = 'https://mitzumitzukyh-code.github.io/monitor-esports';
 // El <head> de cada perfil es distinto: título, descripción, canónica y og.
 // Sin esto los 659 perfiles compartirían título y Google los trataría como
 // copias del mismo.
-export function cabeza(f, nombreA, nombreB) {
+//
+// Y los og: son los que dibujan LA TARJETA. Telegram no tiene embeds como
+// Discord, pero su previa de enlace tiene la misma forma: barra de color,
+// nombre del sitio arriba, título, descripción y miniatura a la derecha. Con
+// og:site_name = el juego, og:title = el enfrentamiento, og:description = la
+// línea del motor y og:image = el escudo del protagonista, sale casi igual a
+// la tarjeta de Discord -- y de paso el enlace lleva al perfil.
+export function cabeza(f, nombreA, nombreB, { etiqueta = null, logoDe = null, hora = null } = {}) {
   const fav = favoritoDe(f);
   const quien = fav.hay ? (fav.ladoA ? nombreA : nombreB) : null;
+  const decidido = f.resultado_real === 'ganaA' || f.resultado_real === 'ganaB';
+  const ganoA = f.resultado_real === 'ganaA';
+
   const resumen = fav.prob == null
     ? 'Sin probabilidad guardada.'
     : fav.hay
       ? `${pct1(fav.prob)}% para ${quien}.`
       : '50/50 exacto: el motor no se jugó por ninguno.';
+
+  // La descripción de la tarjeta imita la de Discord: hora, flecha, favorito
+  // y su número. Si ya se jugó, quién ganó.
+  const linea = decidido
+    ? `${ganoA ? nombreA : nombreB} ganó${f.marcador_a != null ? ` ${ganoA ? f.marcador_a : f.marcador_b}–${ganoA ? f.marcador_b : f.marcador_a}` : ''}`
+    : fav.hay
+      ? `${hora ? `${hora} → ` : ''}${quien} ${Math.round(fav.prob * 100)}%`
+      : `${hora ? `${hora} · ` : ''}50/50, sin favorito`;
+
+  // El escudo del protagonista: el favorito antes de jugarse, el ganador
+  // después. Es la miniatura de la tarjeta, igual que el thumbnail de Discord.
+  const idProta = decidido
+    ? (ganoA ? f.equipo_a : f.equipo_b)
+    : fav.hay ? (fav.ladoA ? f.equipo_a : f.equipo_b) : f.equipo_a;
+  const escudo = logoDe ? logoDe(idProta) : null;
+
   const titulo = `${nombreA} vs ${nombreB} · Monitor eSports`;
   const desc = `${resumen} La predicción quedó congelada antes de la serie y acá están los números con los que se hizo.`;
-  return (
-    `<title>${esc(titulo)}</title>\n` +
-    `<meta name="description" content="${esc(desc)}">\n` +
-    `<link rel="canonical" href="${SITIO}/serie-${f.match_id}.html">\n` +
-    `<meta property="og:title" content="${esc(`${nombreA} vs ${nombreB}`)}">\n` +
-    `<meta property="og:description" content="${esc(resumen)}">\n` +
-    `<meta property="og:url" content="${SITIO}/serie-${f.match_id}.html">`
-  );
+  return [
+    `<title>${esc(titulo)}</title>`,
+    `<meta name="description" content="${esc(desc)}">`,
+    `<link rel="canonical" href="${SITIO}/serie-${f.match_id}.html">`,
+    `<meta property="og:site_name" content="${esc(etiqueta ? `${etiqueta} · Monitor eSports` : 'Monitor eSports')}">`,
+    `<meta property="og:title" content="${esc(`${nombreA} vs ${nombreB}`)}">`,
+    `<meta property="og:description" content="${esc(linea)}">`,
+    `<meta property="og:url" content="${SITIO}/serie-${f.match_id}.html">`,
+    // Con escudo la tarjeta es chica (summary); sin escudo cae a la tarjeta
+    // social del sitio, que sí es 1200x630 y va en grande.
+    ...(escudo
+      ? [`<meta property="og:image" content="${esc(escudo)}">`,
+         '<meta name="twitter:card" content="summary">']
+      : [`<meta property="og:image" content="${SITIO}/assets/og-image.png">`,
+         '<meta property="og:image:width" content="1200">',
+         '<meta property="og:image:height" content="630">',
+         '<meta name="twitter:card" content="summary_large_image">']),
+  ].join(String.fromCharCode(10));
 }
-
 // bo3.gg no publica la URL del stream en su API -- sólo dice si hay cobertura
 // (live_coverage) con un código numérico de fuente. Lo honesto es mandar a la
 // página de la partida en bo3.gg, que es donde SÍ están los reproductores.

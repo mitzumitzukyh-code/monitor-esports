@@ -28,7 +28,7 @@ import {
   mensajeResultados,
   calcularMetricas,
 } from './discord-esports.mjs';
-import { logoDeJuegoUrl } from './web/sala.mjs';
+import { perfilUrl } from './web/sala.mjs';
 import { enVenezuela, hora12 } from './formato.mjs';
 
 // Los constructores son de Discord y usan su markdown (**negrita**,
@@ -71,13 +71,16 @@ export async function avisarTelegram(juego = 'cs2', { fetchImpl, fetchImplSupaba
   const nombre = (id) => equipos.get(id)?.nombre ?? `#${id}`;
 
   const enviados = [];
-  // El logo del juego, chiquito, al lado del texto. Si el juego no tiene
-  // logo publicado, el mensaje sale sin previa y ya.
-  const previa = logoDeJuegoUrl(juego) ? { url: logoDeJuegoUrl(juego) } : null;
+  // La previa apunta al PERFIL de la primera partida de la tanda, no a una
+  // imagen suelta. El perfil declara og:site_name (el juego), og:title (el
+  // enfrentamiento), og:description (hora → favorito y su número) y og:image
+  // (el escudo del protagonista), así que Telegram dibuja la misma tarjeta
+  // que Discord arma con su embed -- y el enlace lleva a los números.
+  const previaDe = (p) => (p ? { url: perfilUrl(p.match_id) } : null);
 
   // --- predicciones ---------------------------------------------------------
   if (nuevasPredichas.length) {
-    const r = await enviar(discordAHtml(mensajePredicciones(nuevasPredichas, nombre, juego)), { previa, fetchImpl });
+    const r = await enviar(discordAHtml(mensajePredicciones(nuevasPredichas, nombre, juego)), { previa: previaDe(nuevasPredichas[0]), fetchImpl });
     enviados.push({ tipo: 'predicciones', cuantas: nuevasPredichas.length, ...r });
     // Sólo se marca lo que DE VERDAD salió: lo que falló reintenta el
     // próximo ciclo en vez de perderse.
@@ -89,7 +92,7 @@ export async function avisarTelegram(juego = 'cs2', { fetchImpl, fetchImplSupaba
   // --- resultados -----------------------------------------------------------
   if (nuevasCalificadas.length) {
     const metricas = calcularMetricas(todas.filter((p) => p.resultado_real));
-    const r = await enviar(discordAHtml(mensajeResultados(nuevasCalificadas, nombre, juego, metricas)), { previa, fetchImpl });
+    const r = await enviar(discordAHtml(mensajeResultados(nuevasCalificadas, nombre, juego, metricas)), { previa: previaDe(nuevasCalificadas[0]), fetchImpl });
     enviados.push({ tipo: 'resultados', cuantas: nuevasCalificadas.length, ...r });
     if (r.enviado) {
       await marcar(nuevasCalificadas.map((c) => c.match_id), 'avisado_telegram_resultado_en', { fetchImpl: fetchImplSupabase });

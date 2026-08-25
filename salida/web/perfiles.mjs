@@ -12,6 +12,7 @@
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { JUEGOS, faseDe } from './sala.mjs';
+import { enVenezuela, hora12 } from '../formato.mjs';
 import {
   cabeza,
   encabezado,
@@ -46,7 +47,15 @@ export function unPerfil(plantilla, f, { todas, stats, capturas, nombre, logoDe,
   const stream = bloqueStream(streams, { enCurso: fase === 'curso' });
 
   let html = plantilla;
-  html = zona(html, 'CABEZA', `\n${cabeza(f, nombreA, nombreB)}\n`);
+  // La hora en criollo va a la tarjeta del enlace, igual que en el aviso.
+  const hora = f.inicio_programado ? hora12(enVenezuela(f.inicio_programado).hora) : null;
+  html = zona(html, 'CABEZA', `
+${cabeza(f, nombreA, nombreB, {
+    etiqueta: cfg?.etiqueta ?? String(f.juego).toUpperCase(),
+    logoDe,
+    hora,
+  })}
+`);
   html = zona(html, 'ENCABEZADO', encabezado(f, {
     nombreA,
     nombreB,
