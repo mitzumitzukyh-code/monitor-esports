@@ -9,9 +9,10 @@
 
 import { fileURLToPath } from 'node:url';
 import { seleccionar, parchear } from '../datos/supabase.mjs';
-import { nombresDeEquipos } from '../datos/juegos/bo3.mjs';
+import { datosDeEquipos } from '../datos/juegos/bo3.mjs';
 import { enviar, recortar } from './discord.mjs';
-import { agruparPorDia } from './formato.mjs';
+import { agruparPorDia, enVenezuela, hora12 } from './formato.mjs';
+import { logoDeJuegoUrl } from './web/sala.mjs';
 
 // CS2 mueve ~34 partidas al día contando todos los tiers. Avisar de todas es
 // ruido que nadie lee. `s` y `a` son los torneos que importan; el resto se
@@ -27,6 +28,12 @@ export const TIERS_QUE_SE_AVISAN = new Set(['s', 'a']);
 export const HORAS_DE_ANTICIPACION = 24;
 
 const NOMBRE_JUEGO = { cs2: 'CS2', lol: 'LoL', valorant: 'Valorant', dota2: 'Dota 2' };
+
+// Los mismos colores por juego del panel web: una tarjeta de Dota se ve de
+// Dota sin leer una sola palabra.
+const COLOR_JUEGO = { dota2: 0x9a3cff, cs2: 0xf5c400, lol: 0x00cfff, valorant: 0x23f28a };
+const COLOR_OK = 0x19e68c;
+const COLOR_FALLO = 0xff2638;
 
 function limpiarVacios(lineas) {
   const salida = [];
@@ -128,6 +135,55 @@ export function mensajeResultados(calificadas, nombre, juego, metricas, ahora = 
   return recortar(limpiarVacios(partes).join('\n'));
 }
 
+// --- embeds (puros): una tarjeta por partida, con logos ----------------------
+
+// Discord no permite dos imágenes pequeñas por tarjeta: la miniatura es del
+// equipo PROTAGÓNISTA de la línea (el favorito en predicciones, el ganador
+// en resultados). El logo del juego va de ícono del autor. Tope duro de 10
+// embeds por mensaje: el texto sigue listando TODAS las partidas.
+export function embedsDe(partidas, { juego, tipo, nombre, logoDe = null }) {
+  const icono = logoDeJuegoUrl(juego);
+  const autor = { name: NOMBRE_JUEGO[juego] ?? juego, ...(icono ? { icon_url: icono } : {}) };
+
+  return partidas.slice(0, 10).map((p) => {
+    const pa = Number(p.prob_a);
+    const favA = pa >= 0.5;
+    const nombreA = nombre(p.equipo_a);
+    const nombreB = nombre(p.equipo_b);
+    const hora = hora12(enVenezuela(p.inicio_programado).hora);
+
+    if (tipo === 'resultados') {
+      const ganoA = p.resultado_real === 'ganaA';
+      const ganador = ganoA ? nombreA : nombreB;
+      const perdedor = ganoA ? nombreB : nombreA;
+      const acerto = favA === ganoA;
+      const marcador =
+        p.marcador_a == null ? '' : ` ${ganoA ? `${p.marcador_a}–${p.marcador_b}` : `${p.marcador_b}–${p.marcador_a}`}`;
+      const probFav = Math.round((favA ? pa : 1 - pa) * 100);
+      const escudo = logoDe?.(ganoA ? p.equipo_a : p.equipo_b);
+      return {
+        author: autor,
+        title: `${ganador} le ganó${marcador} a ${perdedor}`,
+        description: `${hora} · ${acerto ? `le dábamos ${probFav}%` : `íbamos con ${favA ? nombreA : nombreB}, ${probFav}%`}`,
+        ...(escudo ? { thumbnail: { url: escudo } } : {}),
+        color: acerto ? COLOR_OK : COLOR_FALLO,
+      };
+    }
+
+    const fav = favA ? nombreA : nombreB;
+    const otro = favA ? nombreB : nombreA;
+    const probFav = Math.round((favA ? pa : 1 - pa) * 100);
+    const escudo = logoDe?.(favA ? p.equipo_a : p.equipo_b);
+    return {
+      author: autor,
+      title: `${fav} vs ${otro}`,
+      description: `${hora} → **${fav}** ${probFav}%${probFav <= 55 ? ' — muy parejo' : ''}`,
+      ...(escudo ? { thumbnail: { url: escudo } } : {}),
+      color: COLOR_JUEGO[juego] ?? 0x5865f2,
+    };
+  });
+}
+
 // Brier acumulado de todo lo calificado, no sólo de lo que se avisa: la nota
 // del motor se mide con todo lo que predijo.
 export function calcularMetricas(calificadas) {
@@ -179,14 +235,16 @@ export async function avisar(juego = 'cs2', { fetchImpl, fetchImplSupabase } = {
   const nuevasCalificadas = todas.filter((p) => p.resultado_real && !p.avisado_resultado_en && deTier(p));
 
   const idsEquipos = [...nuevasPredichas, ...nuevasCalificadas].flatMap((p) => [p.equipo_a, p.equipo_b]);
-  const nombres = idsEquipos.length ? await nombresDeEquipos(idsEquipos, { juego, fetchImpl }) : new Map();
-  const nombre = (id) => nombres.get(id) ?? `#${id}`;
+  const equipos = idsEquipos.length ? await datosDeEquipos(idsEquipos, { juego, fetchImpl }) : new Map();
+  const nombre = (id) => equipos.get(id)?.nombre ?? `#${id}`;
+  const logoDe = (id) => equipos.get(id)?.logo ?? null;
 
   const enviados = [];
 
   const msgPred = mensajePredicciones(nuevasPredichas, nombre, juego);
   if (msgPred) {
-    const r = await enviar(msgPred, { fetchImpl });
+    const embeds = embedsDe(nuevasPredichas, { juego, tipo: 'predicciones', nombre, logoDe });
+    const r = await enviar(msgPred, { fetchImpl, embeds });
     enviados.push({ tipo: 'predicciones', cuantas: nuevasPredichas.length, ...r });
     // Sólo se marca lo que DE VERDAD se envió: si Discord está caído, el aviso
     // queda pendiente para la corrida siguiente en vez de perderse.
@@ -196,7 +254,8 @@ export async function avisar(juego = 'cs2', { fetchImpl, fetchImplSupabase } = {
   const metricas = calcularMetricas(todas.filter((p) => p.resultado_real));
   const msgRes = mensajeResultados(nuevasCalificadas, nombre, juego, metricas);
   if (msgRes) {
-    const r = await enviar(msgRes, { fetchImpl });
+    const embeds = embedsDe(nuevasCalificadas, { juego, tipo: 'resultados', nombre, logoDe });
+    const r = await enviar(msgRes, { fetchImpl, embeds });
     enviados.push({ tipo: 'resultados', cuantas: nuevasCalificadas.length, ...r });
     if (r.enviado) await marcar(nuevasCalificadas.map((p) => p.match_id), 'avisado_resultado_en', { fetchImpl: fetchImplSupabase });
   }

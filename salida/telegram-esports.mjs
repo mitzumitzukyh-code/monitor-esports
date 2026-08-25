@@ -11,8 +11,8 @@
 //   node --env-file=.env salida/telegram-esports.mjs dota2 cs2 lol valorant
 
 import { seleccionar, parchear } from '../datos/supabase.mjs';
-import { nombresDeEquipos } from '../datos/juegos/bo3.mjs';
-import { enviar, esc } from './telegram.mjs';
+import { datosDeEquipos } from '../datos/juegos/bo3.mjs';
+import { enviar, enviarFotos, esc } from './telegram.mjs';
 import {
   TIERS_QUE_SE_AVISAN,
   HORAS_DE_ANTICIPACION,
@@ -20,6 +20,8 @@ import {
   mensajeResultados,
   calcularMetricas,
 } from './discord-esports.mjs';
+import { logoDeJuegoUrl } from './web/sala.mjs';
+import { enVenezuela, hora12 } from './formato.mjs';
 
 // Los constructores son de Discord y usan su markdown (**negrita**,
 // `codigo`). Telegram recibe HTML: se escapa TODO primero y despues se
@@ -33,6 +35,52 @@ function discordAHtml(s) {
 async function marcar(matchIds, columna, { fetchImpl } = {}) {
   if (matchIds.length === 0) return;
   await parchear('eslo_predicciones', `?match_id=in.(${matchIds.join(',')})`, { [columna]: new Date().toISOString() }, { fetchImpl });
+}
+
+// Fotos del álbum: el logo del JUEGO de primero y luego una foto por partida
+// con el escudo del equipo protagonista (favorito/ganador) y la línea del
+// aviso de caption. 10 por grupo y el juego ya ocupa uno: 9 partidas.
+export function fotosDe(partidas, { juego, tipo, nombre, logoDe = null }) {
+  const fotos = [];
+  const logoJuego = logoDeJuegoUrl(juego);
+  const nombreJuego = { cs2: 'CS2', lol: 'LoL', valorant: 'Valorant', dota2: 'Dota 2' }[juego] ?? juego;
+  if (logoJuego) fotos.push({ url: logoJuego, caption: `🔮 <b>${esc(nombreJuego)}</b>` });
+
+  for (const p of partidas) {
+    if (fotos.length >= 10) break;
+    const pa = Number(p.prob_a);
+    const favA = pa >= 0.5;
+    const nombreA = nombre(p.equipo_a);
+    const nombreB = nombre(p.equipo_b);
+    const hora = hora12(enVenezuela(p.inicio_programado).hora);
+
+    if (tipo === 'resultados') {
+      const ganoA = p.resultado_real === 'ganaA';
+      const ganador = ganoA ? nombreA : nombreB;
+      const perdedor = ganoA ? nombreB : nombreA;
+      const acerto = favA === ganoA;
+      const marcador =
+        p.marcador_a == null ? '' : ` ${ganoA ? `${p.marcador_a}–${p.marcador_b}` : `${p.marcador_b}–${p.marcador_a}`}`;
+      const escudo = logoDe?.(ganoA ? p.equipo_a : p.equipo_b);
+      if (!escudo) continue;
+      fotos.push({
+        url: escudo,
+        caption: `${acerto ? '✅' : '❌'} ${hora} · <b>${esc(ganador)}</b>${esc(marcador)} le ganó a ${esc(perdedor)}`,
+      });
+      continue;
+    }
+
+    const fav = favA ? nombreA : nombreB;
+    const otro = favA ? nombreB : nombreA;
+    const probFav = Math.round((favA ? pa : 1 - pa) * 100);
+    const escudo = logoDe?.(favA ? p.equipo_a : p.equipo_b);
+    if (!escudo) continue;
+    fotos.push({
+      url: escudo,
+      caption: `${hora} → <b>${esc(fav)}</b> ${probFav}% vs ${esc(otro)}${probFav <= 55 ? ' — muy parejo' : ''}`,
+    });
+  }
+  return fotos;
 }
 
 export async function avisarTelegram(juego = 'cs2', { fetchImpl, fetchImplSupabase } = {}) {
@@ -56,8 +104,9 @@ export async function avisarTelegram(juego = 'cs2', { fetchImpl, fetchImplSupaba
   const nuevasCalificadas = todas.filter((p) => p.resultado_real && !p.avisado_telegram_resultado_en && deTier(p));
 
   const idsEquipos = [...nuevasPredichas, ...nuevasCalificadas].flatMap((p) => [p.equipo_a, p.equipo_b]);
-  const nombres = idsEquipos.length ? await nombresDeEquipos(idsEquipos, { juego, fetchImpl }) : new Map();
-  const nombre = (id) => nombres.get(id) ?? `#${id}`;
+  const equipos = idsEquipos.length ? await datosDeEquipos(idsEquipos, { juego, fetchImpl }) : new Map();
+  const nombre = (id) => equipos.get(id)?.nombre ?? `#${id}`;
+  const logoDe = (id) => equipos.get(id)?.logo ?? null;
 
   const enviados = [];
 
@@ -67,6 +116,14 @@ export async function avisarTelegram(juego = 'cs2', { fetchImpl, fetchImplSupaba
     enviados.push({ tipo: 'predicciones', cuantas: nuevasPredichas.length, ...r });
     if (r.enviado) {
       await marcar(nuevasPredichas.map((p) => p.match_id), 'avisado_telegram_prediccion_en', { fetchImpl: fetchImplSupabase });
+      // El álbum de logos es adorno, no el aviso: si falla (CDN caído,
+      // Telegram no pudo traer la foto), NO se reintenta ni bloquea el
+      // marcado -- el texto ya salió y el próximo ciclo no debe duplicarlo.
+      const fotos = fotosDe(nuevasPredichas, { juego, tipo: 'predicciones', nombre, logoDe });
+      if (fotos.length) {
+        const rf = await enviarFotos(fotos, { fetchImpl });
+        enviados.push({ tipo: 'fotos-predicciones', cuantas: fotos.length, ...rf });
+      }
     }
   }
 
@@ -77,6 +134,11 @@ export async function avisarTelegram(juego = 'cs2', { fetchImpl, fetchImplSupaba
     enviados.push({ tipo: 'resultados', cuantas: nuevasCalificadas.length, ...r });
     if (r.enviado) {
       await marcar(nuevasCalificadas.map((c) => c.match_id), 'avisado_telegram_resultado_en', { fetchImpl: fetchImplSupabase });
+      const fotos = fotosDe(nuevasCalificadas, { juego, tipo: 'resultados', nombre, logoDe });
+      if (fotos.length) {
+        const rf = await enviarFotos(fotos, { fetchImpl });
+        enviados.push({ tipo: 'fotos-resultados', cuantas: fotos.length, ...rf });
+      }
     }
   }
 

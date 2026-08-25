@@ -225,7 +225,7 @@ export function mensajeResumenDia(calificadas, nombre, tabla, ahora = new Date()
   return recortar(limpiarVacios(partes).join('\n'));
 }
 
-export async function enviar(contenido, { fetchImpl = fetch, webhook = process.env.DISCORD_WEBHOOK } = {}) {
+export async function enviar(contenido, { fetchImpl = fetch, webhook = process.env.DISCORD_WEBHOOK, embeds } = {}) {
   if (!webhook) {
     return { enviado: false, razon: 'falta DISCORD_WEBHOOK en .env' };
   }
@@ -234,6 +234,9 @@ export async function enviar(contenido, { fetchImpl = fetch, webhook = process.e
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       content: contenido,
+      // Tarjetas con logos (autor = juego, miniatura = equipo). Opcional: el
+      // avisador de Dota no las usa y sigue mandando sólo texto.
+      ...(Array.isArray(embeds) && embeds.length ? { embeds } : {}),
       // Los nombres de equipo vienen de una API de terceros y se meten tal
       // cual en el mensaje. Un equipo llamado "@everyone" haría que el bot
       // pingue a todo el servidor en cada aviso, y el nombre lo controla

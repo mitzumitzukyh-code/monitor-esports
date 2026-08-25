@@ -50,3 +50,36 @@ export async function enviar(texto, {
   }
   return { enviado: true };
 }
+
+// Grupo de fotos (sendMediaGroup): hasta 10, cada una con su caption en
+// HTML. Telegram no permite imágenes dentro de un mensaje de texto -- un
+// álbum al final del aviso es lo más cerca que se está. Sin items no es un
+// fallo: es que hoy no hay logos que mandar.
+export async function enviarFotos(items, {
+  fetchImpl = fetch,
+  token = process.env.TELEGRAM_BOT_TOKEN,
+  chatId = process.env.TELEGRAM_CHAT_ID,
+} = {}) {
+  if (!token || !chatId) {
+    return { enviado: false, razon: 'faltan TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID' };
+  }
+  if (!Array.isArray(items) || items.length === 0) {
+    return { enviado: true };
+  }
+  const res = await fetchImpl(`https://api.telegram.org/bot${token}/sendMediaGroup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      media: items.slice(0, 10).map((i) => ({
+        type: 'photo',
+        media: i.url,
+        ...(i.caption ? { caption: i.caption, parse_mode: 'HTML' } : {}),
+      })),
+    }),
+  });
+  if (!res.ok) {
+    return { enviado: false, razon: `Telegram respondió ${res.status}: ${await res.text()}` };
+  }
+  return { enviado: true };
+}

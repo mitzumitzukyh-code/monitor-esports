@@ -31,6 +31,16 @@ export const JUEGOS = [
 
 const ETIQUETA = new Map(JUEGOS.map((j) => [j.id, j.etiqueta]));
 
+// Los logos de los JUEGOS viven en el repo y Pages los publica: esa es la
+// única URL estable que tienen, y la que usan los avisos de Discord y
+// Telegram (los escudos de EQUIPO van directo al CDN de bo3.gg).
+export const BASE_PUBLICA = 'https://mitzumitzukyh-code.github.io/monitor-esports/';
+
+export function logoDeJuegoUrl(juego) {
+  const cfg = JUEGOS.find((j) => j.id === juego);
+  return cfg ? BASE_PUBLICA + cfg.logo : null;
+}
+
 // Umbral del propio diseño: 55% o menos se lee "MUY PAREJO". Es
 // presentación, no matemática: el número no cambia.
 const UMBRAL_PAREJO = 0.55;

@@ -4,9 +4,10 @@ import assert from 'node:assert/strict';
 process.env.SUPABASE_URL = 'https://prueba.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'llave-de-prueba';
 
-const { mensajePredicciones, mensajeResultados, calcularMetricas, TIERS_QUE_SE_AVISAN } = await import(
+const { mensajePredicciones, mensajeResultados, calcularMetricas, embedsDe, TIERS_QUE_SE_AVISAN } = await import(
   '../salida/discord-esports.mjs'
 );
+const { enviar } = await import('../salida/discord.mjs');
 
 const nombre = (id) => ({ 1: 'Vitality', 2: 'NAVI', 3: 'FaZe', 4: 'Spirit' })[id] ?? `#${id}`;
 const AHORA = new Date('2026-08-17T12:00:00Z');
@@ -126,4 +127,67 @@ test('con demasiadas partidas el mensaje avisa que se recortó, no corta a la mi
   const m = mensajePredicciones(demasiadas, nombre, 'lol', AHORA);
   assert.ok(m.length <= 1900);
   assert.match(m, /recortado/, 'mejor un aviso claro que un renglón cortado por la mitad');
+});
+
+// --- embeds con logos --------------------------------------------------------
+
+const logos = new Map([
+  [1, { nombre: 'Vitality', logo: 'https://cdn.ejemplo/vitality.webp' }],
+  [2, { nombre: 'NAVI', logo: null }],
+]);
+const nombreConLogo = (id) => logos.get(id)?.nombre ?? `#${id}`;
+const logoDe = (id) => logos.get(id)?.logo ?? null;
+
+test('embedsDe: predicción lleva el logo del juego de autor, el escudo del favorito y el color del juego', () => {
+  const [e] = embedsDe([pred({})], { juego: 'cs2', tipo: 'predicciones', nombre: nombreConLogo, logoDe });
+  assert.equal(e.author.icon_url, 'https://mitzumitzukyh-code.github.io/monitor-esports/logos/logo-cs2.jpg');
+  assert.equal(e.author.name, 'CS2');
+  assert.equal(e.title, 'Vitality vs NAVI');
+  assert.match(e.description, /→ \*\*Vitality\*\* 70%/);
+  assert.equal(e.thumbnail.url, 'https://cdn.ejemplo/vitality.webp', 'el favorito es A: su escudo va de miniatura');
+  assert.equal(e.color, 0xf5c400);
+});
+
+test('embedsDe: resultado pinta verde el acierto y rojo de marca el fallo, con el escudo del GANADOR', () => {
+  const [acierto, fallo] = embedsDe(
+    [pred({ resultado_real: 'ganaA', marcador_a: 2, marcador_b: 0 }), pred({ resultado_real: 'ganaB', marcador_a: 1, marcador_b: 2 })],
+    { juego: 'lol', tipo: 'resultados', nombre: nombreConLogo, logoDe },
+  );
+  assert.equal(acierto.color, 0x19e68c);
+  assert.equal(acierto.title, 'Vitality le ganó 2–0 a NAVI');
+  assert.equal(acierto.thumbnail.url, 'https://cdn.ejemplo/vitality.webp', 'el escudo es del GANADOR');
+
+  assert.equal(fallo.color, 0xff2638);
+  assert.equal(fallo.title, 'NAVI le ganó 2–1 a Vitality');
+  assert.ok(!fallo.thumbnail, 'NAVI no tiene logo: sin miniatura, sin img rota');
+});
+
+test('embedsDe: tope de 10 tarjetas por mensaje (límite de Discord); el texto sigue completo', () => {
+  const muchas = Array.from({ length: 12 }, (_, i) => pred({ match_id: i, equipo_a: 1, equipo_b: 2 }));
+  const embeds = embedsDe(muchas, { juego: 'dota2', tipo: 'predicciones', nombre: nombreConLogo, logoDe });
+  assert.equal(embeds.length, 10);
+  assert.equal(embeds[0].color, 0x9a3cff);
+});
+
+test('enviar: los embeds viajan en el cuerpo junto al texto', async () => {
+  let captura = {};
+  const r = await enviar('texto', {
+    fetchImpl: async (url, opts) => {
+      captura = { url, body: JSON.parse(opts.body) };
+      return { ok: true };
+    },
+    webhook: 'https://discord.test/x',
+    embeds: [{ title: 'tarjeta' }],
+  });
+  assert.equal(r.enviado, true);
+  assert.deepEqual(captura.body.embeds, [{ title: 'tarjeta' }]);
+
+  await enviar('texto sin embeds', {
+    fetchImpl: async (url, opts) => {
+      captura = { body: JSON.parse(opts.body) };
+      return { ok: true };
+    },
+    webhook: 'https://discord.test/x',
+  });
+  assert.ok(!('embeds' in captura.body), 'sin embeds el cuerpo no lleva la clave');
 });
