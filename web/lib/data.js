@@ -1,5 +1,5 @@
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
 const BO3 = 'https://api.bo3.gg/api/v1';
 const DISCIPLINAS = { cs2: 1, valorant: 2, lol: 3, dota2: 4 };
 
