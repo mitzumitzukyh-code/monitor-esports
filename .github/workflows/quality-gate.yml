@@ -1,0 +1,58 @@
+name: Quality Gate eSports
+
+on:
+  schedule:
+    - cron: '5,25,45 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'auditoria/quality-gate.mjs'
+      - 'pruebas/quality-gate.test.mjs'
+      - '.github/workflows/quality-gate.yml'
+      - 'sql/migracion-quality-gate.sql'
+
+concurrency:
+  group: quality-gate-esports
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  shadow-quality-gate:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Probar Quality Gate
+        run: node --test pruebas/quality-gate.test.mjs
+
+      - name: Evaluar y registrar decisiones
+        run: node auditoria/quality-gate.mjs | tee quality-gate.txt
+
+      - name: Resumen del gate
+        if: always()
+        run: |
+          echo '## Quality Gate · shadow mode' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No modifica predicciones ni avisos. Sólo registra qué habría pasado el gate y por qué.' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          cat quality-gate.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Guardar reporte
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-gate-shadow
+          path: quality-gate.txt
+          if-no-files-found: ignore
