@@ -1,0 +1,50 @@
+name: Auditoría producción eSports
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'auditoria/**'
+      - 'pruebas/auditoria-produccion.test.mjs'
+      - '.github/workflows/auditoria-produccion.yml'
+  schedule:
+    # Una medición diaria independiente del ciclo de 10 minutos.
+    - cron: '17 10 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  auditar:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Probar cálculos de auditoría
+        run: node --test pruebas/auditoria-produccion.test.mjs
+
+      - name: Medir producción real
+        run: |
+          node auditoria/produccion.mjs | tee auditoria-produccion.txt
+          {
+            echo '## Auditoría producción eSports'
+            echo
+            echo '```text'
+            cat auditoria-produccion.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Guardar informe
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auditoria-produccion
+          path: auditoria-produccion.txt
+          if-no-files-found: warn
