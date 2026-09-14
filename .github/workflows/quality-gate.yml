@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - 'auditoria/quality-gate.mjs'
+      - 'auditoria/run-quality-gate.mjs'
       - 'pruebas/quality-gate.test.mjs'
       - '.github/workflows/quality-gate.yml'
       - 'sql/migracion-quality-gate.sql'
@@ -36,7 +37,12 @@ jobs:
         run: node --test pruebas/quality-gate.test.mjs
 
       - name: Evaluar y registrar decisiones
-        run: node auditoria/quality-gate.mjs | tee quality-gate.txt
+        run: node auditoria/run-quality-gate.mjs | tee quality-gate.txt
+
+      - name: Verificar que el runner produjo reporte
+        run: |
+          test -s quality-gate.txt || { echo '::error::Quality Gate terminó sin producir reporte'; exit 1; }
+          grep -q '^evaluadas=' quality-gate.txt || { echo '::error::El reporte no contiene conteo de evaluaciones'; exit 1; }
 
       - name: Resumen del gate
         if: always()
@@ -55,4 +61,4 @@ jobs:
         with:
           name: quality-gate-shadow
           path: quality-gate.txt
-          if-no-files-found: ignore
+          if-no-files-found: error
