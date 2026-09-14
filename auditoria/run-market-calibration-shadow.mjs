@@ -4,14 +4,17 @@ import {
   SOURCE_GATE_VERSION,
   ejecutarCalibracion,
 } from './market-calibration-shadow.mjs';
+import { persistirCanonicas } from './canonical-calibration-store.mjs';
 
 const { observaciones, resumen } = await ejecutarCalibracion();
+const persistencia = await persistirCanonicas(observaciones);
 
 const payload = {
   calibration_version: CALIBRATION_VERSION,
   source_gate_version: SOURCE_GATE_VERSION,
   generated_at: new Date().toISOString(),
-  canonical_rule: 'usar la primera observacion cronologica status=ok por match_id entre artefactos',
+  canonical_rule: 'primera observacion status=ok por match_id y calibration_version; tabla canonica first-write-wins + artefactos inmutables',
+  persistence: persistencia,
   summary: {
     total: resumen.total,
     ok: resumen.ok,
@@ -63,9 +66,10 @@ writeFileSync('market-calibration-shadow.csv', `${lineas.join('\n')}\n`, 'utf8')
 console.log(`# ${CALIBRATION_VERSION}`);
 console.log(`source_gate=${SOURCE_GATE_VERSION}`);
 console.log(`evaluadas=${resumen.total} calibrables=${resumen.ok}`);
+console.log(`canonical.insertadas=${persistencia.insertadas} canonical.existentes=${persistencia.existentes}`);
 for (const [status, count] of resumen.estados) console.log(`status.${status}=${count}`);
 for (const [band, count] of resumen.bandas) console.log(`delta_band.${band}=${count}`);
-console.log('canonical=primera observacion cronologica status=ok por match_id entre artefactos');
+console.log('canonical=tabla first-write-wins + artefactos inmutables');
 console.log('output=market-calibration-shadow.json,market-calibration-shadow.csv');
 
 for (const obs of observaciones.filter((x) => x.status === 'ok')) {
