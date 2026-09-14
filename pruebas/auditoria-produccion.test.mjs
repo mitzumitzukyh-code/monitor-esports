@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   bucketConfianza,
   bucketCuota,
+  relacionEquipos,
   elegirCuotaEntrada,
   elegirCuotaCierre,
   evaluar,
@@ -43,6 +44,12 @@ test('bucket de confianza y cuota respeta los límites comerciales', () => {
   assert.equal(bucketCuota(2.50), '2.50+');
 });
 
+test('clasifica mismo orden, orden invertido y equipos ajenos', () => {
+  assert.equal(relacionEquipos(pred, cuota('2026-09-14T09:55:00.000Z')), 'mismo');
+  assert.equal(relacionEquipos(pred, cuota('2026-09-14T09:55:00.000Z', { equipo_a: 20, equipo_b: 10 })), 'invertido');
+  assert.equal(relacionEquipos(pred, cuota('2026-09-14T09:55:00.000Z', { equipo_a: 30, equipo_b: 40 })), 'ajeno');
+});
+
 test('entrada usa la última cuota previa a la predicción si tiene <=30 min', () => {
   const cuotas = [
     cuota('2026-09-14T09:20:00.000Z'),
@@ -68,12 +75,24 @@ test('nunca usa como entrada ni cierre una captura posterior al inicio', () => {
   assert.equal(elegirCuotaCierre(pred, cuotas).max_coeff_a, 1.70);
 });
 
-test('descarta cuota cuyo emparejamiento de equipos no coincide', () => {
-  const cuotas = [
-    cuota('2026-09-14T09:55:00.000Z', { equipo_a: 20, equipo_b: 10, max_coeff_a: 9.99 }),
-    cuota('2026-09-14T10:05:00.000Z', { max_coeff_a: 1.62 }),
-  ];
-  assert.equal(elegirCuotaEntrada(pred, cuotas).max_coeff_a, 1.62);
+test('acepta A/B invertido y remapea la cuota al team_id elegido', () => {
+  const invertida = cuota('2026-09-14T09:55:00.000Z', {
+    equipo_a: 20,
+    equipo_b: 10,
+    coeff_a: 2.40,
+    coeff_b: 1.55,
+    max_coeff_a: 2.50,
+    max_coeff_b: 1.72,
+  });
+  const r = evaluar(pred, [invertida]);
+  assert.equal(r.cuotaEntrada, 1.72);
+  assert.equal(r.cuotaProveedor, 1.55);
+  assert.ok(Math.abs(r.roiEntrada - 0.72) < 1e-12);
+});
+
+test('descarta una cuota con team_id realmente ajenos al match', () => {
+  const ajena = cuota('2026-09-14T09:55:00.000Z', { equipo_a: 30, equipo_b: 40, max_coeff_a: 9.99 });
+  assert.equal(elegirCuotaEntrada(pred, [ajena]), null);
 });
 
 test('calcula Brier, acierto y ROI flat stake con el precio observable', () => {
