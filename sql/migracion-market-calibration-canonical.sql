@@ -33,4 +33,21 @@ create index if not exists eslo_market_calibration_shadow_band_idx
 
 alter table public.eslo_market_calibration_shadow enable row level security;
 revoke all on table public.eslo_market_calibration_shadow from anon, authenticated;
-grant select, insert on table public.eslo_market_calibration_shadow to service_role;
+
+-- PostgREST upsert requiere UPDATE además de INSERT. La tabla sigue siendo
+-- first-write-wins porque este trigger transforma cualquier UPDATE en no-op.
+create or replace function public.prevent_market_calibration_shadow_update()
+returns trigger
+language plpgsql
+as $$
+begin
+  return old;
+end;
+$$;
+
+drop trigger if exists trg_prevent_market_calibration_shadow_update on public.eslo_market_calibration_shadow;
+create trigger trg_prevent_market_calibration_shadow_update
+before update on public.eslo_market_calibration_shadow
+for each row execute function public.prevent_market_calibration_shadow_update();
+
+grant select, insert, update on table public.eslo_market_calibration_shadow to service_role;
