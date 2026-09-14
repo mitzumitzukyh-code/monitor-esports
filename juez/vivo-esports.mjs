@@ -255,75 +255,102 @@ export async function calificarTerminadas(juego, { fetchImpl = fetchConReintento
   const disciplinaId = DISCIPLINAS[juego];
   if (!disciplinaId) throw new Error(`juego desconocido: ${juego}`);
 
+  // No limitar a las primeras 100. Ese límite produjo inanición de cola:
+  // partidas antiguas que bo3.gg ya no devolvía quedaban eternamente al frente
+  // y cientos de predicciones posteriores nunca llegaban a consultarse.
+  // seleccionar() pagina de forma segura si alguna vez superamos 1.000.
   const pendientes = await seleccionar(
     'eslo_predicciones',
-    `?select=*&juego=eq.${juego}&resultado_real=is.null&order=inicio_programado.asc&limit=100`,
+    `?select=*&juego=eq.${juego}&resultado_real=is.null&order=inicio_programado.asc,match_id.asc`,
     { fetchImpl: fetchImplSupabase },
   );
-  if (pendientes.length === 0) return { calificadas: 0 };
-
-  // Se piden EXACTAMENTE las partidas pendientes, por id.
-  //
-  // Antes se traían las 100 terminadas más recientes y se cruzaban. Con datos
-  // reales eso cubre apenas 3 días de CS2 (~34 partidas/día): una predicción
-  // cuya partida terminó hace 4 días no se calificaba NUNCA. Y como la cola de
-  // pendientes se ordena por fecha ascendente, esas viejas taponaban el frente
-  // y bloqueaban también a las nuevas. El fallo se agravaba solo.
-  // EL FILTRO DE DISCIPLINA NO ES OPCIONAL, ni siquiera pidiendo por id.
-  // `/matches?filter[matches.id][in]=` está acotado a CS2 por defecto: pedir
-  // un id de LoL sin él devuelve CERO resultados, sin error. Sin esto las
-  // predicciones de LoL no se calificaban NUNCA -- 87 de 139 no volvían.
-  // Es el mismo comportamiento de `/teams`, ya documentado: en esta API, el
-  // default de disciplina se aplica aunque preguntes por clave primaria.
-  const ids = pendientes.map((p) => p.match_id);
-  const url =
-    `${BASE}/matches?page[limit]=${POR_PAGINA}&filter[matches.discipline_id][eq]=${disciplinaId}` +
-    `&filter[matches.id][in]=${ids.join(',')}`;
-  const datos = await pedir(url, fetchImpl);
-  const terminadas = new Map(
-    (datos.results ?? [])
-      .filter((m) => m.status === 'finished')
-      .map(normalizar)
-      .filter(esUtilizable)
-      .map((p) => [p.matchId, p]),
-  );
+  if (pendientes.length === 0) {
+    return { calificadas: 0, consultadas: 0, lotes: 0, fixtureMismatch: 0, noDevueltas: 0 };
+  }
 
   const ahora = new Date().toISOString();
-  const filas = [];
-  for (const pred of pendientes) {
-    const real = terminadas.get(pred.match_id);
-    if (!real) continue;
+  let calificadas = 0;
+  let fixtureMismatch = 0;
+  let noDevueltas = 0;
+  let lotes = 0;
 
-    const ganoA = real.ganador === pred.equipo_a;
-    const probA = Number(pred.prob_a);
-    filas.push({
-      match_id: pred.match_id,
-      resultado_real: ganoA ? 'ganaA' : 'ganaB',
-      marcador_a: real.marcadorA,
-      marcador_b: real.marcadorB,
-      brier: (probA - (ganoA ? 1 : 0)) ** 2,
-      calificada_en: ahora,
-    });
+  // bo3.gg tiene tope efectivo de 100. Recorremos TODA la cola en lotes para
+  // que un registro irrecuperable no pueda bloquear a los que vienen detrás.
+  for (let i = 0; i < pendientes.length; i += POR_PAGINA) {
+    const lotePendientes = pendientes.slice(i, i + POR_PAGINA);
+    const ids = lotePendientes.map((p) => p.match_id);
+    const url =
+      `${BASE}/matches?page[limit]=${POR_PAGINA}&filter[matches.discipline_id][eq]=${disciplinaId}` +
+      `&filter[matches.id][in]=${ids.join(',')}`;
+    const datos = await pedir(url, fetchImpl);
+    lotes++;
+
+    const terminadas = new Map(
+      (datos.results ?? [])
+        .filter((m) => m.status === 'finished')
+        .map(normalizar)
+        .filter(esUtilizable)
+        .map((p) => [p.matchId, p]),
+    );
+
+    for (const pred of lotePendientes) {
+      const real = terminadas.get(pred.match_id);
+      if (!real) {
+        noDevueltas++;
+        continue;
+      }
+
+      // El match_id por sí solo NO es autoridad suficiente. Un proveedor puede
+      // reutilizar/corregir un fixture. Si los participantes cambiaron, marcar
+      // ganaB por descarte contaminaría Brier, ROI y el historial público.
+      const mismoOrden = real.equipoA === pred.equipo_a && real.equipoB === pred.equipo_b;
+      const ordenInvertido = real.equipoA === pred.equipo_b && real.equipoB === pred.equipo_a;
+      if (!mismoOrden && !ordenInvertido) {
+        fixtureMismatch++;
+        console.warn(
+          `FIXTURE_MISMATCH ${juego} #${pred.match_id}: pred=${pred.equipo_a}/${pred.equipo_b} ` +
+            `real=${real.equipoA}/${real.equipoB}; no se califica`,
+        );
+        continue;
+      }
+
+      const ganoA = real.ganador === pred.equipo_a;
+      const probA = Number(pred.prob_a);
+      if (!Number.isFinite(probA) || probA < 0 || probA > 1) {
+        console.warn(`PROB_INVALIDA ${juego} #${pred.match_id}: prob_a=${pred.prob_a}; no se califica`);
+        continue;
+      }
+
+      // Si el proveedor invirtió team1/team2 pero son los mismos participantes,
+      // remapeamos también el marcador a la orientación congelada del pick.
+      const marcadorA = mismoOrden ? real.marcadorA : real.marcadorB;
+      const marcadorB = mismoOrden ? real.marcadorB : real.marcadorA;
+
+      await parchear(
+        'eslo_predicciones',
+        `?match_id=eq.${pred.match_id}`,
+        {
+          resultado_real: ganoA ? 'ganaA' : 'ganaB',
+          marcador_a: marcadorA,
+          marcador_b: marcadorB,
+          brier: (probA - (ganoA ? 1 : 0)) ** 2,
+          calificada_en: ahora,
+        },
+        { fetchImpl: fetchImplSupabase },
+      );
+      calificadas++;
+    }
+
+    if (i + POR_PAGINA < pendientes.length) await espera(400);
   }
 
-  if (filas.length === 0) return { calificadas: 0 };
-
-  // PATCH, no upsert. Con upsert, PostgREST arma un INSERT ... ON CONFLICT, y
-  // el INSERT valida los NOT NULL ANTES de resolver el conflicto: como acá
-  // sólo se mandan las columnas de calificación, `juego` iba en null y la
-  // base rechazaba con 23502. O sea que calificar NUNCA pudo escribir, y no
-  // se vio hasta que termino la primera partida de verdad.
-  //
-  // PATCH además es lo correcto semánticamente: se está ACTUALIZANDO una fila
-  // que ya existe. Y protege la regla de no reescribir predicciones -- toca
-  // sólo las columnas que se le pasan, así que no puede pisar prob_a ni el
-  // rating con que se predijo, ni aunque alguien meta esos campos por error.
-  for (const f of filas) {
-    const { match_id, ...cambios } = f;
-    await parchear('eslo_predicciones', `?match_id=eq.${match_id}`, cambios, { fetchImpl: fetchImplSupabase });
-  }
-
-  return { calificadas: filas.length };
+  return {
+    calificadas,
+    consultadas: pendientes.length,
+    lotes,
+    fixtureMismatch,
+    noDevueltas,
+  };
 }
 
 // --- ciclo -------------------------------------------------------------------
@@ -346,7 +373,8 @@ if (esEjecutadoDirectamente) {
       console.log(
         `${juego}: ${r.sinc.aplicadas} partidas aplicadas (${r.sinc.equipos} equipos) · ` +
           `${r.pred.predichas} predichas (${r.pred.yaPredichas} ya estaban, ${r.pred.yaEmpezaron} ya empezaron) · ` +
-          `${r.cal.calificadas} calificadas`,
+          `${r.cal.calificadas} calificadas de ${r.cal.consultadas ?? 0}` +
+          `${r.cal.fixtureMismatch ? ` · ${r.cal.fixtureMismatch} fixture mismatch` : ''}`,
       );
     } catch (e) {
       console.error(`${juego}: ${e.message}`);
