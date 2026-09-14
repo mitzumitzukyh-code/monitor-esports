@@ -15,6 +15,13 @@ const partidas = JSON.parse(await readFile(RUTA_DATOS, 'utf8'));
 // realmente cubre el torneo que nos interesa, no solo meses viejos.
 const LEAGUEID_TI2026 = 19719;
 
+// Límite fijo de cordura, no una ventana móvil. El histórico puede y debe
+// conservar partidas antiguas: no queremos que CI empiece a fallar sólo
+// porque pasó el calendario. Fechas anteriores a 2010 sí serían claramente
+// sospechosas para este dataset de Dota 2.
+const TIMESTAMP_MINIMO_RAZONABLE = Date.UTC(2010, 0, 1) / 1000;
+const TOLERANCIA_FUTURO_SEGUNDOS = 60 * 60;
+
 test('hay partidas cargadas', () => {
   assert.ok(partidas.length > 0);
 });
@@ -33,12 +40,22 @@ test('todas las partidas tienen radiant_win booleano', () => {
   }
 });
 
-test('todas las fechas caen dentro de la ventana esperada (últimos ~16 meses, sin futuro)', () => {
+test('todos los start_time son timestamps válidos y no están en el futuro', () => {
   const ahora = Date.now() / 1000;
-  const haceUnAnioYMedio = ahora - 16 * 30 * 24 * 60 * 60;
   for (const p of partidas) {
-    assert.ok(p.start_time <= ahora + 3600, `match_id ${p.match_id}: start_time en el futuro`);
-    assert.ok(p.start_time >= haceUnAnioYMedio, `match_id ${p.match_id}: start_time más viejo de lo esperado`);
+    assert.equal(
+      Number.isFinite(p.start_time),
+      true,
+      `match_id ${p.match_id}: start_time no es un número finito`,
+    );
+    assert.ok(
+      p.start_time >= TIMESTAMP_MINIMO_RAZONABLE,
+      `match_id ${p.match_id}: start_time absurdamente antiguo`,
+    );
+    assert.ok(
+      p.start_time <= ahora + TOLERANCIA_FUTURO_SEGUNDOS,
+      `match_id ${p.match_id}: start_time en el futuro`,
+    );
   }
 });
 
