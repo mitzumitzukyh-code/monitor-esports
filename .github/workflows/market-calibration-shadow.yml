@@ -1,0 +1,77 @@
+name: Market Calibration Shadow
+
+on:
+  schedule:
+    # Cinco minutos después de quality-gate-v1 (05/25/45) para observar el
+    # mismo conjunto con las cuotas ya capturadas por el monitor.
+    - cron: '10,30,50 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'auditoria/market-calibration-shadow.mjs'
+      - 'auditoria/run-market-calibration-shadow.mjs'
+      - 'pruebas/market-calibration-shadow.test.mjs'
+      - '.github/workflows/market-calibration-shadow.yml'
+
+concurrency:
+  group: market-calibration-shadow
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Probar Market Calibration Shadow
+        run: node --test pruebas/market-calibration-shadow.test.mjs
+
+      - name: Generar snapshot prospectivo
+        shell: bash
+        run: |
+          set -o pipefail
+          node auditoria/run-market-calibration-shadow.mjs 2>&1 | tee market-calibration-shadow.txt
+
+      - name: Verificar salidas
+        run: |
+          test -s market-calibration-shadow.txt || { echo '::error::No se generó reporte'; exit 1; }
+          test -s market-calibration-shadow.json || { echo '::error::No se generó JSON'; exit 1; }
+          test -s market-calibration-shadow.csv || { echo '::error::No se generó CSV'; exit 1; }
+          grep -q '^evaluadas=' market-calibration-shadow.txt || { echo '::error::Falta conteo de evaluaciones'; exit 1; }
+          grep -q '"calibration_version": "market-calibration-shadow-v1"' market-calibration-shadow.json || { echo '::error::Versión inesperada'; exit 1; }
+
+      - name: Resumen
+        if: always()
+        run: |
+          echo '## Market Calibration Shadow v1' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Observacional: modelo vs probabilidad de mercado de-vig. No modifica Telegram, Discord, Quality Gate ni predicciones.' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Regla canónica futura: primera observación cronológica `status=ok` de cada `match_id` entre artefactos.' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          cat market-calibration-shadow.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Guardar snapshot inmutable
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-calibration-shadow-${{ github.run_id }}
+          path: |
+            market-calibration-shadow.txt
+            market-calibration-shadow.json
+            market-calibration-shadow.csv
+          if-no-files-found: error
+          retention-days: 90
