@@ -2,6 +2,8 @@
 // para publicación analítica. NO usa cuotas, edge ni ROI para seleccionar.
 // Cada evaluación se registra con versión de reglas y motivos explícitos.
 
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import { seleccionar, upsert } from '../datos/supabase.mjs';
 
 export const GATE_VERSION = 'quality-gate-v1';
@@ -108,8 +110,12 @@ export async function ejecutarQualityGate({ ahora = new Date(), fetchImpl } = {}
   return { decisiones, resumen: resumirQualityGate(decisiones) };
 }
 
-const esDirecto = process.argv[1] && import.meta.url === (await import('node:url')).pathToFileURL(process.argv[1]).href;
-if (esDirecto) {
+export function esEjecucionDirecta(argv1 = process.argv[1]) {
+  if (!argv1) return false;
+  return fileURLToPath(import.meta.url) === resolve(argv1);
+}
+
+if (esEjecucionDirecta()) {
   const { decisiones, resumen } = await ejecutarQualityGate();
   console.log(`# Quality Gate ${GATE_VERSION}`);
   console.log(`evaluadas=${resumen.total} pass=${resumen.pass} reject=${resumen.reject}`);
