@@ -88,6 +88,21 @@ export function scoreObservation(obs, prediction) {
 }
 
 function groupSummary(rows) {
+  if (!rows.length) {
+    return {
+      n: 0,
+      accuracy: null,
+      mean_model_probability: null,
+      mean_reference_probability: null,
+      observed_rate: null,
+      calibration_gap_model_pp: null,
+      brier_model: null,
+      brier_reference: null,
+      brier_diff_model_minus_reference: null,
+      mean_delta_pp: null,
+    };
+  }
+
   const modelBrier = avg(rows.map((x) => x.brier_model));
   const referenceBrier = avg(rows.map((x) => x.brier_reference));
   const observed = avg(rows.map((x) => x.outcome_pick));
