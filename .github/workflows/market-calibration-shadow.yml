@@ -10,8 +10,10 @@ on:
     branches: [main]
     paths:
       - 'auditoria/market-calibration-shadow.mjs'
+      - 'auditoria/canonical-calibration-store.mjs'
       - 'auditoria/run-market-calibration-shadow.mjs'
       - 'pruebas/market-calibration-shadow.test.mjs'
+      - 'pruebas/canonical-calibration-store.test.mjs'
       - '.github/workflows/market-calibration-shadow.yml'
 
 concurrency:
@@ -35,7 +37,7 @@ jobs:
           node-version: '22'
 
       - name: Probar Market Calibration Shadow
-        run: node --test pruebas/market-calibration-shadow.test.mjs
+        run: node --test pruebas/market-calibration-shadow.test.mjs pruebas/canonical-calibration-store.test.mjs
 
       - name: Generar snapshot prospectivo
         shell: bash
@@ -49,6 +51,7 @@ jobs:
           test -s market-calibration-shadow.json || { echo '::error::No se generó JSON'; exit 1; }
           test -s market-calibration-shadow.csv || { echo '::error::No se generó CSV'; exit 1; }
           grep -q '^evaluadas=' market-calibration-shadow.txt || { echo '::error::Falta conteo de evaluaciones'; exit 1; }
+          grep -q '^canonical.insertadas=' market-calibration-shadow.txt || { echo '::error::Falta estado de persistencia canónica'; exit 1; }
           grep -q '"calibration_version": "market-calibration-shadow-v1"' market-calibration-shadow.json || { echo '::error::Versión inesperada'; exit 1; }
 
       - name: Resumen
@@ -56,9 +59,9 @@ jobs:
         run: |
           echo '## Market Calibration Shadow v1' >> "$GITHUB_STEP_SUMMARY"
           echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Observacional: modelo vs probabilidad de mercado de-vig. No modifica Telegram, Discord, Quality Gate ni predicciones.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Observacional: modelo vs probabilidad de referencia de-vig. No modifica Telegram, Discord, Quality Gate ni predicciones.' >> "$GITHUB_STEP_SUMMARY"
           echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Regla canónica futura: primera observación cronológica `status=ok` de cada `match_id` entre artefactos.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Registro canónico: primera observación `status=ok` por `match_id` y versión; tabla first-write-wins más artefacto de auditoría.' >> "$GITHUB_STEP_SUMMARY"
           echo '' >> "$GITHUB_STEP_SUMMARY"
           echo '```text' >> "$GITHUB_STEP_SUMMARY"
           cat market-calibration-shadow.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
