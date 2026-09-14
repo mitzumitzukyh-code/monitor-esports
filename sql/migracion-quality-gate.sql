@@ -27,5 +27,9 @@ create index if not exists eslo_quality_gate_game_idx
 
 alter table public.eslo_quality_gate enable row level security;
 
+-- El monitor escribe desde GitHub Actions con la service_role. RLS se omite para
+-- ese rol, pero PostgreSQL igual exige privilegios de tabla explícitos.
+grant select, insert, update on table public.eslo_quality_gate to service_role;
+
 comment on table public.eslo_quality_gate is
   'Registro prospectivo de decisiones del Quality Gate; no altera predicciones ni resultados.';
