@@ -37,7 +37,10 @@ jobs:
         run: node --test pruebas/quality-gate.test.mjs
 
       - name: Evaluar y registrar decisiones
-        run: node auditoria/run-quality-gate.mjs | tee quality-gate.txt
+        shell: bash
+        run: |
+          set -o pipefail
+          node auditoria/run-quality-gate.mjs 2>&1 | tee quality-gate.txt
 
       - name: Verificar que el runner produjo reporte
         run: |
