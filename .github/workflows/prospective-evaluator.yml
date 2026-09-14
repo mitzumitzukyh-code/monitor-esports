@@ -1,0 +1,76 @@
+name: Prospective Calibration Evaluator
+
+on:
+  schedule:
+    # Una lectura por hora es suficiente: sólo cambian métricas cuando el juez
+    # incorpora nuevos resultados. Corre después del shadow de :10.
+    - cron: '15 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'auditoria/prospective-evaluator.mjs'
+      - 'auditoria/run-prospective-evaluator.mjs'
+      - 'pruebas/prospective-evaluator.test.mjs'
+      - '.github/workflows/prospective-evaluator.yml'
+
+concurrency:
+  group: prospective-calibration-evaluator
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Probar evaluador prospectivo
+        run: node --test pruebas/prospective-evaluator.test.mjs
+
+      - name: Evaluar cohorte canónica
+        shell: bash
+        run: |
+          set -o pipefail
+          node auditoria/run-prospective-evaluator.mjs 2>&1 | tee prospective-evaluator-console.txt
+
+      - name: Verificar salidas
+        run: |
+          test -s prospective-evaluator.txt || { echo '::error::No se generó reporte'; exit 1; }
+          test -s prospective-evaluator.json || { echo '::error::No se generó JSON'; exit 1; }
+          test -s prospective-evaluator.csv || { echo '::error::No se generó CSV'; exit 1; }
+          grep -q '^canonical=' prospective-evaluator.txt || { echo '::error::Falta tamaño de cohorte'; exit 1; }
+          grep -q '^resolved=' prospective-evaluator.txt || { echo '::error::Falta conteo de resueltas'; exit 1; }
+          grep -q '"evaluator_version": "prospective-evaluator-v1"' prospective-evaluator.json || { echo '::error::Versión inesperada'; exit 1; }
+
+      - name: Resumen
+        if: always()
+        run: |
+          echo '## Prospective Calibration Evaluator v1' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Compara scoring prospectivo del modelo contra la probabilidad de referencia congelada. No genera ROI, EV, stake ni decisiones de publicación.' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          cat prospective-evaluator.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Guardar reporte
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prospective-evaluator-${{ github.run_id }}
+          path: |
+            prospective-evaluator.txt
+            prospective-evaluator.json
+            prospective-evaluator.csv
+          if-no-files-found: error
+          retention-days: 14
