@@ -83,17 +83,22 @@ export function resumirQualityGate(decisiones) {
 }
 
 export async function ejecutarQualityGate({ ahora = new Date(), fetchImpl } = {}) {
-  const limiteMs = ahora.getTime() + GATE_RULES.horasMaximas * 3_600_000;
-  const desde = ahora.toISOString();
-  const hasta = new Date(limiteMs).toISOString();
+  const ahoraMs = ahora.getTime();
+  const limiteMs = ahoraMs + GATE_RULES.horasMaximas * 3_600_000;
 
-  // Evaluamos próximas 24 h de TODOS los juegos para conservar también el
-  // historial de rechazos por juego/tier, no sólo los LoL que pueden pasar.
-  const predicciones = await seleccionar(
+  // PostgREST ya nos causó silencios por filtros/paginación. Aquí priorizamos
+  // observabilidad: traemos todas las pendientes con orden total y aplicamos
+  // la ventana temporal en JS, usando la misma lógica probada del gate.
+  const pendientes = await seleccionar(
     'eslo_predicciones',
-    `?select=match_id,juego,tier,prob_a,prob_b,rd_a,rd_b,inicio_programado,resultado_real&resultado_real=is.null&inicio_programado=gt.${encodeURIComponent(desde)}&inicio_programado=lte.${encodeURIComponent(hasta)}&order=match_id.asc`,
+    '?select=match_id,juego,tier,prob_a,prob_b,rd_a,rd_b,inicio_programado,resultado_real&resultado_real=is.null&order=match_id.asc',
     { fetchImpl },
   );
+
+  const predicciones = pendientes.filter((p) => {
+    const inicioMs = new Date(p.inicio_programado).getTime();
+    return Number.isFinite(inicioMs) && inicioMs > ahoraMs && inicioMs <= limiteMs;
+  });
 
   const decisiones = predicciones.map((p) => evaluarQualityGate(p, { ahora }));
   if (decisiones.length) {
