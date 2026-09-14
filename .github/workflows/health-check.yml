@@ -1,0 +1,62 @@
+name: Health Check eSports
+
+on:
+  schedule:
+    # Desfasado del monitor principal para revisar el estado DESPUÉS de una
+    # corrida normal y no disparar falsos positivos mientras aún está enviando.
+    - cron: '7,27,47 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+concurrency:
+  group: health-monitor-esports
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      DISCORD_WEBHOOK_ERRORES: ${{ secrets.DISCORD_WEBHOOK_ERRORES }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Pruebas de integridad del calificador
+        run: node --test pruebas/calificador-integridad.test.mjs pruebas/auditoria-produccion.test.mjs
+
+      - name: Generar panel de control para validar datos
+        run: node salida/web/generar.mjs
+
+      - name: Detectar silencios peligrosos
+        shell: bash
+        run: |
+          set -o pipefail
+          node auditoria/health-check.mjs 2>&1 | tee health-check.txt
+
+      - name: Guardar diagnóstico
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-check
+          path: health-check.txt
+          if-no-files-found: warn
+
+      - name: Avisar health check rojo
+        if: failure()
+        continue-on-error: true
+        shell: bash
+        run: |
+          detalle=$(tail -c 850 health-check.txt 2>/dev/null || printf 'El health check falló antes de producir diagnóstico.')
+          node salida/errores.mjs "Health Check eSports" "$detalle"
