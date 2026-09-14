@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluarQualityGate, resumirQualityGate, GATE_VERSION } from '../auditoria/quality-gate.mjs';
+import { fileURLToPath } from 'node:url';
+import { evaluarQualityGate, resumirQualityGate, GATE_VERSION, esEjecucionDirecta } from '../auditoria/quality-gate.mjs';
 
 const ahora = new Date('2026-09-14T14:00:00.000Z');
 const base = {
@@ -98,4 +99,10 @@ test('resume pass/reject y frecuencia de motivos', () => {
   assert.equal(r.pass, 1);
   assert.equal(r.reject, 2);
   assert.equal(r.reasons.find(([k]) => k === 'GAME_NOT_ALLOWED')[1], 2);
+});
+
+test('reconoce ejecución directa usando ruta absoluta o relativa resuelta', () => {
+  const path = fileURLToPath(new URL('../auditoria/quality-gate.mjs', import.meta.url));
+  assert.equal(esEjecucionDirecta(path), true);
+  assert.equal(esEjecucionDirecta('/tmp/otro-script.mjs'), false);
 });
