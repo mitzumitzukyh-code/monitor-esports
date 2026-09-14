@@ -117,4 +117,7 @@ test('resumen vacío no inventa métricas', () => {
   assert.equal(summary.resolved, 0);
   assert.equal(summary.global.n, 0);
   assert.equal(summary.global.brier_model, null);
+  assert.equal(summary.global.brier_reference, null);
+  assert.equal(summary.global.brier_diff_model_minus_reference, null);
+  assert.equal(summary.global.calibration_gap_model_pp, null);
 });
