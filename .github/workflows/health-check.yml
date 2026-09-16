@@ -5,9 +5,8 @@ on:
     # Desfasado del monitor principal para revisar el estado DESPUÉS de una
     # corrida normal y no disparar falsos positivos mientras aún está enviando.
     - cron: '7,27,47 * * * *'
+  # Para validarlo manualmente cuando haga falta, sin competir con el monitor.
   workflow_dispatch:
-  push:
-    branches: [main]
 
 concurrency:
   group: health-monitor-esports
