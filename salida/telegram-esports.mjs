@@ -69,8 +69,7 @@ export function lineaPrediccion(p, { juego, nombre, ahora = new Date() }) {
   const { fecha, hora } = enVenezuela(p.inicio_programado);
   const dia = diaEnPalabras(fecha, ahora);
   return `${emojiDe(juego)} <b>${esc(NOMBRE_JUEGO[juego] ?? juego)}</b> · ${esc(dia.toLowerCase())}` +
-    `
-<code>${esc(hora12(hora))}</code>  <b>${esc(fav)}</b> ${prob}% vs ${esc(otro)} ${100 - prob}%${esc(aviso)}`;
+    `\n<code>${esc(hora12(hora))}</code>  <b>${esc(fav)}</b> ${prob}% vs ${esc(otro)} ${100 - prob}%${esc(aviso)}`;
 }
 
 // La de una ya jugada: quién ganó, por cuánto, y si le atinamos.
@@ -88,8 +87,7 @@ export function lineaResultado(c, { juego, nombre }) {
     : ` ${ganoA ? `${c.marcador_a}–${c.marcador_b}` : `${c.marcador_b}–${c.marcador_a}`}`;
   const comentario = acerto ? `le dábamos ${prob}%` : `íbamos con ${favorito}, ${prob}%`;
   return `${acerto ? '✅' : '❌'} <b>${esc(NOMBRE_JUEGO[juego] ?? juego)}</b>` +
-    `
-<b>${esc(ganador)}</b>${esc(marcador)} le ganó a ${esc(perdedor)} · ${esc(comentario)}`;
+    `\n<b>${esc(ganador)}</b>${esc(marcador)} le ganó a ${esc(perdedor)} · ${esc(comentario)}`;
 }
 
 // Telegram tumba a un bot que dispara mensajes seguidos a un mismo canal
@@ -150,9 +148,14 @@ export async function avisarTelegram(juego = 'cs2', { fetchImpl, fetchImplSupaba
       if (r.enviado) anunciadas.push(f.match_id);
     }
     if (filas.length > TOPE_TARJETAS) {
+      const resto = filas.slice(TOPE_TARJETAS);
       await respirar();
-      const r = await enviar(`…y ${filas.length - TOPE_TARJETAS} más. <a href="${perfilUrl(filas[0].match_id)}">Ver el panel</a>.`, { fetchImpl });
-      enviados.push({ tipo: `${tipo}-resto`, cuantas: filas.length - TOPE_TARJETAS, ...r });
+      const r = await enviar(`…y ${resto.length} más. <a href="${perfilUrl(filas[0].match_id)}">Ver el panel</a>.`, { fetchImpl });
+      enviados.push({ tipo: `${tipo}-resto`, cuantas: resto.length, ...r });
+      // El resumen confirma que esas filas sí fueron notificadas aunque no
+      // tuvieran tarjeta individual. Si el resumen falla, quedan pendientes
+      // para que el siguiente ciclo las reintente.
+      if (r.enviado) anunciadas.push(...resto.map((f) => f.match_id));
     }
     if (anunciadas.length) await marcar(anunciadas, columna, { fetchImpl: fetchImplSupabase });
     return anunciadas.length;
