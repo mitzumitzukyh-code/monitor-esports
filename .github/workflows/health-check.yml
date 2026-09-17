@@ -3,9 +3,10 @@ name: Health Check eSports
 on:
   schedule:
     # Desfasado del monitor principal para revisar el estado DESPUÉS de una
-    # corrida normal y no disparar falsos positivos mientras aún está enviando.
+    # corrida normal. Además actúa como watchdog: si GitHub omite una corrida
+    # programada del monitor, este workflow rehace una pasada idempotente antes
+    # de evaluar la salud.
     - cron: '7,27,47 * * * *'
-  # Para validarlo manualmente cuando haga falta, sin competir con el monitor.
   workflow_dispatch:
 
 concurrency:
@@ -34,6 +35,28 @@ jobs:
 
       - name: Pruebas de integridad del calificador
         run: node --test pruebas/calificador-integridad.test.mjs pruebas/auditoria-produccion.test.mjs
+
+      # WATCHDOG/RECOVERY. Los cron de GitHub Actions son best-effort y pueden
+      # saltarse una ejecución. El 2026-09-17 el health siguió corriendo mientras
+      # el monitor principal dejó de ser despachado durante horas. Esta pasada
+      # idempotente evita que un fallo del scheduler congele cuotas y avisos.
+      # Cada paso es tolerante a fallos para que el diagnóstico final SIEMPRE se
+      # ejecute y diga con precisión qué subsistema sigue rojo.
+      - name: Recuperar cuotas si el monitor perdió una corrida
+        continue-on-error: true
+        run: node datos/juegos/guardar-cuotas.mjs
+
+      - name: Recuperar ciclo de Dota 2, CS2, LoL y Valorant
+        continue-on-error: true
+        run: node juez/vivo-esports.mjs dota2 cs2 lol valorant
+
+      - name: Reintentar avisos pendientes de Discord
+        continue-on-error: true
+        run: node salida/discord-esports.mjs dota2 cs2 lol valorant
+
+      - name: Reintentar avisos pendientes de Telegram
+        continue-on-error: true
+        run: node salida/telegram-esports.mjs dota2 cs2 lol valorant
 
       - name: Generar panel de control para validar datos
         run: node salida/web/generar.mjs
