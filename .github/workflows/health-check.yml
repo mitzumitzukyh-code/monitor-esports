@@ -8,10 +8,19 @@ on:
     # de evaluar la salud.
     - cron: '7,27,47 * * * *'
   workflow_dispatch:
+  # Validar inmediatamente cualquier cambio al propio watchdog. Comparte el
+  # mismo grupo de concurrencia del monitor, así que nunca toca producción en
+  # paralelo con el ciclo normal.
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/health-check.yml'
 
+# MISMO grupo que Monitor TI2026. Así el watchdog/recovery y el ciclo normal
+# se serializan; nunca pueden predecir ni enviar a la vez.
 concurrency:
-  group: health-monitor-esports
-  cancel-in-progress: true
+  group: monitor-ti2026
+  cancel-in-progress: false
 
 permissions:
   contents: read
