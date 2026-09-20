@@ -21,6 +21,11 @@ on:
     - cron: '*/10 * * * *'
   # Para poder dispararlo a mano desde la pestaña Actions.
   workflow_dispatch:
+  # Reloj externo fiable (Cloudflare/Supabase/Vercel/etc.). GitHub schedule es
+  # best-effort y ya dejó huecos de horas; este evento permite que un scheduler
+  # externo despache el mismo workflow sin duplicar lógica ni tocar secretos.
+  repository_dispatch:
+    types: [external-scheduler]
   # También en cada push a main: sirve de CI (las pruebas corren antes de
   # tocar nada) y da una forma de disparar el ciclo sin abrir el navegador.
   # Es seguro porque el ciclo es idempotente: no re-predice una serie ya
