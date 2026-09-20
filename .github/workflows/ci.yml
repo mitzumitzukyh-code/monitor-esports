@@ -1,0 +1,23 @@
+name: CI eSports
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: https://prueba.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: llave-de-prueba
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Pruebas
+        run: node --test "pruebas/**/*.test.mjs"
