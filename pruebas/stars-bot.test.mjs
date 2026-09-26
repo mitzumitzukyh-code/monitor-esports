@@ -46,7 +46,7 @@ test('FREE nunca lee ni recibe contenido premium, también por callback', async 
 test('premium autorizado recibe informe protegido', async () => {
   const f=fixture(); await f.bot.procesar(mensaje('/analisis 20'));
   assert.equal(f.lecturas(),1); assert.equal(f.llamadas[0].datos.protect_content,true);
-  assert.match(f.llamadas[0].datos.text,/Análisis PRO/);
+  assert.match(f.llamadas[0].datos.text,/Análisis completo/);
 });
 test('checkout fallido o base caída rechaza sin activar', async () => {
   for(const accion of [async()=>({error:'importe'}),async()=>{throw Error('caída');}]) {

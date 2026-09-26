@@ -139,3 +139,34 @@ del propietario sin cambios; conteos de órdenes/pagos/reembolsos/incidencias
 iguales antes/después (1/0/0/0). Sin cobros, aceptaciones nuevas ni activaciones.
 Respaldo previo del perfil y fuentes anteriores del receptor guardados
 localmente en work, excluidos de Git. No hay entorno TEST oficial configurado.
+
+## Estado vigente: partidos por juego y fichas, 2026-09-26
+
+El dueño pidió quitar el país y la frase «El historial no garantiza
+resultados futuros» del escaparate, y mejorar el orden y la plantilla de
+partidos. Se retiraron del caption; la imagen del historial fue editada con
+imagegen sólo para cambiar el cierre por una invitación a explorar partidos,
+conservando cifras, período y metodología. `resultados-v2.png` es la pieza
+activa; original conservado. El perfil y el resto del pack no cambiaron.
+No se quitaron las condiciones previas a la compra ni se prometieron ganancias.
+
+`/partidos` ahora comienza con selector CS2/Dota 2/LoL/Valorant. Cada juego
+tiene Hoy/Mañana/Próximos, seis encuentros por página, agrupación por fecha y
+orden estable por inicio/ID. Consultas filtradas en servidor: las primeras
+diez filas de otros juegos ya no ocultan encuentros del juego elegido.
+Todos los horarios visibles usan UTC−4, sin ubicación del propietario.
+Callbacks validados y regreso a la misma página/período. Botones anteriores
+de análisis siguen compatibles.
+
+FREE al abrir un encuentro ve ficha (equipos, fecha, formato, precios y
+opciones), con una lectura pública limitada de metadatos. No lee prob_a,
+ratings ni historial premium. PRO o análisis individual autorizado recibe
+informe privado con probabilidades guardadas, forma reciente, últimas G/P y
+antecedentes por equipo. No se inventan mapas, vetos, rankings ni ligas.
+Botones para volver a partidos y estado. Navegar no crea compras/consentimientos.
+
+Receptor `esport-stars` versión 4 desplegado; mismo webhook y secretos,
+sin migraciones ni cambios de motor/activación de pagos. 494 pruebas JS y
+21 Postgres local correctas (515), incluidas 11 nuevas de navegación/ficha,
+validación de callbacks, límites de fechas y proyección pública. Rutas reales
+verificadas sólo con el dueño; sin cobros ni activaciones por estas pruebas.
