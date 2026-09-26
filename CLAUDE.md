@@ -19,8 +19,10 @@ no una matriz de Poisson.
 **Desde 2026-09-26**, por encargo explícito del dueño, se prepara FREE + PRO
 con Telegram Stars y análisis individuales. La monetización vive sólo en
 la capa de salida; no cambia probabilidades, ratings ni predicciones.
-Permanece deshabilitada por defecto y requiere migración, receptor HTTPS,
-precios y contacto de soporte antes de activarse. Ver
+El 2026-09-26 el dueño autorizó activarla: migración aplicada, receptor
+Supabase Edge `esport-stars`, webhook y menú registrados; precios 250/50
+Stars y soporte @mitzukyhs. El código sigue apagado por defecto en entornos
+nuevos. Ver
 `docs/TELEGRAM_STARS.md` y `docs/HANDOFF_TELEGRAM_STARS.md`.
 
 ## Contexto: por qué existe esto ahora
@@ -38,7 +40,8 @@ limpias, cualquier número que salga es ruido.
 - Supabase para guardar (solo a partir de Fase 3, si se llega)
 - Discord webhook para avisos y errores (solo a partir de Fase 4, si se llega)
 - Telegram: avisos en `salida/telegram-esports.mjs`; comandos y pagos en
-  `salida/stars/`. Receptor Node continuo; el cron conserva los avisos FREE.
+  `salida/stars/`. Receptor Supabase Edge (Node continuo opcional); el cron
+  conserva los avisos FREE.
 
 ## Las seis reglas duras
 

@@ -18,12 +18,16 @@ if (!process.argv.includes('--activar-webhook')) {
   process.exit(0);
 }
 const url = new URL(process.env.TELEGRAM_WEBHOOK_URL ?? '');
-if (url.protocol !== 'https:' || url.pathname !== '/telegram' || url.search || url.username || url.password) {
-  throw new Error('TELEGRAM_WEBHOOK_URL debe ser https://TU-HOST/telegram');
+if (url.protocol !== 'https:' || !url.pathname.endsWith('/telegram') || url.search || url.username || url.password || url.hash) {
+  throw new Error('TELEGRAM_WEBHOOK_URL debe ser HTTPS y terminar en /telegram');
 }
 if (antes.url && antes.url !== url.href && !process.argv.includes('--reemplazar-webhook')) {
   throw new Error('Ya existe otro receptor. Revisarlo y usar --reemplazar-webhook si corresponde.');
 }
+const salud = await fetch(new URL(url.href.replace(/\/telegram$/, '/health')), {
+  signal: AbortSignal.timeout(6000),
+});
+if (!salud.ok || (await salud.json()).ok !== true) throw new Error('El receptor HTTPS no está listo');
 // Nunca descartar recibos pendientes. Los reintentos son seguros por charge ID.
 await api('setWebhook', { url: url.href, secret_token: config.secreto,
   allowed_updates: ['message','callback_query','pre_checkout_query','subscription'], drop_pending_updates: false, max_connections: 4 });
@@ -33,4 +37,6 @@ await api('setMyCommands', { commands: [
   { command: 'analisis', description: 'Abrir informe: /analisis ID' }, { command: 'cancelar', description: 'Cancelar renovación automática' },
   { command: 'terms', description: 'Condiciones de compra' }, { command: 'paysupport', description: 'Ayuda con compras' },
 ] });
+const despues = await api('getWebhookInfo', {});
+if (despues.url !== url.href) throw new Error('Telegram no registró la URL esperada');
 console.log('Receptor y menú registrados. Verificar /planes y /estado en privado.');

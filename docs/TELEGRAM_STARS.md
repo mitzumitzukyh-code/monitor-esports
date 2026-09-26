@@ -1,7 +1,26 @@
 # Telegram Stars — activación de FREE y PRO
 
-Versión preparada el 2026-09-26 sobre main `cca7478`. No se hicieron cobros,
-migraciones remotas, cambios de webhook ni despliegues de producción.
+Activado el 2026-09-26 por petición del dueño, sobre main `cca7478` y rama
+`feat/telegram-stars`. Migración aplicada y receptor HTTPS desplegado en
+Supabase; webhook y menú del bot registrados. No se hicieron cobros reales.
+
+## Estado operativo actual
+
+- Bot: [@monitor_esports_avisos_bot](https://t.me/monitor_esports_avisos_bot).
+- PRO: 250 Stars cada 30 días, renovación automática. Partido: 50 Stars.
+- Soporte: [@mitzukyhs](https://t.me/mitzukyhs).
+- Supabase existente: `ysqstdgjmugdlyahkhou`, función `esport-stars`.
+- Receptor: `https://ysqstdgjmugdlyahkhou.supabase.co/functions/v1/esport-stars/telegram`.
+- `/health` de la misma función confirma `compras_habilitadas: true`.
+- Migración registrada: `20260926174331_telegram_stars.sql`. **Ya aplicada**.
+- Credencial del bot reutilizada y secreto de webhook generado; credenciales
+  Supabase de servidor disponibles en el entorno de la función. No poner
+  secretos en documentación ni repositorio.
+
+No depende de mantener encendida la PC. La función usa el plan Free existente;
+no se contrató hosting ni se cambió de plan. El webhook tenía cero updates
+pendientes y ningún error en la verificación. La prueba de compra completa
+en el servidor oficial TEST no se realizó: no hay cuenta/bot TEST configurado.
 
 ## Producto disponible
 
@@ -27,7 +46,7 @@ los términos versionados y se muestra el precio.
 ## Configuración
 
 Copiar `.env.ejemplo` a `.env` en el host del receptor. Los valores van sólo
-en el servidor o su gestor de secretos, nunca en el panel, repo o navegador.
+en el servidor o su gestor de secretos, nunca en el panel público o repo.
 
 | Variable | Uso |
 |---|---|
@@ -46,8 +65,11 @@ en el servidor o su gestor de secretos, nunca en el panel, repo o navegador.
 | `TELEGRAM_TEST_ENV` | `false`; `true` dirige todas las llamadas a `/bot<TOKEN>/test/METHOD` |
 | `TELEGRAM_CHAT_ID` | Sólo avisos FREE del cron actual; no es necesario para compras privadas |
 
-Ejemplo de precios, sin recomendación comercial: PRO `250` y partido `50`.
-Para cambiarlos: editar variables del receptor y reiniciar Node. Las órdenes
+Precios de lanzamiento elegidos: PRO `250` y partido `50`.
+Para cambiarlos en el alojamiento actual: editar `TELEGRAM_PRO_STARS` y
+`TELEGRAM_MATCH_STARS` en Dashboard → Edge Functions → Secrets del proyecto.
+Los secretos actualizados se aplican a las invocaciones nuevas; comprobar
+`/planes`. Con Node, editar env y reiniciar el proceso. Las órdenes
 ya emitidas conservan su precio guardado; las facturas iniciales pendientes
 vencen a los 30 min. Suscripciones existentes conservan el precio original:
 no se puede cambiar su importe editando una variable ni cobrar diferencia
@@ -63,7 +85,7 @@ silenciosamente. El precio nuevo se aplica a compras/suscripciones nuevas.
    ```
    PGlite es dependencia sólo de desarrollo; producción usa Node y fetch.
 2. Aplicar **sólo al entorno elegido** la migración
-   `supabase/migrations/20260926172512_telegram_stars.sql` usando SQL Editor
+   `supabase/migrations/20260926174331_telegram_stars.sql` usando SQL Editor
    o el proceso de migraciones del proyecto. Es una migración nueva; no
    repetirla manualmente sobre tablas ya creadas. Antes, respaldar la base.
    La RPC y las cinco tablas tienen permisos sólo de servidor y RLS.
@@ -72,7 +94,17 @@ silenciosamente. El precio nuevo se aplica a compras/suscripciones nuevas.
    ```sh
    node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
    ```
-4. Mantener un proceso Node continuo con supervisor y reinicio automático:
+4. En Supabase Edge, desplegar la función desde
+   `supabase/functions/esport-stars/index.mjs`. El comando
+   `node scripts/empaquetar-stars-edge.mjs` genera el objeto JSON de archivos
+   para `deploy_edge_function`, conservando los imports relativos. No sube
+   secretos. Establecer `verify_jwt=false` sólo porque el receptor implementa
+   autenticación propia mediante el secreto enviado por Telegram. Una llamada
+   POST sin ese secreto devuelve 403. `/health` no revela datos privados.
+   Guardar variables Telegram en Edge Functions → Secrets; `SUPABASE_URL` y
+   `SUPABASE_SERVICE_ROLE_KEY` ya están disponibles en el servidor.
+
+   Alternativa Node: mantener un proceso continuo con supervisor y reinicio:
    ```sh
    node --env-file=.env salida/stars/webhook.mjs
    ```
@@ -80,7 +112,8 @@ silenciosamente. El precio nuevo se aplica a compras/suscripciones nuevas.
    y conservar `X-Telegram-Bot-Api-Secret-Token`. `/health` indica que el
    proceso está vivo, no que la base/API esté disponible. GitHub Actions
    conserva el cron FREE, pero no puede recibir checkout continuo: el plazo
-   de Telegram es 10 s. Hace falta este receptor accesible permanentemente.
+   de Telegram es 10 s. Hace falta este receptor accesible permanentemente;
+   la función Edge ya cubre este requisito.
 5. Comprobar configuración sin modificar Telegram:
    ```sh
    node --env-file=.env scripts/configurar-stars.mjs
@@ -93,11 +126,13 @@ silenciosamente. El precio nuevo se aplica a compras/suscripciones nuevas.
    `--reemplazar-webhook` tras revisarlo. No descarta updates pendientes.
    No ejecutar junto a un consumidor de `getUpdates`: Telegram admite una
    sola modalidad de recepción. Los avisos `sendMessage` del cron continúan.
-7. Validar en TEST antes de habilitar en producción. Una vez configurado el
+7. Se recomienda recorrer también el flujo en TEST. Una vez configurado el
    entorno elegido, poner `TELEGRAM_STARS_ENABLED=true` y reiniciar el receptor.
-   No hace falta un payment provider token para Stars.
+   No hace falta un payment provider token para Stars. En Supabase Edge basta
+   actualizar el secreto ENABLED; confirmar el estado en `/health`.
 
-Para detener ventas nuevas, poner ENABLED=false y reiniciar. **Conservar el
+Para detener ventas nuevas, poner ENABLED=false (en Edge actualizar el secreto;
+en Node reiniciar). **Conservar el
 receptor y la base**: seguirá procesando recibos de pagos ya realizados,
 renovaciones y refunds. Esto no cancela suscripciones existentes; usar
 `/cancelar` o `editUserStarSubscription` según corresponda.
@@ -176,7 +211,13 @@ del bot, duplicados, expiración, renovación y refunds. PGlite ejecuta un solo
 proceso; las peticiones concurrentes se serializan allí. El bloqueo asesor y
 las restricciones del SQL protegen también procesos independientes en
 Postgres; la concurrencia distribuida debe verificarse en staging si se escala.
-CI ejecuta ambos sin secretos reales ni contacto con Telegram/Supabase remoto.
+`pruebas/stars-receptor.test.mjs` cubre el adaptador Edge: autorización,
+límite de cuerpo, JSON inválido, health y reintentos. CI ejecuta todas estas
+pruebas sin secretos reales ni contacto con Telegram/Supabase remoto.
+
+Verificación remota sin compras: `/health` 200 con compras habilitadas,
+webhook sin secreto 403, JSON mal formado 400 y update vacío 200. Se comprobó
+el menú de Telegram y la URL de webhook registrada sin errores ni pendientes.
 
 Para la prueba oficial, crear cuenta/bot en el servidor TEST de Telegram y
 usar una base Supabase separada con las tablas base y esta migración. Un
@@ -197,3 +238,5 @@ real con Telegram queda pendiente de configuración.
 - [Autenticación de webhook](https://core.telegram.org/bots/api#setwebhook)
 - [Entorno TEST separado](https://core.telegram.org/bots/features#dedicated-test-environment)
 - [Supabase: permisos y RLS](https://supabase.com/docs/guides/api/securing-your-api)
+- [Supabase: secretos de Edge Functions](https://supabase.com/docs/guides/functions/secrets)
+- [Supabase: autenticación propia de webhooks](https://supabase.com/docs/guides/functions/auth)

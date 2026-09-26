@@ -15,7 +15,7 @@ before(async()=>{
     insert into public.eslo_predicciones values (20),(21);
     grant usage on schema public to anon,authenticated,service_role;
     grant select on public.eslo_predicciones to service_role;`);
-  await db.exec(await readFile(new URL('../supabase/migrations/20260926172512_telegram_stars.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/20260926174331_telegram_stars.sql',import.meta.url),'utf8'));
 });
 after(async()=>db?.close());
 const accion=async(a,d)=>(await db.query('select public.eslo_stars($1,$2::jsonb) as r',[a,JSON.stringify(d)])).rows[0].r;

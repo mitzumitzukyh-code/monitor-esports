@@ -131,12 +131,19 @@ Lo que **no** está resuelto y hay que tener presente:
 
 ### Monetización Telegram (2026-09-26)
 
-`salida/stars/webhook.mjs` recibe updates autenticados por secret_token.
+`supabase/functions/esport-stars/index.mjs` recibe updates HTTPS en Supabase
+Edge mediante `salida/stars/receptor.mjs`, autenticados por secret_token.
+Reutiliza el bot y persistencia del runtime Node; `salida/stars/webhook.mjs`
+permanece como alternativa de alojamiento. El empaquetador incluye sólo los
+módulos relativos requeridos y no incorpora `.env` ni secretos.
 `bot.mjs` presenta planes y facturas; `persistencia.mjs` reutiliza el cliente
 PostgREST de `datos/supabase.mjs`. La RPC `eslo_stars` valida en servidor,
 serializa por usuario y registra pago + acceso en una transacción. Los
 charge_id y update_id son únicos. Tablas privadas con RLS, sin permisos
 anon/authenticated; RPC SECURITY INVOKER sólo para service_role.
+La migración `20260926174331_telegram_stars.sql` ya está aplicada en el
+proyecto existente `ysqstdgjmugdlyahkhou`. No repetirla. Stars habilitadas
+con precios 250/50; soporte @mitzukyhs. Secretos sólo en el servidor.
 
 Los informes privados se autorizan en cada solicitud con hora de Postgres;
 el pago de partido abre sólo ese ID. `informe.mjs` usa predicciones guardadas
