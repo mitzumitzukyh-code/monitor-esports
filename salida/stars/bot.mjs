@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { PERIODO_PRO, VERSION_TERMINOS } from './config.mjs';
 import { informePremium } from './informe.mjs';
+import { MUESTRA } from './muestra.mjs';
 import { esc } from '../telegram.mjs';
 import { JUEGOS, POR_PAGINA, PERIODOS, contextoLista, enlaceLista, ventanaPartidos,
-  fechaPartido, nombreEncuentro, formatoSerie } from './partidos.mjs';
+  fechaPartido, nombreEncuentro, formatoSerie, zonaPublica } from './partidos.mjs';
 
 const idValido = (id) => Number.isSafeInteger(id) && id > 0;
 const partidoId = (s) => /^\d{1,15}$/.test(s ?? '') && idValido(Number(s)) ? Number(s) : null;
@@ -29,22 +30,25 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
   );
   const volver = () => markup([boton('Menú principal', 'inicio')]);
   const elegirJuego = (id, individual = false) => {
-    const texto = '<b>Encuentra tu próximo partido</b>\nElige un juego y consulta sus encuentros por fecha.\nHorarios UTC−4.';
+    const texto = '<b>Encuentra tu próximo partido</b>\nElige un juego y consulta sus encuentros por fecha.\nHorarios AM/PM · UTC−4.';
     const botones = markup(
-      [boton('CS2', 'juego:cs2:0:proximos'), boton('Dota 2', 'juego:dota2:0:proximos')],
-      [boton('LoL', 'juego:lol:0:proximos'), boton('Valorant', 'juego:valorant:0:proximos')],
+      [boton('CS2', 'filtro:cs2'), boton('Dota 2', 'filtro:dota2')],
+      [boton('LoL', 'filtro:lol'), boton('Valorant', 'filtro:valorant')],
       [boton('Ver planes', 'planes'), boton('Menú principal', 'inicio')],
     );
     return individual ? presentar(id,
       `Un análisis · ${config.partido ?? 'precio por confirmar'} Stars. Pago único.\n\n${texto}`, 'individual', botones) : decir(id, texto, botones);
   };
+  const elegirPeriodo = (id, juego) => decir(id, `<b>${JUEGOS[juego]} · Elige un período</b>\nHorarios AM/PM · UTC−4.`,
+    markup(Object.entries(PERIODOS).map(([periodo,nombre]) => boton(nombre,enlaceLista({ juego,periodo }))),
+      [boton('Cambiar juego','partidos'),boton('Menú principal','inicio')]));
   async function listarPartidos(id, contexto) {
     const { juego, pagina, periodo } = contexto;
     const filas = await almacen.partidos({ juego, ...ventanaPartidos(periodo, ahora()),
       offset: pagina * POR_PAGINA, limite: POR_PAGINA + 1 });
     const visibles = filas.slice(0, POR_PAGINA);
     const mapa = visibles.length ? await nombresPartidos(visibles).catch(() => new Map()) : new Map();
-    const lineas = [`<b>${JUEGOS[juego]} · ${PERIODOS[periodo]}</b>`, 'Horarios UTC−4.'];
+    const lineas = [`<b>${JUEGOS[juego]} · ${PERIODOS[periodo]}</b>`, 'Horarios AM/PM · UTC−4.'];
     let diaAnterior;
     for (const [i, p] of visibles.entries()) {
       const dia = fechaPartido(p.inicio_programado, { dateStyle: 'medium' });
@@ -82,19 +86,27 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
     '<b>Monitor eSports</b>\nPredicciones y estadísticas para entender cada partido.\n' +
     'CS2 · Dota 2 · LoL · Valorant\n\nElige una opción para continuar.', 'bienvenida', menu());
   const soporte = () => config.soporte ? `Soporte de compras: ${esc(config.soporte)}. Envía el recibo y explica el problema.` : 'Las compras aún no están habilitadas.';
-  const terminos = (id, producto = 'p') => presentar(id, `${TERMINOS}\n${soporte()}`,
+  const terminos = (id, producto = 'p') => presentar(id,
+    (producto === 'p' ? `PRO · ${config.pro} Stars cada 30 días.${config.recurrente ? ' Renovación automática.' : ' Pago único.'}\n` :
+      `Análisis #${producto.slice(1)} · ${config.partido} Stars. Pago único, sin renovación.\n`) + `${TERMINOS}\n${soporte()}`,
     producto === 'p' ? 'pro' : 'individual', markup([
     boton('Acepto los términos', `aceptar:${VERSION_TERMINOS}:${producto}`),
   ]));
+  const verPro = id => presentar(id,
+    `<b>Monitor eSports PRO</b>\n${config.pro ?? 'Precio por confirmar'} Stars cada 30 días.${config.recurrente ? ' Renovación automática.' : ' Pago único, sin renovación.'}\n\n` +
+    'Acceso a los informes completos de los partidos disponibles durante tu suscripción.\n' +
+    'Incluye probabilidades estimadas, forma reciente, últimos resultados y H2H; fecha, hora y formato cuando esté disponible.\n\n' +
+    'El acceso se activa después del pago confirmado. Cancelar detiene futuras renovaciones y conserva el período pagado.',
+    'pro',markup([boton('Revisar condiciones','condiciones:p')],[boton('Ver partidos','partidos'),boton('Mi estado','estado')]));
   const planes = (id) => presentar(id, [
     '<b>Planes Monitor eSports</b>',
-    'FREE: consulta los partidos disponibles.',
-    config.pro ? `PRO: probabilidades, estadísticas y contexto del partido.\n${config.pro} Stars cada 30 días.${config.recurrente ? ' Renovación automática.' : ' Pago único, sin renovación automática.'}` : 'PRO: próximamente.',
+    'FREE: partidos, ficha básica, muestra e historial publicado. Entrar, consultar y aceptar condiciones no cobra Stars.',
+    config.pro ? `PRO: probabilidades estimadas, forma reciente, últimos resultados y H2H.\n${config.pro} Stars cada 30 días.${config.recurrente ? ' Renovación automática.' : ' Pago único, sin renovación automática.'}` : 'PRO: próximamente.',
     config.partido ? `Un análisis: ${config.partido} Stars. Pago único, sin renovación.` : '',
     'Las predicciones son estimaciones.',
   ].filter(Boolean).join('\n\n'), 'pro', markup(
     [boton('Ver PRO', 'pro'), boton('Elegir partido', 'individual')],
-    [boton('Ver ejemplo de informe', 'muestra'), boton('Ver resultados', 'resultados')],
+    [boton('Ver ejemplo de informe', 'muestra'), boton('Historial de pruebas', 'resultados')],
     [boton('Menú principal', 'inicio')],
   ));
 
@@ -139,14 +151,14 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
       const datos = ficha ? [
         `<b>${esc(JUEGOS[ficha.juego] ?? ficha.juego)} · Análisis del encuentro</b>`,
         `<b>${esc(nombreEncuentro(ficha, mapa))}</b>`,
-        `${fechaPartido(ficha.inicio_programado)} · UTC−4`, formatoSerie(ficha.formato), '',
+        `${fechaPartido(ficha.inicio_programado)} · ${zonaPublica(ficha.inicio_programado)}`, formatoSerie(ficha.formato), '',
       ].filter(x => x !== '').join('\n') + '\n\n' : '';
       return presentar(id, datos + 'El informe completo requiere PRO o compra individual.\n' +
-        'Incluye probabilidades, forma reciente y enfrentamientos previos.\n\n' +
+        'Incluye probabilidades estimadas, forma reciente, últimos resultados y H2H.\n\n' +
         (config.partido ? `Este análisis: ${config.partido} Stars · pago único.\n` : '') +
         (config.pro ? `PRO: ${config.pro} Stars cada 30 días.${config.recurrente ? ' Renovación automática.' : ' Pago único.'}` : ''),
         'individual', markup(
-          [boton('Ver PRO', 'pro'), ...(config.partido ? [boton('Comprar este análisis', `comprar:${matchId}`)] : [])],
+          [boton('Ver PRO', 'pro'), ...(config.partido ? [boton('Comprar análisis', `comprar:${matchId}`)] : [])],
           [boton('Volver a partidos', regresar), boton('Ver ejemplo', 'muestra')],
         ));
     }
@@ -213,7 +225,8 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
       if (r.duplicado) return;
       if (mensaje.refunded_payment || r.reembolsado) return decir(id, 'Reembolso registrado. El acceso de esa compra quedó retirado. Usa /estado.');
       if (r.producto === 'partido') return decir(id, `Análisis activado. Usa /analisis ${r.match_id}.`, markup([boton('Abrir análisis', `analisis:${r.match_id}`)]));
-      return decir(id, `PRO activado hasta ${fecha(r.expira_en)} (UTC−4). Usa /partidos para abrir un análisis.`);
+      return decir(id, `PRO activado · período de 30 días. Vigente hasta ${fecha(r.expira_en)} (${zonaPublica(r.expira_en)}).`,
+        markup([boton('Ver partidos','partidos'),boton('Mi estado','estado')]));
     }
     if (cb) await api('answerCallbackQuery', { callback_query_id: cb.id });
     await almacen.accion('usuario', { user_id: id });
@@ -222,10 +235,11 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
       const data = cb.data ?? '';
       if (data.startsWith(`aceptar:${VERSION_TERMINOS}:`)) {
         const producto = data.split(':')[2];
-        if (producto !== 'p' && !/^m\d{1,15}$/.test(producto)) return;
+        if (data.split(':').length !== 3 || (producto !== 'p' && !partidoId(producto?.slice(1))) ||
+          (producto !== 'p' && !producto.startsWith('m'))) return;
         await almacen.accion('terminos', { user_id: id, version: VERSION_TERMINOS });
         return decir(id, 'Términos aceptados. Revisa el precio antes de pagar.', markup([
-          boton('Continuar compra', producto === 'p' ? 'pagar_pro' : `comprar:${producto.slice(1)}`),
+          boton('Continuar compra', producto === 'p' ? 'pagar_pro' : `pagar_individual:${producto.slice(1)}`),
         ]));
       }
       [comando, arg] = data.split(':');
@@ -236,22 +250,30 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
     if (['start','help','inicio'].includes(comando)) return bienvenida(id);
     if (comando === 'planes') return planes(id);
     if (['support','paysupport','soporte'].includes(comando)) return decir(id, soporte(), volver());
-    if (['muestra','ejemplo'].includes(comando)) return presentar(id,
-      '<b>Ejemplo de informe</b>\nEsta pieza muestra el diseño del informe. Los campos no confirmados figuran como pendientes.\n' +
-      'Las probabilidades son estimaciones; la plantilla no es un resultado confirmado.', 'muestra',
+    if (['muestra','ejemplo'].includes(comando)) return MUESTRA ? decir(id,
+      '🧪 <b>Ejemplo real · partido cerrado</b>\nUna muestra pública del formato actual, con datos registrados.\n\n' +
+      informePremium(MUESTRA.partido,MUESTRA.historial,teamId => MUESTRA.nombres[teamId] ?? `#${teamId}`),
+      markup([boton('Ver partidos disponibles','partidos'),boton('Ver planes','planes')])) : presentar(id,
+      '<b>Plantilla visual · valores demostrativos</b>\nLos porcentajes, forma y H2H de esta imagen son ejemplos de diseño; no son datos verificados de ese partido.', 'muestra',
       markup([boton('Ver partidos disponibles', 'partidos'), boton('Ver planes', 'planes')]));
-    if (['resultados','historial'].includes(comando)) return presentar(id,
-      '<b>Resultados con contexto</b>\n27 AGO–25 SEP 2026\n1.896 partidos evaluados.\n\n' +
+    if (['resultados','historial'].includes(comando)) return decir(id,
+      '<b>Historial de pruebas · corte estático</b>\nMaterial de validación publicado, separado de los planes comerciales.\n' +
+      '27 AGO–25 SEP 2026 · UTC−4\n1.896 partidos evaluados.\n\n' +
       'CS2: 755/1.289 · 58,6%\nDota 2: 122/190 · 64,2%\nLoL: 204/296 · 68,9%\nValorant: 63/121 · 52,1%\n\n' +
       'Porcentaje de predicciones acertadas sobre partidos con resultado registrado. Los 166 pendientes quedan fuera del cálculo.\n' +
-      'Predicciones registradas antes del inicio programado.\n\nExplora los próximos partidos y descubre el análisis completo.',
-      'resultados', markup([boton('Ver partidos', 'partidos'), boton('Ver planes', 'planes')]));
+      'Predicciones registradas antes del inicio programado. Estas cifras describen esas pruebas y no son una tasa general de rendimiento del servicio.', volver());
     if (['terms','terminos'].includes(comando)) return terminos(id);
-    if (['pro','pagar_pro'].includes(comando)) return comprar(id, 'pro');
+    if (comando === 'pro') return verPro(id);
+    if (comando === 'pagar_pro') return comprar(id, 'pro');
+    if (comando === 'condiciones' && cb && arg === 'p') return terminos(id);
     if (comando === 'comprar') {
       const matchId = partidoId(arg);
       if (!matchId) return decir(id, 'Usa /comprar ID. Encuentra el ID con /partidos.');
-      return comprar(id, 'partido', matchId);
+      return terminos(id, `m${matchId}`);
+    }
+    if (comando === 'pagar_individual' && cb) {
+      const matchId = partidoId(arg);
+      return matchId ? comprar(id,'partido',matchId) : elegirJuego(id);
     }
     if (comando === 'analisis') return verAnalisis(id, partidoId(arg));
     if (comando === 'juego' && cb) {
@@ -265,20 +287,24 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
       const matchId = partidoId(arg);
       return contexto && matchId ? verAnalisis(id, matchId, enlaceLista(contexto)) : elegirJuego(id);
     }
+    if (comando === 'filtro' && cb) return Object.hasOwn(JUEGOS,arg ?? '') ? elegirPeriodo(id,arg) : elegirJuego(id);
     if (comando === 'partidos' || comando === 'individual') {
       const contexto = arg ? contextoLista(arg) : null;
-      return contexto ? listarPartidos(id, contexto) : elegirJuego(id, comando === 'individual');
+      return contexto ? elegirPeriodo(id,contexto.juego) : elegirJuego(id, comando === 'individual');
     }
     if (comando === 'estado' || comando === 'cancelar') {
       const estado = await almacen.accion('estado', { user_id: id });
       if (comando === 'cancelar') {
-        for (const s of estado.suscripciones.filter((s) => !s.cancelada)) {
+        const pendientes = estado.suscripciones.filter(s => !s.cancelada);
+        if (!pendientes.length) return decir(id,'No tienes una renovación automática activa para cancelar.',menu());
+        for (const s of pendientes) {
           await api('editUserStarSubscription', { user_id: id, telegram_payment_charge_id: s.cargo, is_canceled: true });
-          await almacen.accion('cancelar', { user_id: id, payload: s.payload, telegram_payment_charge_id: s.cargo });
+          const r = await almacen.accion('cancelar', { user_id: id, payload: s.payload, telegram_payment_charge_id: s.cargo });
+          if (!r.ok) throw Error('Cancelación pendiente de persistir');
         }
         return decir(id, 'Renovación automática cancelada. Conservas PRO hasta el final del período pagado. /estado');
       }
-      return decir(id, estado.premium ? `PRO activo hasta ${fecha(estado.expira_en)} (UTC−4).\n` +
+      return decir(id, estado.premium ? `PRO activo hasta ${fecha(estado.expira_en)} (${zonaPublica(estado.expira_en)}).\n` +
         (estado.suscripciones.some((s) => s.state === 'active' && !s.cancelada) ? 'Renovación automática activa. /cancelar para detenerla.' :
           estado.suscripciones.some((s) => s.state === 'failed') ? 'El último intento de renovación falló. Revisa tu suscripción y Stars en Telegram.' :
             'Renovación automática desactivada o pago único.') :

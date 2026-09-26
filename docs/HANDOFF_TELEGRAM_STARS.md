@@ -1,5 +1,34 @@
 # Handoff — monetización Telegram, 2026-09-26
 
+## Estado que prevalece: Bot v3 afinado, PR #6, 26/09/2026
+
+Esta sección sustituye las decisiones de presentación de v2 que aparecen
+en el historial inferior. Integración v3 en Supabase Edge `esport-stars`
+versión 6. 512 pruebas JS + 34 Postgres local = 546 correctas.
+Nuevo en la rama: resultados automáticos sólo para PRO vigente, agrupados en
+ventanas de 30 minutos (migración `20260926230000` sin aplicar; workflow
+`Resultados PRO Telegram` apagado hasta `TELEGRAM_RESULTADOS_PRO=true`).
+Orden tras merge autorizado: migración → redeploy Edge → activar variable.
+Cambios, verificación y protocolo de pago real en `BOT_V3_VALIDACION.md`.
+Sin cambios del modelo, migraciones, secretos, TikTok ni infraestructura.
+Rama `fix/bot-pack-v3`, PR #6 abierta; **no fusionar** hasta autorización
+del dueño y, idealmente, tras la prueba real de 300 Stars + reembolsos.
+
+FREE: bienvenida → juego → período → listado de 6 → ficha básica →
+Comprar análisis / Ver PRO; sin premium ni cobros. PRO: explicación →
+condiciones v3 → aceptación → continuar → Stars → recibo validado
+transaccional; individual 50 sin renovación y sin activar PRO.
+`/estado` muestra vigencia; `/cancelar` detiene renovaciones futuras.
+AM/PM; fechas concretas con `UTC−4` o `UTC−4 / ET` si EDT coincide.
+Informe PRO solo con campos permitidos (probs, forma≤10, últimos≤5, H2H,
+fecha/hora, formato, competición si existe). `/muestra` = snapshot real
+vía `informePremium`. Diagramas INTERNO_OPERADOR solo locales.
+
+No se gastaron Stars ni se simularon pagos en producción. Pendiente cierre
+con dos compras reales autorizadas (PRO 250 + individual 50, total 300) y
+ambos reembolsos. APIs simuladas + SQL real local ya validan todo el flujo,
+incluyendo reinicio, duplicados, cancelación, expiración y revocación.
+
 Solicitud explícita del dueño: preparar monetización FREE/PRO con Stars
 sin cambiar el motor. Repo correcto: `mitzumitzukyh-code/monitor-esports`.
 Base de trabajo: `cca7478`, rama `feat/telegram-stars`. La copia antigua

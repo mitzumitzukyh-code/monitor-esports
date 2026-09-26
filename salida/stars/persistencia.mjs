@@ -26,10 +26,20 @@ export function almacenStars({ fetchImpl = fetch } = {}) {
     },
     prediccion: async (id) => (await seleccionar('eslo_predicciones',
       `?select=*&match_id=eq.${id}&limit=1`, { fetchImpl }))[0] ?? null,
-    historial: (p) => seleccionar('eslo_predicciones',
-      `?select=equipo_a,equipo_b,resultado_real,prob_a,inicio_programado&juego=eq.${encodeURIComponent(p.juego)}` +
-      `&inicio_programado=lt.${encodeURIComponent(p.inicio_programado)}&resultado_real=not.is.null` +
-      `&or=(equipo_a.in.(${p.equipo_a},${p.equipo_b}),equipo_b.in.(${p.equipo_a},${p.equipo_b}))` +
-      '&order=inicio_programado.desc,match_id.desc&limit=100', { fetchImpl }),
+    historial: async (p) => {
+      if (![p.equipo_a, p.equipo_b].every(id => Number.isSafeInteger(id) && id > 0) ||
+        !Object.hasOwn(JUEGOS, p.juego) || !Number.isFinite(Date.parse(p.inicio_programado))) throw Error('Historial no válido');
+      const base = `?select=match_id,equipo_a,equipo_b,resultado_real,inicio_programado&juego=eq.${p.juego}` +
+        `&inicio_programado=lt.${encodeURIComponent(p.inicio_programado)}&resultado_real=in.(ganaA,ganaB)`;
+      const orden = '&order=inicio_programado.desc,match_id.desc';
+      // Diez resultados por equipo y todos los H2H, sin truncarlos por un límite combinado.
+      const lotes = await Promise.all([
+        ...[p.equipo_a,p.equipo_b].map(id => seleccionar('eslo_predicciones',
+          base + `&or=(equipo_a.eq.${id},equipo_b.eq.${id})` + orden + '&limit=10', { fetchImpl })),
+        seleccionar('eslo_predicciones', base +
+          `&or=(and(equipo_a.eq.${p.equipo_a},equipo_b.eq.${p.equipo_b}),and(equipo_a.eq.${p.equipo_b},equipo_b.eq.${p.equipo_a}))` + orden, { fetchImpl }),
+      ]);
+      return [...new Map(lotes.flat().map(f => [f.match_id,f])).values()];
+    },
   };
 }

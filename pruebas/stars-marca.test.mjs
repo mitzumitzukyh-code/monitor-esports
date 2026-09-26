@@ -38,8 +38,8 @@ test('los botones abren planes, estado y soporte sin consultar informes premium'
   assert.ok(f.llamadas.some(c => /@mitzukyhs/.test(c.datos.text ?? ''))); assert.equal(f.lecturas(), 0);
 });
 test('PRO con imagen sigue exigiendo consentimiento antes de crear factura', async () => {
-  const f = fixture({ estado: { premium: false, suscripciones: [] } }); await f.bot.procesar(mensaje('/pro'));
-  const c = f.llamadas[0]; assert.equal(c.metodo, 'sendPhoto'); assert.equal(c.datos.photo, 'pro');
+  const f = fixture({ estado: { premium: false, suscripciones: [] } }); await f.bot.procesar(callback('condiciones:p'));
+  const c = f.llamadas.find(c => c.metodo === 'sendPhoto'); assert.equal(c.datos.photo, 'pro');
   assert.match(c.datos.caption, /cobra automáticamente/); assert.ok(c.datos.caption.length <= 1024);
   assert.equal(c.datos.reply_markup.inline_keyboard[0][0].callback_data, `aceptar:${VERSION_TERMINOS}:p`);
   assert.ok(!f.acciones.some(c => c.a === 'crear')); assert.equal(f.lecturas(), 0);
@@ -59,12 +59,16 @@ test('una imagen rechazada conserva el menú de texto y no crea órdenes', async
   assert.equal(f.llamadas[1].datos.reply_markup.inline_keyboard.flat().length, 4);
   assert.ok(!f.acciones.some(c => c.a === 'crear'));
 });
-test('muestra e historial identifican plantilla y período, sin leer informes privados', async () => {
+test('muestra real e historial de pruebas están separados y no leen informes privados', async () => {
   const f = fixture(); await f.bot.procesar(callback('muestra')); await f.bot.procesar(callback('resultados'));
-  const fotos = f.llamadas.filter(c => c.metodo === 'sendPhoto');
-  assert.match(fotos[0].datos.caption, /plantilla no es un resultado confirmado/);
-  assert.match(fotos[1].datos.caption, /27 AGO–25 SEP 2026/); assert.match(fotos[1].datos.caption, /166 pendientes/);
-  assert.doesNotMatch(fotos[1].datos.caption, /Venezuela|no garantiza resultados futuros/);
+  const mensajes = f.llamadas.filter(c => c.metodo === 'sendMessage');
+  assert.match(mensajes[0].datos.text, /Ejemplo real · partido cerrado/);
+  assert.match(mensajes[0].datos.text, /Últimos resultados/);
+  assert.match(mensajes[1].datos.text, /Historial de pruebas/);
+  assert.match(mensajes[1].datos.text, /27 AGO–25 SEP 2026/); assert.match(mensajes[1].datos.text, /166 pendientes/);
+  assert.doesNotMatch(mensajes[1].datos.text, /Venezuela|descubre el análisis/);
+  assert.equal(f.llamadas.filter(c => c.metodo === 'sendPhoto').length,0);
+  assert.ok(!mensajes[1].datos.reply_markup.inline_keyboard.flat().some(b => b.callback_data === 'planes'));
   assert.equal(f.lecturas(), 0); assert.ok(!f.acciones.some(c => c.a === 'acceso'));
 });
 test('seleccionar un análisis individual muestra 50 Stars y opciones de acceso', async () => {
@@ -75,7 +79,7 @@ test('seleccionar un análisis individual muestra 50 Stars y opciones de acceso'
   await f.bot.procesar(callback('individual'));
   const c = f.llamadas.find(c => c.metodo === 'sendPhoto'); assert.equal(c.datos.photo, 'one');
   assert.match(c.datos.caption, /50 Stars/);
-  assert.equal(c.datos.reply_markup.inline_keyboard[0][0].callback_data, 'juego:cs2:0:proximos');
+  assert.equal(c.datos.reply_markup.inline_keyboard[0][0].callback_data, 'filtro:cs2');
   await f.bot.procesar(callback('juego:cs2:0:proximos'));
   const lista = f.llamadas.find(c => c.metodo === 'sendMessage' && c.datos.text.includes('&lt;Equipo A&gt;'));
   assert.ok(lista); assert.equal(lista.datos.reply_markup.inline_keyboard[1][0].callback_data, 'partido:20:cs2:0:proximos');
