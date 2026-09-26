@@ -30,9 +30,12 @@ No se contrató otro servicio ni se modificó el plan Free de Supabase.
 
 Preparación de escaparate y operación (2026-09-26): avatar/portada con la
 marca existente; bienvenida, muestra PRO de un partido terminado e historial
-real de 1.896 evaluados en 30 días completos. Canal privado; pendiente decidir
-privacidad y aplicar/publicar materiales desde la cuenta administradora.
-No se publicaron borradores. Ver `ESCAPARATE_TELEGRAM.md`.
+real de 1.896 evaluados en 30 días completos. El dueño eligió público y se
+configuró el canal existente como @monitor_esports_avisos desde su cuenta
+administradora. Avatar/descripcion aplicados; portada 1277, bienvenida 1278
+fijada, muestra 1280 e historial 1281 publicados. Se verificaron el perfil
+con enlace público y la bienvenida fijada, con captura local. No se ampliaron
+permisos del bot ni se cambió el chat_id. Ver `ESCAPARATE_TELEGRAM.md`.
 
 Migración `20260926181029` aplicada: RPC de snapshot/diagnóstico sólo servidor.
 Respaldo inicial AES-GCM verificado y prueba de recuperación en Postgres local.

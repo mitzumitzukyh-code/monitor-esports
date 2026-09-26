@@ -38,7 +38,10 @@ node --env-file=.env scripts/preparar-escaparate.mjs --desde=2026-08-27 --hasta=
 El JSON contiene sólo estadísticas y la muestra autorizada, sin compradores.
 Refrescar los textos y precios de la imagen cuando cambie la configuración.
 
-El canal encontrado es privado. El bot publica, pero no puede cambiar imagen
-ni editar/fijar mensajes. Aplicar desde la cuenta administradora; no ampliar
-permisos ni cambiar privacidad hasta que el dueño elija. No se creó canal
-nuevo ni se publicaron los borradores.
+El dueño eligió público. Canal existente configurado desde su cuenta
+administradora: https://t.me/monitor_esports_avisos. Avatar y descripción
+aplicados; portada, bienvenida fijada, muestra e historial publicados.
+Posts: portada 1277, bienvenida 1278, muestra 1280 e historial 1281.
+El bot conserva sus permisos y el chat_id numérico; no se creó otro canal.
+El acceso PRO sigue validándose en privado dentro del bot. Entrar al canal
+no activa premium ni cobra Stars.
