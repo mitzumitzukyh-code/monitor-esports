@@ -40,8 +40,10 @@ Clave en GitHub Secrets y `.env` privado; copia offline local preparada.
 Vigilancia contra receptor/webhook/base correcta; aviso de prueba recibido
 por Discord de errores existente. Workflow independiente preparado para
 revisión cada 20 min y copia diaria 04:17 UTC, retención 30 días; cron de GitHub
-best-effort. La programación se activa al incorporar el workflow a main;
-su estado y los artifacts están en Actions → Operación Telegram Stars.
+best-effort. Programación incorporada a main. Primera ejecución manual
+36262152987 correcta: vigilancia y upload de copia cifrada; el artifact
+descargado también se descifró y validó localmente, sin escribir en producción.
+Su estado y los artifacts están en Actions → Operación Telegram Stars.
 Procedimiento y CLI de revisión de reembolsos en `OPERACION_TELEGRAM_STARS.md`.
 No se realizaron reembolsos reales; --confirmar es decisión del operador.
 
@@ -57,10 +59,10 @@ en servidor TEST de Telegram (no hay credenciales). El flujo se probó con
 facturas/updates simulados y SQL real local. Para TEST usar cuenta/bot/base
 separados. No asumir que ENABLED=false detiene renovaciones existentes.
 
-PR #3: https://github.com/mitzumitzukyh-code/monitor-esports/pull/3 reúne la
-monetización y operación; el receptor ya utiliza el código de esta rama.
-La publicación del panel y el cron FREE no requieren fusionarla para atender
-las compras; la programación operativa sí necesita el workflow en main.
+PR #3: https://github.com/mitzumitzukyh-code/monitor-esports/pull/3 fusionada
+el 2026-09-26, commit 74ae8ce, tras CI correcta (494 pruebas). Monetización
+y operación están en main; el receptor conserva el código ya desplegado.
+El motor/juez no tienen diferencias respecto de la base de esta tarea.
 Para frenar ventas nuevas, actualizar ENABLED=false en Secrets
 y conservar receptor/base. No aplicar de nuevo la migración.
 

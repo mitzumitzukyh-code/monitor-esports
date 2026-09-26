@@ -2,6 +2,12 @@
 
 Soporte: @mitzukyhs. No se hicieron cobros ni reembolsos reales al preparar esto.
 
+Estado al 2026-09-26: programación activa en main. [Primera ejecución](https://github.com/mitzumitzukyh-code/monitor-esports/actions/runs/36262152987)
+correcta: vigilancia y copia cifrada subida. Se descargó el artifact y se
+descifró/validó con la clave privada, sin modificar producción. 494 pruebas
+automatizadas correctas. Una compra completa en el entorno TEST oficial de
+Telegram sigue pendiente de disponer de cuenta/bot/base separados.
+
 ## Vigilancia
 
 El workflow `Operación Telegram Stars` revisa a los minutos 13, 33 y 53 de
