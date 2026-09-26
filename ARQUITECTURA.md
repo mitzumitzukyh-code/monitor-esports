@@ -129,6 +129,36 @@ Lo que **no** está resuelto y hay que tener presente:
   sigue llamándose `D:\monitor-dota2`**: renombrarla rompería las tareas
   programadas y los `.cmd` de `scripts/`, así que se dejó.
 
+### Monetización Telegram (2026-09-26)
+
+`supabase/functions/esport-stars/index.mjs` recibe updates HTTPS en Supabase
+Edge mediante `salida/stars/receptor.mjs`, autenticados por secret_token.
+Reutiliza el bot y persistencia del runtime Node; `salida/stars/webhook.mjs`
+permanece como alternativa de alojamiento. El empaquetador incluye sólo los
+módulos relativos requeridos y no incorpora `.env` ni secretos.
+`bot.mjs` presenta planes y facturas; `persistencia.mjs` reutiliza el cliente
+PostgREST de `datos/supabase.mjs`. La RPC `eslo_stars` valida en servidor,
+serializa por usuario y registra pago + acceso en una transacción. Los
+charge_id y update_id son únicos. Tablas privadas con RLS, sin permisos
+anon/authenticated; RPC SECURITY INVOKER sólo para service_role.
+La migración `20260926174331_telegram_stars.sql` ya está aplicada en el
+proyecto existente `ysqstdgjmugdlyahkhou`. No repetirla. Stars habilitadas
+con precios 250/50; soporte @mitzukyhs. Secretos sólo en el servidor.
+
+Operación independiente en `.github/workflows/telegram-stars-ops.yml`:
+vigilancia HTTPS/webhook/base y respaldo cifrado fuera de Supabase. RPC
+de snapshot consistente sólo para service_role. Reembolsos: revisión local
+por defecto; ejecución únicamente tras decisión del operador. Ver
+`docs/OPERACION_TELEGRAM_STARS.md`. Muestra pública autorizada de un único
+partido terminado y materiales de canal: `docs/ESCAPARATE_TELEGRAM.md`.
+
+Los informes privados se autorizan en cada solicitud con hora de Postgres;
+el pago de partido abre sólo ese ID. `informe.mjs` usa predicciones guardadas
+y contexto histórico, sin invocar ni alterar `motor/` o `juez/`. Los avisos
+y el panel públicos conservan FREE. No exportar informes PRO al generador
+estático, canal público o tablas públicas. Activación y límites:
+`docs/TELEGRAM_STARS.md`; estado: `docs/HANDOFF_TELEGRAM_STARS.md`.
+
 ## Convenciones
 
 - Español en nombres de función, variables y comentarios. Los campos que

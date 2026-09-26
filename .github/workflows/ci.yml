@@ -21,3 +21,7 @@ jobs:
           node-version: '22'
       - name: Pruebas
         run: node --test "pruebas/**/*.test.mjs"
+      - name: Preparar Postgres local para pruebas de Stars
+        run: npm ci --ignore-scripts
+      - name: Compra, idempotencia y permisos en Postgres
+        run: npm run test:stars-db
