@@ -64,6 +64,7 @@ test('muestra e historial identifican plantilla y período, sin leer informes pr
   const fotos = f.llamadas.filter(c => c.metodo === 'sendPhoto');
   assert.match(fotos[0].datos.caption, /plantilla no es un resultado confirmado/);
   assert.match(fotos[1].datos.caption, /27 AGO–25 SEP 2026/); assert.match(fotos[1].datos.caption, /166 pendientes/);
+  assert.doesNotMatch(fotos[1].datos.caption, /Venezuela|no garantiza resultados futuros/);
   assert.equal(f.lecturas(), 0); assert.ok(!f.acciones.some(c => c.a === 'acceso'));
 });
 test('seleccionar un análisis individual muestra 50 Stars y opciones de acceso', async () => {
@@ -73,8 +74,11 @@ test('seleccionar un análisis individual muestra 50 Stars y opciones de acceso'
   ]) });
   await f.bot.procesar(callback('individual'));
   const c = f.llamadas.find(c => c.metodo === 'sendPhoto'); assert.equal(c.datos.photo, 'one');
-  assert.match(c.datos.caption, /50 Stars/); assert.match(c.datos.caption, /&lt;Equipo A&gt;/);
-  assert.equal(c.datos.reply_markup.inline_keyboard[0][0].callback_data, 'analisis:20');
+  assert.match(c.datos.caption, /50 Stars/);
+  assert.equal(c.datos.reply_markup.inline_keyboard[0][0].callback_data, 'juego:cs2:0:proximos');
+  await f.bot.procesar(callback('juego:cs2:0:proximos'));
+  const lista = f.llamadas.find(c => c.metodo === 'sendMessage' && c.datos.text.includes('&lt;Equipo A&gt;'));
+  assert.ok(lista); assert.equal(lista.datos.reply_markup.inline_keyboard[1][0].callback_data, 'partido:20:cs2:0:proximos');
   await f.bot.procesar(callback('analisis:20')); assert.equal(f.lecturas(), 0);
   assert.ok(!f.llamadas.some(c => ['sendInvoice','createInvoiceLink'].includes(c.metodo)));
 });

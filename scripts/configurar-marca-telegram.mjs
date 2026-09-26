@@ -24,7 +24,7 @@ console.log('Destino comercial y conversación del propietario verificados. Prec
 if (process.argv.includes('--aplicar')) {
 
 const pack = resolve(argumento('pack') ?? 'assets/telegram');
-const fotos = { bienvenida: 'bienvenida.png', pro: 'pro.png', individual: 'individual.png', muestra: 'muestra.png', resultados: 'resultados.png' };
+const fotos = { bienvenida: 'bienvenida.png', pro: 'pro.png', individual: 'individual.png', muestra: 'muestra.png', resultados: 'resultados-v2.png' };
 // Sin reintentos automáticos de envíos. Ningún archivo se manda al canal de pruebas.
 async function multipart(metodo, datos, archivo, bytes, mime) {
   const form = new FormData();

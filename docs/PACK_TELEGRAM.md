@@ -17,13 +17,26 @@ avatar a JPEG necesaria para `setMyProfilePhoto`.
 | assets/telegram/pro.png | 08_pro_1080x1080.png | Planes y condiciones de PRO |
 | assets/telegram/individual.png | 10_analisis_individual_1080x1080_v2.png | Elegir partido y acceso bloqueado |
 | assets/telegram/muestra.png | 11_ejemplo_informe_1080x1350.png | Ejemplo identificado como plantilla |
-| assets/telegram/resultados.png | 12_resultados_1080x1350.png | Historial del período cerrado |
+| assets/telegram/resultados-v2.png | Edición de 12_resultados_1080x1350.png solicitada por el dueño | Historial con cierre comercial; cifras intactas |
 
 Los controles impresos en las imágenes son decorativos. Debajo hay botones
 reales de Telegram: planes, partidos, estado, ayuda, muestra e historial.
 Se registra un menú de 11 comandos, por defecto y en español. Los informes
 PRO y de compra individual siguen protegidos y autorizados antes de leerse.
 Las fotos públicas no activan premium, aceptan condiciones ni crean compras.
+
+`/partidos` abre CS2, Dota 2, LoL y Valorant. Cada juego tiene Hoy, Mañana y
+Próximos; se consulta en servidor, se ordena por fecha/ID y se muestran seis
+encuentros por página. Los botones Anterior/Siguiente conservan juego y
+período. Horario indicado como UTC−4, sin país del propietario. `/partidos cs2`
+(o el identificador de otro juego) abre directamente esa selección.
+
+Al pulsar un encuentro, FREE recibe una ficha pública de equipos, horario,
+formato y precios, con opciones PRO/individual. Esa ficha usa una proyección
+limitada, sin probabilidades, ratings ni historial. PRO o compra individual
+válida abren directamente el informe protegido con las probabilidades
+guardadas, forma de hasta 10 series, últimas G/P y enfrentamientos previos.
+El regreso conserva la selección. No se crea una orden sólo por navegar.
 
 ## Reaplicar el pack
 
@@ -74,15 +87,19 @@ que una imagen antigua contiene los precios nuevos.
 
 `/muestra` indica que el ejemplo tiene campos pendientes y no es un resultado
 confirmado. No se presenta como un informe premium completo disponible.
-`/resultados` corresponde a 27/08–25/09/2026, hora Venezuela: 1.896 evaluados,
+`/resultados` corresponde a 27/08–25/09/2026, UTC−4: 1.896 evaluados,
 166 pendientes excluidos, ganador registrado y predicción previa al inicio
 programado. Es un corte estático. Al refrescarlo, actualizar imagen y texto
 juntos con estadísticas verificadas, período y criterio de exclusión.
 Para reproducir el cálculo ver `ESCAPARATE_TELEGRAM.md`.
+Por petición del dueño, texto e imagen cierran con una invitación a explorar
+partidos; se retiró la frase sobre resultados futuros del escaparate. Las
+condiciones de compra mantienen su información previa al pago. El original
+`resultados.png` se conserva como respaldo visual y no se usa en nuevos envíos.
 
 ## Verificación y recuperación
 
-504 pruebas correctas: 483 JS y 21 de SQL real local. La navegación real
+515 pruebas correctas: 494 JS y 21 de SQL real local. La navegación real
 se comprobó contra el receptor desplegado, sólo con la cuenta del dueño;
 no se aceptaron términos, generaron facturas ni gastaron Stars. Las órdenes,
 pagos, reembolsos, incidencias y acceso conservaron su estado anterior.
