@@ -138,3 +138,14 @@ export async function upsert(tabla, filas, { onConflict, fetchImpl = fetchConRei
   if (!res.ok) throw new Error(`Supabase upsert(${tabla}) respondió ${res.status}: ${await res.text()}`);
   return res.json();
 }
+
+// Una transacción de Postgres reúne validación, recibo y acceso. No hacer
+// tres escrituras HTTP: un corte entre ellas perdería pagos o duplicaría días.
+export async function rpc(nombre, datos, { fetchImpl = fetch, timeoutMs = 4000 } = {}) {
+  const res = await fetchImpl(`${baseUrl()}/rest/v1/rpc/${nombre}`, {
+    method: 'POST', headers: headers(), body: JSON.stringify(datos),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!res.ok) throw new Error(`Supabase rpc(${nombre}): ${res.status}`);
+  return res.json();
+}

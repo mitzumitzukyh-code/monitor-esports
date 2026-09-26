@@ -16,13 +16,12 @@ goles, así que no aplica Dixon-Coles. El motor de fuerza es Elo puro
 (actualización secuencial por resultado, como `motor/elo.mjs` de LaLiga),
 no una matriz de Poisson.
 
-**Hoy** es de un solo usuario: el dueño. No hay login, registro, cobro,
-multiusuario ni panel de administración, y nada de eso se escribe todavía.
-
-**Más adelante sí**, pero condicionado: ver "Hacia dónde va esto" al final.
-Mientras el sistema no se haya ganado el puesto contra el backtest, cualquier
-tarea de cobro, cuentas o multiusuario sigue fuera de alcance — pregunta
-antes de escribirla.
+**Desde 2026-09-26**, por encargo explícito del dueño, se prepara FREE + PRO
+con Telegram Stars y análisis individuales. La monetización vive sólo en
+la capa de salida; no cambia probabilidades, ratings ni predicciones.
+Permanece deshabilitada por defecto y requiere migración, receptor HTTPS,
+precios y contacto de soporte antes de activarse. Ver
+`docs/TELEGRAM_STARS.md` y `docs/HANDOFF_TELEGRAM_STARS.md`.
 
 ## Contexto: por qué existe esto ahora
 
@@ -38,8 +37,8 @@ limpias, cualquier número que salga es ruido.
 - Cero dependencias en `motor/` y `juez/` — es matemática pura
 - Supabase para guardar (solo a partir de Fase 3, si se llega)
 - Discord webhook para avisos y errores (solo a partir de Fase 4, si se llega)
-- Telegram (API de bot) como destino futuro de los avisos — ver "Hacia dónde
-  va esto". No escrito todavía.
+- Telegram: avisos en `salida/telegram-esports.mjs`; comandos y pagos en
+  `salida/stars/`. Receptor Node continuo; el cron conserva los avisos FREE.
 
 ## Las seis reglas duras
 

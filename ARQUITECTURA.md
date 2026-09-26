@@ -129,6 +129,22 @@ Lo que **no** está resuelto y hay que tener presente:
   sigue llamándose `D:\monitor-dota2`**: renombrarla rompería las tareas
   programadas y los `.cmd` de `scripts/`, así que se dejó.
 
+### Monetización Telegram (2026-09-26)
+
+`salida/stars/webhook.mjs` recibe updates autenticados por secret_token.
+`bot.mjs` presenta planes y facturas; `persistencia.mjs` reutiliza el cliente
+PostgREST de `datos/supabase.mjs`. La RPC `eslo_stars` valida en servidor,
+serializa por usuario y registra pago + acceso en una transacción. Los
+charge_id y update_id son únicos. Tablas privadas con RLS, sin permisos
+anon/authenticated; RPC SECURITY INVOKER sólo para service_role.
+
+Los informes privados se autorizan en cada solicitud con hora de Postgres;
+el pago de partido abre sólo ese ID. `informe.mjs` usa predicciones guardadas
+y contexto histórico, sin invocar ni alterar `motor/` o `juez/`. Los avisos
+y el panel públicos conservan FREE. No exportar informes PRO al generador
+estático, canal público o tablas públicas. Activación y límites:
+`docs/TELEGRAM_STARS.md`; estado: `docs/HANDOFF_TELEGRAM_STARS.md`.
+
 ## Convenciones
 
 - Español en nombres de función, variables y comentarios. Los campos que
