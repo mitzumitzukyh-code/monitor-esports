@@ -194,7 +194,7 @@ test('flujo bot completo con persistencia real: factura, checkout, pago duplicad
     almacen:{accion,prediccion:async()=>({match_id:20,juego:'cs2',equipo_a:1,equipo_b:2,prob_a:0.6,motor:'glicko2',inicio_programado:'2026-09-27T15:00:00Z'}),historial:async()=>[]},
     api:async(m,d)=>{if(m==='sendInvoice')payload=d.payload;if(m==='sendMessage')mensajes.push(d);return true;}});
   const m=(text,extra={})=>({update_id:++secuencia,message:{date:ahora(),from:{id:user_id},chat:{id:user_id,type:'private'},text,...extra}});
-  await accion('terminos',{user_id,version:VERSION_TERMINOS}); await bot.procesar(m('/pro')); assert.ok(payload);
+  await accion('terminos',{user_id,version:VERSION_TERMINOS}); await bot.procesar(m('/pagar_pro')); assert.ok(payload);
   await bot.procesar({update_id:++secuencia,pre_checkout_query:{id:'q-e2e',from:{id:user_id},currency:'XTR',total_amount:250,invoice_payload:payload}});
   const p={currency:'XTR',total_amount:250,invoice_payload:payload,telegram_payment_charge_id:`e2e-${user_id}`,provider_payment_charge_id:''};
   const recibo=m('',{successful_payment:p}); await bot.procesar(recibo); await bot.procesar(recibo);
@@ -202,4 +202,52 @@ test('flujo bot completo con persistencia real: factura, checkout, pago duplicad
   await bot.procesar(m('/analisis 20')); assert.equal(mensajes.at(-1).protect_content,true);
   await bot.procesar(m('',{refunded_payment:p})); await bot.procesar(m('/analisis 20'));
   assert.match(mensajes.at(-1).text,/requiere PRO/);
+});
+
+for (const producto of ['pro','partido']) test(`v3 ${producto}: condiciones, checkout, recibo, reinicio, duplicado y reembolso con SQL real`,async()=>{
+  const user_id=++secuencia, llamadas=[];let factura;
+  const config={habilitado:true,pro:250,partido:50,recurrente:true,soporte:'@mitzukyhs'};
+  const almacen={accion,partidos:async()=>[{match_id:20,juego:'cs2'}],
+    ficha:async()=>({match_id:20,juego:'cs2',equipo_a:1,equipo_b:2,inicio_programado:'2026-09-27T18:00:00Z'}),
+    prediccion:async()=>({match_id:20,juego:'cs2',equipo_a:1,equipo_b:2,prob_a:0.73,inicio_programado:'2026-09-27T18:00:00Z'}),historial:async()=>[]};
+  const api=async(m,d)=>{llamadas.push({m,d});if(['sendInvoice','createInvoiceLink'].includes(m))factura=d;
+    return m==='createInvoiceLink'?'https://t.me/$simulado':true;};
+  let bot=crearBotStars({config,almacen,api});
+  const mensaje=(text,extra={})=>({update_id:++secuencia,message:{date:ahora(),from:{id:user_id},chat:{id:user_id,type:'private'},text,...extra}});
+  const callback=data=>({update_id:++secuencia,callback_query:{id:`cb-${secuencia}`,from:{id:user_id},message:{chat:{id:user_id,type:'private'}},data}});
+  const ultimo=()=>llamadas.filter(c=>c.m==='sendMessage').at(-1).d;
+  if(producto==='pro') {await bot.procesar(callback('pro'));assert.match(ultimo().text,/250 Stars/);
+    assert.equal(factura,undefined);await bot.procesar(callback('condiciones:p'));}
+  else await bot.procesar(mensaje('/comprar 20'));
+  await bot.procesar(callback(`aceptar:${VERSION_TERMINOS}:${producto==='pro'?'p':'m20'}`));
+  assert.equal(factura,undefined);assert.equal((await accion('estado',{user_id})).premium,false);
+  assert.equal((await accion('acceso',{user_id,match_id:20})).ok,false);
+  await bot.procesar(callback(producto==='pro'?'pagar_pro':'pagar_individual:20'));
+  assert.ok(factura);assert.equal(factura.currency,'XTR');assert.equal(factura.prices[0].amount,producto==='pro'?250:50);
+  assert.equal(factura.subscription_period,producto==='pro'?2592000:undefined);
+  await bot.procesar({update_id:++secuencia,pre_checkout_query:{id:`q-${user_id}`,from:{id:user_id},currency:'XTR',
+    total_amount:factura.prices[0].amount,invoice_payload:factura.payload}});
+  assert.equal(llamadas.find(c=>c.m==='answerPreCheckoutQuery').d.ok,true);
+  assert.equal((await accion('acceso',{user_id,match_id:20})).ok,false);
+  const p={currency:'XTR',total_amount:factura.prices[0].amount,invoice_payload:factura.payload,
+    telegram_payment_charge_id:`v3-${user_id}`,provider_payment_charge_id:'',
+    ...(producto==='pro'?{is_recurring:true,is_first_recurring:true,subscription_expiration_date:ahora()+2592000}:{})};
+  const recibo=mensaje('',{successful_payment:p}); await bot.procesar(recibo);
+  const expira=(await accion('estado',{user_id})).expira_en;
+  bot=crearBotStars({config,almacen,api}); // Otro proceso conserva el ledger.
+  const antes=llamadas.length;await bot.procesar(recibo);assert.equal(llamadas.length,antes);
+  assert.equal((await accion('estado',{user_id})).expira_en,expira);
+  assert.equal((await accion('estado',{user_id})).premium,producto==='pro');
+  for(let i=0;i<2;i++){await bot.procesar(mensaje('/analisis 20'));assert.equal(ultimo().protect_content,true);}
+  assert.equal((await accion('acceso',{user_id,match_id:21})).ok,producto==='pro');
+  if(producto==='pro') {
+    await bot.procesar(mensaje('/cancelar'));assert.ok(llamadas.some(c=>c.m==='editUserStarSubscription'&&c.d.is_canceled));
+    const s=await accion('estado',{user_id});assert.equal(s.premium,true);assert.equal(s.suscripciones[0].cancelada,true);
+    await bot.procesar(mensaje('/estado'));assert.match(ultimo().text,/desactivada/);
+  } else assert.ok(!llamadas.some(c=>c.m==='editUserStarSubscription'));
+  const refund={...p};delete refund.is_recurring;delete refund.is_first_recurring;delete refund.subscription_expiration_date;
+  await bot.procesar(mensaje('',{from:{id:999,is_bot:true},refunded_payment:refund}));
+  assert.equal((await accion('acceso',{user_id,match_id:20})).ok,false);
+  await bot.procesar(mensaje('/analisis 20'));assert.match(ultimo().text,/requiere PRO/);
+  assert.equal((await db.query('select count(*)::int as n from eslo_stars_pagos where user_id=$1',[user_id])).rows[0].n,1);
 });

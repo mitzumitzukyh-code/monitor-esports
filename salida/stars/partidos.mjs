@@ -1,11 +1,17 @@
 export const JUEGOS = { cs2: 'CS2', dota2: 'Dota 2', lol: 'LoL', valorant: 'Valorant' };
 export const POR_PAGINA = 6;
-export const PERIODOS = { proximos: 'Próximos', hoy: 'Hoy', manana: 'Mañana' };
+export const PERIODOS = { hoy: 'Hoy', manana: 'Mañana', proximos: 'Próximos' };
 const DESFASE = 4 * 60 * 60 * 1000;
 
 // Horario de publicación UTC−4, sin mostrar una ubicación del propietario.
 export function fechaPartido(iso, opciones = { dateStyle: 'medium', timeStyle: 'short' }) {
-  return new Date(iso).toLocaleString('es', { timeZone: 'America/Caracas', ...opciones });
+  const fecha = new Date(iso);
+  if (!Number.isFinite(fecha.getTime())) return 'Pendiente';
+  const { dateStyle, timeStyle } = opciones;
+  const partes = [];
+  if (dateStyle) partes.push(fecha.toLocaleDateString('es', { timeZone: 'Etc/GMT+4', dateStyle }));
+  if (timeStyle) partes.push(fecha.toLocaleTimeString('en-US', { timeZone: 'Etc/GMT+4', timeStyle, hour12: true }));
+  return partes.join(' · ');
 }
 
 export function contextoLista(juego, pagina = '0', periodo = 'proximos') {
