@@ -3,7 +3,16 @@ export const POR_PAGINA = 6;
 export const PERIODOS = { hoy: 'Hoy', manana: 'Mañana', proximos: 'Próximos' };
 const DESFASE = 4 * 60 * 60 * 1000;
 
-// Horario de publicación UTC−4, sin mostrar una ubicación del propietario.
+// Horario de publicación UTC−4 fijo. Si en ese instante ET coincide (EDT), se indica.
+export function zonaPublica(iso) {
+  const fecha = new Date(iso);
+  if (!Number.isFinite(fecha.getTime())) return 'UTC−4';
+  const offset = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', timeZoneName: 'shortOffset',
+  }).formatToParts(fecha).find((p) => p.type === 'timeZoneName')?.value ?? '';
+  return /(?:GMT|UTC)-4\b/.test(offset) ? 'UTC−4 / ET' : 'UTC−4';
+}
+
 export function fechaPartido(iso, opciones = { dateStyle: 'medium', timeStyle: 'short' }) {
   const fecha = new Date(iso);
   if (!Number.isFinite(fecha.getTime())) return 'Pendiente';

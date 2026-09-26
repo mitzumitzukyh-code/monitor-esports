@@ -1,13 +1,13 @@
 # Pack aprobado de Monitor eSports
 
-> Estado vigente: pack Bot v3, desplegado en `esport-stars` versión 6 el
-> 26/09/2026. Las instrucciones históricas de v2 que siguen debajo quedan
-> sustituidas por `BOT_V3_VALIDACION.md`.
+> Estado vigente: pack Bot v3, afinación PR #6 el 26/09/2026.
+> Receptor desplegado: `esport-stars` versión 6. Detalle en
+> `BOT_V3_VALIDACION.md` (527 pruebas: 504 JS + 23 Postgres).
 > Se cargan cuatro imágenes públicas (bienvenida, PRO, individual, plantilla).
-> `/muestra` usa un ejemplo real cerrado. `/resultados` es texto identificado
-> como historial de pruebas, sin imagen agregada ni CTA de compra.
-> Diagramas y material del operador permanecen fuera del repositorio público
-> y nunca se envían al cliente.
+> `/muestra` usa un ejemplo real cerrado con el mismo informe PRO.
+> `/resultados` es texto identificado como historial de pruebas, sin imagen
+> agregada ni CTA de compra. Diagramas del operador permanecen fuera del
+> repositorio público y nunca se envían al cliente.
 
 Implementado el 26/09/2026 en **@monitor_esports_avisos_bot**. Se mantiene
 el canal @monitor_esports_avisos para pruebas; este documento no autoriza

@@ -1,5 +1,5 @@
 import { esc } from '../telegram.mjs';
-import { JUEGOS, fechaPartido, formatoSerie } from './partidos.mjs';
+import { JUEGOS, fechaPartido, formatoSerie, zonaPublica } from './partidos.mjs';
 
 // Sólo presenta predicciones guardadas. No recalcula ni modifica el motor.
 export function informePremium(p, historial, nombre = (id) => `#${id}`) {
@@ -21,25 +21,25 @@ export function informePremium(p, historial, nombre = (id) => `#${id}`) {
   const nombreA = esc(nombre(p.equipo_a)), nombreB = esc(nombre(p.equipo_b));
   const mayorA = Number(p.prob_a) >= 0.5;
   const a = forma(p.equipo_a), b = forma(p.equipo_b), preferido = mayorA ? a : b;
-  const formaTexto = f => f.total ? `${f.victorias} de ${f.total} series ganadas` : 'Sin resultados previos disponibles.';
+  const sinDatos = 'Sin datos suficientes';
+  const formaTexto = f => f.total ? `${f.victorias} de ${f.total} series ganadas` : sinDatos;
   return [
     `<b>${esc(JUEGOS[p.juego] ?? p.juego)} · Análisis completo</b>`,
     `<b>${nombreA} vs. ${nombreB}</b>`,
-    `${fechaPartido(p.inicio_programado)} · UTC−4`,
+    `${fechaPartido(p.inicio_programado)} · ${zonaPublica(p.inicio_programado)}`,
     formatoSerie(p.formato),
     p.competicion ? `Competición: ${esc(p.competicion)}` : '',
-    probValida ? `\n<b>Probabilidad: ${Math.max(probA,100-probA)}% · Forma: ${preferido.total ? `${preferido.victorias}/${preferido.total}` : 'Sin datos'} · H2H: ${h2h.length ? `${ganadosA}–${h2h.length-ganadosA}` : 'Sin datos'}</b>` : '',
-    probValida ? `Forma: ${mayorA ? nombreA : nombreB}. H2H en orden ${nombreA}–${nombreB}.` : '',
+    probValida ? `\n<b>Probabilidad: ${Math.max(probA,100-probA)}% · Forma: ${preferido.total ? `${preferido.victorias}/${preferido.total}` : sinDatos} · H2H: ${h2h.length ? `${ganadosA}–${h2h.length-ganadosA}` : sinDatos}</b>` : '',
+    probValida ? `Forma referida a ${mayorA ? nombreA : nombreB}. H2H en orden ${nombreA}–${nombreB}.` : '',
+    probValida && probA === 50 && Number(p.prob_a) !== 0.5 ? 'Los porcentajes se muestran redondeados.' : '',
     '\n<b>Probabilidades estimadas</b>',
     probValida ? `${nombreA}: ${probA}%\n${nombreB}: ${100-probA}%` : 'Pendiente: probabilidad no disponible.',
-    probValida ? (Number(p.prob_a) === 0.5 ? 'Probabilidades equilibradas.' :
-      `Mayor probabilidad: ${mayorA ? nombreA : nombreB}.${probA === 50 ? ' Los porcentajes se muestran redondeados.' : ''}`) : '',
     '\n<b>Forma reciente</b>',
     `${nombreA}: ${formaTexto(a)}`,
     `${nombreB}: ${formaTexto(b)}`,
     '\n<b>Últimos resultados</b>',
-    `${nombreA}: ${a.ultimas.join(' · ') || 'Sin datos'}`,
-    `${nombreB}: ${b.ultimas.join(' · ') || 'Sin datos'}`,
+    `${nombreA}: ${a.ultimas.join(' · ') || sinDatos}`,
+    `${nombreB}: ${b.ultimas.join(' · ') || sinDatos}`,
     'Hasta 5 series, más reciente primero. G = ganada · P = perdida.',
     '\n<b>Enfrentamientos previos · H2H</b>',
     h2h.length ? `${h2h.length} series registradas.\n${nombreA}: ${ganadosA} ganadas · ${nombreB}: ${h2h.length - ganadosA} ganadas.` : 'Sin enfrentamientos previos registrados.',

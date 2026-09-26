@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { crearBotStars } from '../salida/stars/bot.mjs';
-import { fechaPartido } from '../salida/stars/partidos.mjs';
+import { fechaPartido, zonaPublica } from '../salida/stars/partidos.mjs';
 import { informePremium } from '../salida/stars/informe.mjs';
 import { almacenStars } from '../salida/stars/persistencia.mjs';
 import { VERSION_TERMINOS } from '../salida/stars/config.mjs';
@@ -50,6 +50,8 @@ test('horarios AM/PM con desplazamiento fijo incluso en invierno y con fecha pen
   assert.equal(fechaPartido('2026-01-02T00:00:00Z',{timeStyle:'short'}),'8:00 PM');
   assert.equal(fechaPartido('2026-09-27T18:00:00Z',{timeStyle:'short'}),'2:00 PM');
   assert.equal(fechaPartido('no-es-fecha'),'Pendiente');
+  assert.equal(zonaPublica('2026-09-27T18:00:00Z'),'UTC−4 / ET');
+  assert.equal(zonaPublica('2026-01-02T00:00:00Z'),'UTC−4');
 });
 test('informe ordena, acota 10/5, excluye futuro y no inventa probabilidades ausentes',()=>{
   const historia=Array.from({length:12},(_,i)=>({match_id:i+1,equipo_a:1,equipo_b:2,resultado_real:i%2?'ganaB':'ganaA',
@@ -58,6 +60,7 @@ test('informe ordena, acota 10/5, excluye futuro y no inventa probabilidades aus
   const texto=informePremium(p,historia,id=>`Equipo ${id}`);
   assert.match(texto,/5 de 10 series ganadas/); assert.match(texto,/Equipo 1: P · G · P · G · P/);
   assert.match(texto,/12 series registradas/); assert.match(texto,/2:00 PM/);
+  assert.match(texto,/UTC−4 \/ ET/); assert.doesNotMatch(texto,/Mayor probabilidad|recomend|cuotas|ROI|ranking|veto|Venezuela/i);
   for(const prob_a of [null,undefined,NaN,-1,2]) {
     const pendiente=informePremium({...p,prob_a},[]);
     assert.doesNotMatch(pendiente,/NaN|\d+%|Mayor probabilidad/); assert.match(pendiente,/Pendiente/);
@@ -78,13 +81,15 @@ test('muestra usa un partido real cerrado, el mismo informe y antecedentes anter
   assert.ok(['ganaA','ganaB'].includes(MUESTRA.partido.resultado_real));
   assert.ok(MUESTRA.historial.every(h=>Date.parse(h.inicio_programado)<Date.parse(MUESTRA.partido.inicio_programado)));
   const texto=informePremium(MUESTRA.partido,MUESTRA.historial,id=>MUESTRA.nombres[id]);
-  assert.doesNotMatch(texto,/ranking|veto|mapa|contexto|cuotas|ROI|Venezuela/i);
+  assert.doesNotMatch(texto,/ranking|veto|mapa|contexto|cuotas|ROI|Venezuela|Mayor probabilidad|recomend/i);
   assert.match(texto,/Últimos resultados/);assert.match(texto,/AM|PM/);
+  assert.match(texto,/Probabilidades estimadas/); assert.match(texto,/Forma reciente/);
+  assert.match(texto,/Enfrentamientos previos/);
 });
-test('el equipo con mayor probabilidad sigue el dato guardado aunque redondee a 50%',()=>{
+test('el cabecero de forma sigue al equipo con mayor probabilidad guardada aunque redondee a 50%',()=>{
   const texto=informePremium({...p,prob_a:0.4999},[],id=>`Equipo ${id}`);
-  assert.match(texto,/Mayor probabilidad: Equipo 2/);assert.match(texto,/Forma: Equipo 2/);
-  assert.doesNotMatch(texto,/Probabilidades equilibradas/);
+  assert.match(texto,/Forma referida a Equipo 2/); assert.match(texto,/Equipo 1: 50%\nEquipo 2: 50%/);
+  assert.doesNotMatch(texto,/Mayor probabilidad|Probabilidades equilibradas/);
 });
 test('cancelar llama a Telegram y luego persiste, no confirma fallo ni promete cancelación inexistente',async()=>{
   const f=fixture(async a=>a==='estado'?{premium:true,suscripciones:[{cargo:'cargo',payload:'orden',cancelada:false}]}:{ok:true});
@@ -92,4 +97,10 @@ test('cancelar llama a Telegram y luego persiste, no confirma fallo ni promete c
   assert.deepEqual(f.llamadas.find(c=>c.m==='editUserStarSubscription').d,{user_id:10,telegram_payment_charge_id:'cargo',is_canceled:true});
   assert.match(f.ultimo().text,/Conservas PRO/);
   const sin=fixture();await sin.bot.procesar(cb('cancelar'));assert.match(sin.ultimo().text,/No tienes/);
+});
+test('informe omite competición ausente y muestra sólo campos confirmados',()=>{
+  const con=informePremium({...p,competicion:'Liga Demo'},[],id=>`E${id}`);
+  const sin=informePremium(p,[],id=>`E${id}`);
+  assert.match(con,/Competición: Liga Demo/); assert.doesNotMatch(sin,/Competición/);
+  assert.doesNotMatch(sin,/análisis táctico|cuotas|ROI|ranking|mapa\/veto|contexto editorial/i);
 });

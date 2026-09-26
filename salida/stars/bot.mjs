@@ -4,7 +4,7 @@ import { informePremium } from './informe.mjs';
 import { MUESTRA } from './muestra.mjs';
 import { esc } from '../telegram.mjs';
 import { JUEGOS, POR_PAGINA, PERIODOS, contextoLista, enlaceLista, ventanaPartidos,
-  fechaPartido, nombreEncuentro, formatoSerie } from './partidos.mjs';
+  fechaPartido, nombreEncuentro, formatoSerie, zonaPublica } from './partidos.mjs';
 
 const idValido = (id) => Number.isSafeInteger(id) && id > 0;
 const partidoId = (s) => /^\d{1,15}$/.test(s ?? '') && idValido(Number(s)) ? Number(s) : null;
@@ -30,7 +30,7 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
   );
   const volver = () => markup([boton('Menú principal', 'inicio')]);
   const elegirJuego = (id, individual = false) => {
-    const texto = '<b>Encuentra tu próximo partido</b>\nElige un juego y consulta sus encuentros por fecha.\nHorarios UTC−4.';
+    const texto = '<b>Encuentra tu próximo partido</b>\nElige un juego y consulta sus encuentros por fecha.\nHorarios AM/PM · UTC−4.';
     const botones = markup(
       [boton('CS2', 'filtro:cs2'), boton('Dota 2', 'filtro:dota2')],
       [boton('LoL', 'filtro:lol'), boton('Valorant', 'filtro:valorant')],
@@ -48,7 +48,7 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
       offset: pagina * POR_PAGINA, limite: POR_PAGINA + 1 });
     const visibles = filas.slice(0, POR_PAGINA);
     const mapa = visibles.length ? await nombresPartidos(visibles).catch(() => new Map()) : new Map();
-    const lineas = [`<b>${JUEGOS[juego]} · ${PERIODOS[periodo]}</b>`, 'Horarios UTC−4.'];
+    const lineas = [`<b>${JUEGOS[juego]} · ${PERIODOS[periodo]}</b>`, 'Horarios AM/PM · UTC−4.'];
     let diaAnterior;
     for (const [i, p] of visibles.entries()) {
       const dia = fechaPartido(p.inicio_programado, { dateStyle: 'medium' });
@@ -151,14 +151,14 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
       const datos = ficha ? [
         `<b>${esc(JUEGOS[ficha.juego] ?? ficha.juego)} · Análisis del encuentro</b>`,
         `<b>${esc(nombreEncuentro(ficha, mapa))}</b>`,
-        `${fechaPartido(ficha.inicio_programado)} · UTC−4`, formatoSerie(ficha.formato), '',
+        `${fechaPartido(ficha.inicio_programado)} · ${zonaPublica(ficha.inicio_programado)}`, formatoSerie(ficha.formato), '',
       ].filter(x => x !== '').join('\n') + '\n\n' : '';
       return presentar(id, datos + 'El informe completo requiere PRO o compra individual.\n' +
         'Incluye probabilidades estimadas, forma reciente, últimos resultados y H2H.\n\n' +
         (config.partido ? `Este análisis: ${config.partido} Stars · pago único.\n` : '') +
         (config.pro ? `PRO: ${config.pro} Stars cada 30 días.${config.recurrente ? ' Renovación automática.' : ' Pago único.'}` : ''),
         'individual', markup(
-          [boton('Ver PRO', 'pro'), ...(config.partido ? [boton('Comprar este análisis', `comprar:${matchId}`)] : [])],
+          [boton('Ver PRO', 'pro'), ...(config.partido ? [boton('Comprar análisis', `comprar:${matchId}`)] : [])],
           [boton('Volver a partidos', regresar), boton('Ver ejemplo', 'muestra')],
         ));
     }
@@ -225,7 +225,7 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
       if (r.duplicado) return;
       if (mensaje.refunded_payment || r.reembolsado) return decir(id, 'Reembolso registrado. El acceso de esa compra quedó retirado. Usa /estado.');
       if (r.producto === 'partido') return decir(id, `Análisis activado. Usa /analisis ${r.match_id}.`, markup([boton('Abrir análisis', `analisis:${r.match_id}`)]));
-      return decir(id, `PRO activado · período de 30 días. Vigente hasta ${fecha(r.expira_en)} (UTC−4).`,
+      return decir(id, `PRO activado · período de 30 días. Vigente hasta ${fecha(r.expira_en)} (${zonaPublica(r.expira_en)}).`,
         markup([boton('Ver partidos','partidos'),boton('Mi estado','estado')]));
     }
     if (cb) await api('answerCallbackQuery', { callback_query_id: cb.id });
@@ -304,7 +304,7 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
         }
         return decir(id, 'Renovación automática cancelada. Conservas PRO hasta el final del período pagado. /estado');
       }
-      return decir(id, estado.premium ? `PRO activo hasta ${fecha(estado.expira_en)} (UTC−4).\n` +
+      return decir(id, estado.premium ? `PRO activo hasta ${fecha(estado.expira_en)} (${zonaPublica(estado.expira_en)}).\n` +
         (estado.suscripciones.some((s) => s.state === 'active' && !s.cancelada) ? 'Renovación automática activa. /cancelar para detenerla.' :
           estado.suscripciones.some((s) => s.state === 'failed') ? 'El último intento de renovación falló. Revisa tu suscripción y Stars en Telegram.' :
             'Renovación automática desactivada o pago único.') :

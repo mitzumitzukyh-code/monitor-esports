@@ -1,20 +1,24 @@
 # Handoff — monetización Telegram, 2026-09-26
 
-## Estado que prevalece: Bot v3, 26/09/2026
+## Estado que prevalece: Bot v3 afinado, PR #6, 26/09/2026
 
 Esta sección sustituye las decisiones de presentación de v2 que aparecen
-en el historial inferior. Integración v3 desplegada en Supabase Edge
-`esport-stars` versión 6. 503 pruebas JS + 23 Postgres local = 526 correctas.
+en el historial inferior. Integración v3 en Supabase Edge `esport-stars`
+versión 6. 504 pruebas JS + 23 Postgres local = 527 correctas.
 Cambios, verificación y protocolo de pago real en `BOT_V3_VALIDACION.md`.
 Sin cambios del modelo, migraciones, secretos, TikTok ni infraestructura.
+Rama `fix/bot-pack-v3`, PR #6 abierta; **no fusionar** hasta autorización
+del dueño y, idealmente, tras la prueba real de 300 Stars + reembolsos.
 
-FREE: bienvenida → juego → período → listado paginado → ficha; sin premium
-ni cobros. PRO: explicación → condiciones v3 → aceptación → continuar →
-Stars → recibo validado transaccional; individual 50 sin renovación.
-AM/PM UTC−4. Informes con campos reales; historial por equipo y H2H separado.
-`/muestra` usa snapshot de un partido cerrado real, `/resultados` conserva
-texto de pruebas separado del marketing. Cuatro imágenes PUBLICO_TELEGRAM
-cargadas. Diagramas internos conservados sólo localmente: el repo es público.
+FREE: bienvenida → juego → período → listado de 6 → ficha básica →
+Comprar análisis / Ver PRO; sin premium ni cobros. PRO: explicación →
+condiciones v3 → aceptación → continuar → Stars → recibo validado
+transaccional; individual 50 sin renovación y sin activar PRO.
+`/estado` muestra vigencia; `/cancelar` detiene renovaciones futuras.
+AM/PM; fechas concretas con `UTC−4` o `UTC−4 / ET` si EDT coincide.
+Informe PRO solo con campos permitidos (probs, forma≤10, últimos≤5, H2H,
+fecha/hora, formato, competición si existe). `/muestra` = snapshot real
+vía `informePremium`. Diagramas INTERNO_OPERADOR solo locales.
 
 No se gastaron Stars ni se simularon pagos en producción. Pendiente cierre
 con dos compras reales autorizadas (PRO 250 + individual 50, total 300) y

@@ -1,8 +1,8 @@
 # Bot Monitor eSports — integración v3
 
-Estado del 26/09/2026. Producto: FREE sin cobros por navegación ni términos;
-PRO 250 XTR cada 30 días con renovación; partido 50 XTR sin renovación.
-Soporte @mitzukyhs; destino https://t.me/monitor_esports_avisos_bot.
+Estado del 26/09/2026 (afinación final PR #6). Producto: FREE sin cobros por
+navegación ni términos; PRO 250 XTR cada 30 días con renovación; partido 50 XTR
+sin renovación. Soporte @mitzukyhs; destino https://t.me/monitor_esports_avisos_bot.
 
 ## Cambios
 
@@ -15,37 +15,44 @@ Soporte @mitzukyhs; destino https://t.me/monitor_esports_avisos_bot.
   requieren aceptación y botón Continuar compra; aceptar no crea acceso.
 - Confirmación PRO incluye vigencia y botones Ver partidos/Mi estado.
   Individual guarda su recibo y ofrece Abrir análisis, sin activar PRO.
-- Horas de 12 horas AM/PM con UTC−4 fijo, incluyendo invierno. No se usa ET
-  como sinónimo de UTC−4 en el texto dinámico.
-- Informe: probabilidades guardadas, forma hasta 10, últimos 5 G/P, H2H,
-  fecha/hora/formato. Competición sólo si existe; hoy no hay nombre en los
-  datos, por lo que se omite. Sin ranking, mapa/veto, cuotas ni editorial.
+- Horas de 12 horas AM/PM con UTC−4 fijo, incluyendo invierno. En fechas
+  concretas, si ET coincide (EDT = UTC−4), el sello muestra `UTC−4 / ET`.
+  Nunca se usa «Venezuela» en la interfaz pública del bot.
+- Informe PRO exclusivo: probabilidades de ambos equipos; forma hasta 10;
+  últimos resultados hasta 5 G/P; H2H; fecha/hora; formato si existe;
+  competición sólo si hay dato. Cabecera con Probabilidad · Forma · H2H.
+  Sin ranking, mapa/veto, cuotas, ROI, análisis táctico, editorial ni
+  frases de «mayor probabilidad» / recomendaciones.
 - Forma se consulta por equipo y H2H en consulta separada paginable; no
   truncar antecedentes por el anterior límite de 100 filas combinadas.
 - `/muestra` publica un único ejemplo cerrado real: LoL #130485,
-  Unicorns Of Love Sexy Edition vs. PCIFIC Esports, 26/09/2026 3:00 PM UTC−4.
-  Se conserva un snapshot público sin datos de compradores y se usa la misma
-  función que produce informes autorizados. La imagen del pack es sólo una
-  plantilla con cifras demostrativas, nunca datos confirmados del encuentro.
+  Unicorns Of Love Sexy Edition vs. PCIFIC Esports, 26/09/2026 3:00 PM UTC−4 / ET.
+  Usa la misma `informePremium` que los informes autorizados. La imagen del
+  pack queda como plantilla de respaldo y no se envía mientras exista el
+  snapshot real.
 - `/resultados` conserva el historial ya publicado, marcado como pruebas y
-  corte estático. Sin imagen agregada ni llamada a comprar.
-- INTERNO_OPERADOR queda en almacenamiento local privado, fuera del repo
-  público. No incluir esa carpeta en commits, assets enviados o el bundle Edge.
+  corte estático. Sin imagen agregada ni llamada a comprar. La pieza de
+  porcentajes globales no se usa como publicidad comercial.
+- INTERNO_OPERADOR (diagramas FREE/PRO) queda en almacenamiento local
+  privado, fuera del repo público. No incluir esa carpeta en commits,
+  assets enviados o el bundle Edge.
 
 ## Validación
 
-503 pruebas JS y 23 con Postgres local, todas correctas (526). Incluyen
+504 pruebas JS y 23 con Postgres local, todas correctas (527). Incluyen
 recorrido FREE completo, callbacks manipulados, consentimiento sin compra,
 PRO recurrente e individual completos con APIs de Telegram simuladas y SQL
 real, rechazo comprador/payload/moneda/precio, idempotencia por cargo/update,
 reinicio del bot, renovaciones fuera de orden, cancelación, vencimiento,
 reembolso repetido y refund anterior al recibo. También permisos del ledger,
-respaldo cifrado, recuperación y ausencia de campos inventados.
+respaldo cifrado, recuperación, zona UTC−4/ET, omisión de competición ausente
+y ausencia de campos inventados o de recomendación.
 
 Las migraciones existentes no cambian ni se vuelven a aplicar. La RPC
 transaccional valida y serializa pagos; sólo successful_payment activa.
 Eventos subscription canceled/active/failed actualizan renovación sin
 otorgar períodos nuevos. Un pago confirmado nuevo es necesario para extender.
+Updates duplicados no extienden el acceso dos veces.
 
 ## Producción
 
@@ -62,13 +69,18 @@ Respaldo AES-GCM antes de desplegar, descifrado y verificado localmente.
 
 Navegación real comprobada con la cuenta del propietario: bienvenida con
 imágenes v3, selector CS2, elección Mañana, lista de seis con AM/PM, ficha
-FREE Nexus vs. Black Phoenix y regreso a CS2/Mañana. PRO muestra explicación
-y condiciones; individual muestra precio 50, pago único y condiciones. Se
-verifican también `/muestra` real y `/resultados` identificado como pruebas.
-No se aceptan condiciones ni se crean facturas durante esa comprobación.
-Sin cambios en las dos órdenes ya existentes, cero pagos, reembolsos e
-incidencias. El conteo se verifica antes y después; no publicar recibos,
-identificadores de comprador, secretos ni respaldo descifrado.
+FREE y regreso a CS2/Mañana. PRO muestra explicación y condiciones;
+individual muestra precio 50, pago único y condiciones. Se verifican también
+`/muestra` real y `/resultados` identificado como pruebas. No se aceptan
+condiciones ni se crean facturas durante esa comprobación. Sin cambios en
+órdenes existentes, cero pagos, reembolsos e incidencias. El conteo se
+verifica antes y después; no publicar recibos, identificadores de comprador,
+secretos ni respaldo descifrado.
+
+Afinación de esta sesión (sin redeploy ni Stars): informe sin lenguaje de
+recomendación; sello `UTC−4 / ET` cuando EDT coincide; CTA «Comprar análisis»;
+pruebas de competición omitida y campos prohibidos. Receptor en producción
+sigue en versión 6 hasta un deploy autorizado con este commit.
 
 ## Cierre pendiente con pagos reales
 
