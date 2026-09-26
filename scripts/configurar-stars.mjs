@@ -1,5 +1,6 @@
 import { configuracionStars } from '../salida/stars/config.mjs';
 import { clienteTelegram } from '../salida/stars/api.mjs';
+import { COMANDOS } from '../salida/stars/comandos.mjs';
 
 const config = configuracionStars();
 if (!config.token) throw new Error('Falta TELEGRAM_BOT_TOKEN');
@@ -31,12 +32,7 @@ if (!salud.ok || (await salud.json()).ok !== true) throw new Error('El receptor 
 // Nunca descartar recibos pendientes. Los reintentos son seguros por charge ID.
 await api('setWebhook', { url: url.href, secret_token: config.secreto,
   allowed_updates: ['message','callback_query','pre_checkout_query','subscription'], drop_pending_updates: false, max_connections: 4 });
-await api('setMyCommands', { commands: [
-  { command: 'planes', description: 'FREE y PRO' }, { command: 'pro', description: 'Comprar acceso PRO con Stars' },
-  { command: 'estado', description: 'Ver mi acceso' }, { command: 'partidos', description: 'Ver ID de próximos partidos' },
-  { command: 'analisis', description: 'Abrir informe: /analisis ID' }, { command: 'cancelar', description: 'Cancelar renovación automática' },
-  { command: 'terms', description: 'Condiciones de compra' }, { command: 'paysupport', description: 'Ayuda con compras' },
-] });
+for (const language_code of ['', 'es']) await api('setMyCommands', { commands: COMANDOS, language_code });
 const despues = await api('getWebhookInfo', {});
 if (despues.url !== url.href) throw new Error('Telegram no registró la URL esperada');
 console.log('Receptor y menú registrados. Verificar /planes y /estado en privado.');

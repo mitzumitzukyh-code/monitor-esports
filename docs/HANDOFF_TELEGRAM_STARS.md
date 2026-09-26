@@ -73,3 +73,69 @@ Los informes PRO son privados en el bot; los datos básicos existentes
 continúan públicos. No incluir informes PRO en el generador estático o
 canal FREE. Todo cambio del cálculo sigue sujeto a los invariantes y
 backtests existentes, fuera del alcance de esta implementación.
+
+Corrección posterior del dueño y kit de marca (2026-09-26): el espacio que
+ya recibe partidos del motor es para PRUEBAS. Todo lo comercial debe dirigir
+al bot @monitor_esports_avisos_bot. Esta instrucción tiene precedencia sobre
+la elección de escaparate descrita arriba: no seguir publicando ventas en
+el canal @monitor_esports_avisos ni asumir que existe otro canal comercial.
+La separación visual preparada es BOT oscuro/lima y LAB claro/tinta. Los
+posts comerciales anteriores 1277/1278/1280/1281 y perfil del canal aún deben
+revisarse con esta corrección; no se borraron ni modificaron en esta entrega.
+
+Kit nuevo creado: logo ME vectorial original, firmas, avatares BOT/LAB,
+bienvenida, planes 250/50, publicidad cuadrada y vertical, muestra cerrada,
+historial con metodología, soporte @mitzukyhs y guía de marca. Sin enlace a
+web propia, porque el dueño aún no tiene dominio. Editables de Figma:
+https://www.figma.com/design/RAYavU24Cv2Pmip1XWsA0Z . Exportaciones locales:
+outputs/Monitor-eSports-Brand en la carpeta del chat; instrucciones y textos
+en LEEME.md y Textos-para-publicar.md. Los materiales están preparados, aún
+no aplicados a Telegram. La cuenta Starter agotó el límite de exportación
+MCP; se completaron PNG/SVG localmente manteniendo la identidad y tipografías.
+No se cambió motor, pagos, webhook, destinos automáticos ni configuración
+de producción. Esta actualización del handoff permanece local, sin push.
+
+## Estado vigente: pack aprobado aplicado, 2026-09-26
+
+El dueño sustituyó el kit provisional por
+`Monitor_eSports_Pack_Final_AntiIA_v2.zip` y pidió implementarlo. Se usan
+los originales rojos/negros/crema, sin rediseño ni variantes BOT/LAB para
+clientes. Destino comercial verificado: @monitor_esports_avisos_bot,
+ID 8904052961. Canal de pruebas @monitor_esports_avisos/-1004373776020
+sin nuevas publicaciones ni cambios de permisos/destino en esta entrega.
+Los posts comerciales antiguos del canal siguen pendientes de revisión;
+no se borraron, editaron ni fijaron posts nuevos allí.
+
+Aplicado al bot: avatar aprobado (JPEG requerido por Telegram), descripción,
+11 comandos y cinco imágenes reutilizables cargadas en la conversación
+privada del propietario @mitzukyhs. `/start` muestra bienvenida con botones
+reales para planes, partidos, estado y ayuda. Planes incluyen PRO 250 Stars
+cada 30 días con renovación automática e individual 50 Stars pago único,
+más muestra e historial. Listas de partidos con nombres, fechas y botones.
+Los informes privados presentan probabilidades, forma reciente y antecedentes
+sin nombres de modelos/rating/RD. No cambió ningún cálculo predictivo.
+
+Se desplegó `esport-stars` versión 3, con el mismo receptor autenticado,
+webhook, base, secretos, consentimiento y ledger. No aplicar migraciones
+ni crear nuevos secretos. `salida/stars/marca.mjs` contiene file_id públicos
+del pack, específicos de este bot; no contiene credenciales. Cuando los
+precios o renovación dejan de coincidir con la imagen, el bot usa texto
+configurado para evitar publicidad desactualizada. Ver mantenimiento y
+reaplicación en `PACK_TELEGRAM.md`.
+
+Muestra pública: plantilla del pack con campos pendientes, explícitamente
+identificada como diseño, sin prometer un informe completo para ese partido.
+Historial estático: 27 agosto–25 septiembre 2026 Venezuela, 1.896 evaluados;
+166 pendientes excluidos. No actualizar sólo el texto dejando la imagen
+con cifras antiguas. Las variantes verticales, firmas claras/oscuras y
+piezas de TikTok quedan como material del pack, sin publicaciones extra.
+
+Verificación: 483 pruebas JS + 21 Postgres local = 504 correctas. Incluyen
+compra, duplicados, expiración, acceso y 10 nuevas de presentación/navegación.
+En producción: perfil, comandos, health 200, rechazo sin secreto 403 y
+nueve rutas de navegación por el webhook, sólo al propietario. Botones
+reales de menú/planes comprobados en Telegram Web. Estado y consentimiento
+del propietario sin cambios; conteos de órdenes/pagos/reembolsos/incidencias
+iguales antes/después (1/0/0/0). Sin cobros, aceptaciones nuevas ni activaciones.
+Respaldo previo del perfil y fuentes anteriores del receptor guardados
+localmente en work, excluidos de Git. No hay entorno TEST oficial configurado.

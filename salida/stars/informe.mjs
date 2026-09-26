@@ -1,7 +1,4 @@
 import { esc } from '../telegram.mjs';
-import { lineaPrediccion } from '../telegram-esports.mjs';
-
-const cifra = (x) => x == null || !Number.isFinite(Number(x)) ? 'sin dato' : Number(x).toFixed(1);
 
 // Sólo presenta predicciones guardadas. No recalcula ni modifica el motor.
 export function informePremium(p, historial, nombre = (id) => `#${id}`) {
@@ -14,13 +11,18 @@ export function informePremium(p, historial, nombre = (id) => `#${id}`) {
     [f.equipo_a, f.equipo_b].includes(p.equipo_b));
   return [
     `<b>Análisis PRO · partido #${p.match_id}</b>`,
-    lineaPrediccion(p, { juego: p.juego, nombre }),
-    `Modelo guardado: ${esc(p.motor)} · ${esc(p.formato ?? 'formato sin dato')}`,
-    `${esc(nombre(p.equipo_a))}: rating ${cifra(p.rating_a)} · incertidumbre RD ${cifra(p.rd_a)}`,
-    `${esc(nombre(p.equipo_b))}: rating ${cifra(p.rating_b)} · incertidumbre RD ${cifra(p.rd_b)}`,
-    `Forma previa: ${esc(nombre(p.equipo_a))} ${forma(p.equipo_a)}; ${esc(nombre(p.equipo_b))} ${forma(p.equipo_b)}.`,
-    `Enfrentamientos previos en la muestra: ${h2h.length}.`,
-    'La forma usa hasta 100 predicciones calificadas anteriores al inicio. RD más alto indica mayor incertidumbre.',
-    'Son estimaciones estadísticas; los resultados pueden diferir.',
+    `${esc(({ cs2: 'CS2', dota2: 'Dota 2', lol: 'LoL', valorant: 'Valorant' })[p.juego] ?? p.juego)} · ${esc((p.formato ?? '').toUpperCase())}`,
+    `<b>${esc(nombre(p.equipo_a))} vs. ${esc(nombre(p.equipo_b))}</b>`,
+    new Date(p.inicio_programado).toLocaleString('es-VE', { timeZone: 'America/Caracas', dateStyle: 'short', timeStyle: 'short' }) + ' · Venezuela',
+    '\n<b>Probabilidades estimadas</b>',
+    `${esc(nombre(p.equipo_a))}: ${Math.round(Number(p.prob_a) * 100)}%`,
+    `${esc(nombre(p.equipo_b))}: ${100 - Math.round(Number(p.prob_a) * 100)}%`,
+    '\n<b>Forma reciente</b>',
+    `${esc(nombre(p.equipo_a))}: ${forma(p.equipo_a)}`,
+    `${esc(nombre(p.equipo_b))}: ${forma(p.equipo_b)}`,
+    '\n<b>Contexto</b>',
+    h2h.length ? `${h2h.length} enfrentamientos previos con resultado registrado.` : 'Sin enfrentamientos previos registrados.',
+    'La forma resume hasta 10 partidos anteriores con resultado registrado.',
+    '\nLas predicciones son estimaciones; los resultados pueden diferir.',
   ].join('\n');
 }

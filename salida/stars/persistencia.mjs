@@ -5,7 +5,7 @@ export function almacenStars({ fetchImpl = fetch } = {}) {
   return {
     accion,
     partidos: () => seleccionar('eslo_predicciones',
-      `?select=match_id,juego,inicio_programado&inicio_programado=gt.${encodeURIComponent(new Date().toISOString())}` +
+      `?select=match_id,juego,equipo_a,equipo_b,inicio_programado&inicio_programado=gt.${encodeURIComponent(new Date().toISOString())}` +
       '&order=inicio_programado.asc,match_id.asc&limit=10', { fetchImpl }),
     prediccion: async (id) => (await seleccionar('eslo_predicciones',
       `?select=*&match_id=eq.${id}&limit=1`, { fetchImpl }))[0] ?? null,

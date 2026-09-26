@@ -204,6 +204,10 @@ cargos; no hay job automático de conciliación en esta primera versión.
 
 ## Pruebas sin cobros
 
+Presentación y menú del pack aprobado: ver `PACK_TELEGRAM.md`. Se reutilizan
+los secretos y precios de esta configuración. La navegación pública no
+altera consentimientos, compras ni acceso premium.
+
 `pruebas/stars-bot.test.mjs` verifica facturas, consentimiento, acceso,
 checkout, API TEST y autenticación del webhook. `scripts/pruebas-stars-db.mjs`
 ejecuta la migración y RPC reales en Postgres local, incluyendo flujo completo
