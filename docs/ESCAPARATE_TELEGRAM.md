@@ -1,5 +1,13 @@
 # Escaparate de Monitor eSports
 
+> Corrección del dueño, posterior a la configuración que se registra abajo:
+> el canal que recibe partidos es de pruebas. Toda monetización debe conducir
+> al bot @monitor_esports_avisos_bot. No usar este documento histórico como
+> autorización para publicar nuevas ventas en el canal de pruebas. Se creó
+> un kit provisional ME que el dueño sustituyó por su pack aprobado.
+> El pack rojo/negro/crema ya está aplicado al bot comercial. Ver
+> `PACK_TELEGRAM.md` y el último apartado de `HANDOFF_TELEGRAM_STARS.md`.
+
 Se reutilizó el rayo rojo/blanco de los SVG del repo, exportado a avatar
 PNG 1024 y portada 1600×900. Bienvenida: FREE/PRO, precios configurados
 250/50, renovación/cancelación, soporte y enlace al bot.

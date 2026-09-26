@@ -5,6 +5,8 @@ import { configuracionStars } from './config.mjs';
 import { clienteTelegram } from './api.mjs';
 import { almacenStars } from './persistencia.mjs';
 import { crearBotStars } from './bot.mjs';
+import { MARCA } from './marca.mjs';
+import { nombresParaPartidos } from './catalogo.mjs';
 import { datosDeEquipos } from '../../datos/juegos/bo3.mjs';
 
 export function crearServidorStars({ secreto, bot, registrarError = () => {} }) {
@@ -39,7 +41,7 @@ export function crearServidorStars({ secreto, bot, registrarError = () => {} }) 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const config = configuracionStars();
   if (!config.token || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('Faltan credenciales Telegram/Supabase');
-  const bot = crearBotStars({ config, almacen: almacenStars(), api: clienteTelegram(config),
+  const bot = crearBotStars({ config, almacen: almacenStars(), api: clienteTelegram(config), marca: MARCA, nombresPartidos: nombresParaPartidos,
     nombres: (p) => datosDeEquipos([p.equipo_a,p.equipo_b], { juego: p.juego }) });
   const servidor = crearServidorStars({ secreto: config.secreto, bot, registrarError: console.error });
   servidor.requestTimeout = 15000;
