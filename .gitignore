@@ -11,3 +11,5 @@ salida/web/assets/
 salida/web/logos/
 .claude/
 supabase/.temp/
+work/
+.stars-backup-key

@@ -1,0 +1,63 @@
+name: Operación Telegram Stars
+on:
+  schedule:
+    - cron: '13,33,53 * * * *'
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: telegram-stars-operacion
+  cancel-in-progress: false
+jobs:
+  vigilancia:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_WEBHOOK_URL: ${{ vars.TELEGRAM_WEBHOOK_URL }}
+      DISCORD_WEBHOOK_ERRORES: ${{ secrets.DISCORD_WEBHOOK_ERRORES }}
+      TELEGRAM_STARS_STATE_FILE: work/stars-estado.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/cache/restore@v4
+        with:
+          path: work/stars-estado.json
+          key: stars-vigilancia-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: stars-vigilancia-v1-
+      - run: node scripts/vigilar-stars.mjs
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: work/stars-estado.json
+          key: stars-vigilancia-v1-${{ github.run_id }}-${{ github.run_attempt }}
+  respaldo:
+    if: github.event_name != 'schedule' || github.event.schedule == '17 4 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      TELEGRAM_STARS_BACKUP_KEY: ${{ secrets.TELEGRAM_STARS_BACKUP_KEY }}
+      DISCORD_WEBHOOK_ERRORES: ${{ secrets.DISCORD_WEBHOOK_ERRORES }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Crear copia consistente, cifrar y verificar
+        run: node scripts/respaldar-stars.mjs --archivo=work/stars-pagos.enc.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stars-pagos-cifrado-${{ github.run_id }}
+          path: work/stars-pagos.enc.json
+          retention-days: 30
+          if-no-files-found: error
+      - name: Avisar fallo de respaldo
+        if: failure()
+        run: node scripts/vigilar-stars.mjs --fallo-respaldo

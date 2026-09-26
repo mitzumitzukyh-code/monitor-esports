@@ -145,6 +145,13 @@ La migración `20260926174331_telegram_stars.sql` ya está aplicada en el
 proyecto existente `ysqstdgjmugdlyahkhou`. No repetirla. Stars habilitadas
 con precios 250/50; soporte @mitzukyhs. Secretos sólo en el servidor.
 
+Operación independiente en `.github/workflows/telegram-stars-ops.yml`:
+vigilancia HTTPS/webhook/base y respaldo cifrado fuera de Supabase. RPC
+de snapshot consistente sólo para service_role. Reembolsos: revisión local
+por defecto; ejecución únicamente tras decisión del operador. Ver
+`docs/OPERACION_TELEGRAM_STARS.md`. Muestra pública autorizada de un único
+partido terminado y materiales de canal: `docs/ESCAPARATE_TELEGRAM.md`.
+
 Los informes privados se autorizan en cada solicitud con hora de Postgres;
 el pago de partido abre sólo ese ID. `informe.mjs` usa predicciones guardadas
 y contexto histórico, sin invocar ni alterar `motor/` o `juez/`. Los avisos

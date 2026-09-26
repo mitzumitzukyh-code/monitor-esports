@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { crearBotStars } from '../salida/stars/bot.mjs';
 import { VERSION_TERMINOS } from '../salida/stars/config.mjs';
+import { sqlRestauracion } from '../salida/stars/respaldo.mjs';
 
 let db; let secuencia=1000;
 const ahora=()=>Math.floor(Date.now()/1000);
@@ -16,6 +17,7 @@ before(async()=>{
     grant usage on schema public to anon,authenticated,service_role;
     grant select on public.eslo_predicciones to service_role;`);
   await db.exec(await readFile(new URL('../supabase/migrations/20260926174331_telegram_stars.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/20260926181029_telegram_stars_operacion.sql',import.meta.url),'utf8'));
 });
 after(async()=>db?.close());
 const accion=async(a,d)=>(await db.query('select public.eslo_stars($1,$2::jsonb) as r',[a,JSON.stringify(d)])).rows[0].r;
@@ -29,6 +31,33 @@ async function orden({recurrente=false,producto='pro',user_id=++secuencia,amount
     ...(recurrente?{subscription_expiration_date:ahora()+2592000}:{})};
   return {datos,compra,aprobar:()=>accion('aprobar',{...compra,precheckout_id:`q-${payload}`})};
 }
+
+test('respaldo consistente conserva pagos y referencias y se restaura en base vacía',async()=>{
+  const o=await orden({producto:'partido',match_id:20});
+  o.compra.telegram_payment_charge_id="cargo-con-'comilla";
+  await o.aprobar(); await accion('pago',o.compra);
+  const copia=(await db.query('select public.eslo_stars_respaldo() as r')).rows[0].r;
+  assert.ok(copia.tablas.eslo_stars_pagos.some(p=>p.telegram_payment_charge_id===o.compra.telegram_payment_charge_id));
+  const destino=new PGlite();
+  try {
+    await destino.exec('create role anon; create role authenticated; create role service_role bypassrls; create table public.eslo_predicciones(match_id bigint primary key);');
+    await destino.exec(await readFile(new URL('../supabase/migrations/20260926174331_telegram_stars.sql',import.meta.url),'utf8'));
+    await destino.exec(sqlRestauracion(copia));
+    const r=(await destino.query("select public.eslo_stars('acceso',$1::jsonb) as r",[JSON.stringify({user_id:o.datos.user_id,match_id:20})])).rows[0].r;
+    assert.equal(r.ok,true);
+    assert.equal((await destino.query('select count(*)::int as n from eslo_stars_pagos')).rows[0].n,copia.tablas.eslo_stars_pagos.length);
+  } finally { await destino.close(); }
+});
+
+test('RPC de respaldo y diagnóstico no están disponibles a usuarios públicos',async()=>{
+  for(const rol of ['anon','authenticated']) {
+    await db.exec(`set role ${rol}`);
+    try {
+      await assert.rejects(db.query('select public.eslo_stars_respaldo()'),/permission denied/);
+      await assert.rejects(db.query('select public.eslo_stars_diagnostico()'),/permission denied/);
+    } finally { await db.exec('reset role'); }
+  }
+});
 test('pago único: primero FREE, checkout no activa, compra activa y persiste recibo',async()=>{
   const o=await orden();
   assert.equal((await accion('estado',o.datos)).premium,false);
