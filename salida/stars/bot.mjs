@@ -251,7 +251,7 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
     if (comando === 'planes') return planes(id);
     if (['support','paysupport','soporte'].includes(comando)) return decir(id, soporte(), volver());
     if (['muestra','ejemplo'].includes(comando)) return MUESTRA ? decir(id,
-      '<b>Ejemplo real · partido cerrado</b>\nUna muestra pública del formato actual, con datos registrados.\n\n' +
+      '🧪 <b>Ejemplo real · partido cerrado</b>\nUna muestra pública del formato actual, con datos registrados.\n\n' +
       informePremium(MUESTRA.partido,MUESTRA.historial,teamId => MUESTRA.nombres[teamId] ?? `#${teamId}`),
       markup([boton('Ver partidos disponibles','partidos'),boton('Ver planes','planes')])) : presentar(id,
       '<b>Plantilla visual · valores demostrativos</b>\nLos porcentajes, forma y H2H de esta imagen son ejemplos de diseño; no son datos verificados de ese partido.', 'muestra',

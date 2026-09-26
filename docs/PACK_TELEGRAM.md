@@ -2,7 +2,7 @@
 
 > Estado vigente: pack Bot v3, afinación PR #6 el 26/09/2026.
 > Receptor desplegado: `esport-stars` versión 6. Detalle en
-> `BOT_V3_VALIDACION.md` (527 pruebas: 504 JS + 23 Postgres).
+> `BOT_V3_VALIDACION.md` (546 pruebas: 512 JS + 34 Postgres).
 > Se cargan cuatro imágenes públicas (bienvenida, PRO, individual, plantilla).
 > `/muestra` usa un ejemplo real cerrado con el mismo informe PRO.
 > `/resultados` es texto identificado como historial de pruebas, sin imagen

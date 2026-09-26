@@ -4,7 +4,11 @@
 
 Esta sección sustituye las decisiones de presentación de v2 que aparecen
 en el historial inferior. Integración v3 en Supabase Edge `esport-stars`
-versión 6. 504 pruebas JS + 23 Postgres local = 527 correctas.
+versión 6. 512 pruebas JS + 34 Postgres local = 546 correctas.
+Nuevo en la rama: resultados automáticos sólo para PRO vigente, agrupados en
+ventanas de 30 minutos (migración `20260926230000` sin aplicar; workflow
+`Resultados PRO Telegram` apagado hasta `TELEGRAM_RESULTADOS_PRO=true`).
+Orden tras merge autorizado: migración → redeploy Edge → activar variable.
 Cambios, verificación y protocolo de pago real en `BOT_V3_VALIDACION.md`.
 Sin cambios del modelo, migraciones, secretos, TikTok ni infraestructura.
 Rama `fix/bot-pack-v3`, PR #6 abierta; **no fusionar** hasta autorización

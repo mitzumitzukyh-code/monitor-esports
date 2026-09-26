@@ -88,7 +88,7 @@ test('muestra usa un partido real cerrado, el mismo informe y antecedentes anter
 });
 test('el cabecero de forma sigue al equipo con mayor probabilidad guardada aunque redondee a 50%',()=>{
   const texto=informePremium({...p,prob_a:0.4999},[],id=>`Equipo ${id}`);
-  assert.match(texto,/Forma referida a Equipo 2/); assert.match(texto,/Equipo 1: 50%\nEquipo 2: 50%/);
+  assert.match(texto,/Forma: Sin datos/); assert.match(texto,/Equipo 1: 50%\nEquipo 2: 50%/);
   assert.doesNotMatch(texto,/Mayor probabilidad|Probabilidades equilibradas/);
 });
 test('cancelar llama a Telegram y luego persiste, no confirma fallo ni promete cancelación inexistente',async()=>{
@@ -97,6 +97,19 @@ test('cancelar llama a Telegram y luego persiste, no confirma fallo ni promete c
   assert.deepEqual(f.llamadas.find(c=>c.m==='editUserStarSubscription').d,{user_id:10,telegram_payment_charge_id:'cargo',is_canceled:true});
   assert.match(f.ultimo().text,/Conservas PRO/);
   const sin=fixture();await sin.bot.procesar(cb('cancelar'));assert.match(sin.ultimo().text,/No tienes/);
+});
+test('/muestra reproduce exactamente la plantilla aprobada con el informe real',async()=>{
+  const f=fixture(); await f.bot.procesar(cb('muestra'));
+  assert.equal(f.ultimo().text,[
+    '🧪 <b>Ejemplo real · partido cerrado</b>','Una muestra pública del formato actual, con datos registrados.','',
+    '🎮 <b>LoL · Análisis completo</b>','<b>Unicorns Of Love Sexy Edition vs. PCIFIC Esports</b>',
+    '📅 26 sept 2026 · 3:00 PM · UTC−4 / ET','Serie al mejor de 1','',
+    '📊 <b>Probabilidad: 70% · Forma: 3/5 · H2H: Sin datos</b>','','<b>Probabilidades estimadas</b>',
+    'Unicorns Of Love Sexy Edition: 70%','PCIFIC Esports: 30%','','📈 <b>Forma reciente</b>',
+    'Unicorns Of Love Sexy Edition: 3 de 5 series ganadas','PCIFIC Esports: 3 de 5 series ganadas','',
+    '🧾 <b>Últimos resultados</b>','Unicorns Of Love Sexy Edition: G · G · P · G · P','PCIFIC Esports: P · G · G · G · P','',
+    '⚔️ <b>Enfrentamientos previos · H2H</b>','Sin enfrentamientos previos registrados.',
+  ].join('\n'));
 });
 test('informe omite competición ausente y muestra sólo campos confirmados',()=>{
   const con=informePremium({...p,competicion:'Liga Demo'},[],id=>`E${id}`);

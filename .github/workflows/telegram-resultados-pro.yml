@@ -1,0 +1,27 @@
+name: Resultados PRO Telegram
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: telegram-resultados-pro
+  cancel-in-progress: false
+jobs:
+  enviar:
+    # No hace nada hasta aplicar la migración y activar la variable del repo.
+    if: vars.TELEGRAM_RESULTADOS_PRO == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_RESULTADOS_PRO: ${{ vars.TELEGRAM_RESULTADOS_PRO }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/enviar-resultados-pro.mjs

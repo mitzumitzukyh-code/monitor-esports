@@ -36,10 +36,47 @@ sin renovación. Soporte @mitzukyhs; destino https://t.me/monitor_esports_avisos
 - INTERNO_OPERADOR (diagramas FREE/PRO) queda en almacenamiento local
   privado, fuera del repo público. No incluir esa carpeta en commits,
   assets enviados o el bundle Edge.
+- Plantilla del informe con pocos emojis (🎮 📅 📊 📈 🧾 ⚔️) y `/muestra`
+  con 🧪; la prueba compara el texto completo de `/muestra` con la plantilla
+  aprobada, generado por la misma `informePremium`.
+
+## Resultados automáticos PRO (ventana de 30 minutos)
+
+- FREE e individual nunca reciben resultados automáticos, resúmenes ni
+  alertas push. Sólo PRO vigente. Cancelar renovación mantiene los envíos
+  hasta el vencimiento del período pagado; PRO vencido no recibe.
+- Migración nueva `20260926230000_telegram_stars_resultados.sql` (tablas
+  bloques/items/envíos + RPC `eslo_stars_resultados`, sólo service_role).
+  Lee `eslo_predicciones.calificada_en`; no escribe predicciones ni motor.
+- Regla de bloque: se cierra cuando el resultado pendiente más antiguo lleva
+  30 minutos y el bloque anterior tiene al menos 30 minutos. Todo lo pendiente
+  entra junto; nunca dos mensajes separados por menos de la ventana. Sin
+  resultados nuevos no hay bloque ni mensaje.
+- Cada resultado pertenece a un único bloque (PK por match_id). Cada envío
+  se reserva por (bloque, usuario) justo antes de mandarlo; la reserva vuelve
+  a comprobar PRO vigente y bloquea duplicados. Fallo temporal libera para
+  reintentar; bot bloqueado (400/403) se descarta. Ventana de reintento 2 h.
+  Un PRO nuevo no recibe bloques cerrados antes de su activación.
+- Mensaje: `🏁 Resultados recientes`, agrupado CS2 → Dota 2 → LoL →
+  Valorant, cronológico por hora real del partido (un resultado atrasado
+  entra en el siguiente bloque en su lugar cronológico), `✅`/`❌` según la
+  predicción principal guardada, pie `Actualizado hasta h:mm AM/PM · UTC−4`
+  (`/ ET` cuando coincide). Sin ROI, cuotas, ganancias ni apuestas. Enviado
+  con protect_content.
+- Ejecución: `scripts/enviar-resultados-pro.mjs` y workflow
+  `Resultados PRO Telegram` cada 10 min. **Apagado** hasta aplicar la
+  migración y definir la variable de repo `TELEGRAM_RESULTADOS_PRO=true`
+  (el job ni arranca sin ella). El cron de GitHub es best-effort: la latencia
+  real queda entre 30 y ~45 minutos.
 
 ## Validación
 
-504 pruebas JS y 23 con Postgres local, todas correctas (527). Incluyen
+512 pruebas JS y 34 con Postgres local, todas correctas (546). Las 11 nuevas
+en Postgres cubren la cola real: FREE nunca recibe, bloque agrupado único,
+dos resultados en 20 minutos juntos, atrasado ordenado, sin duplicados en
+ejecuciones simultáneas, PRO vencido (también justo antes del envío), PRO
+cancelado vigente, individual sin resultados, ventana vacía, agrupación por
+juego y permisos. Las JS cubren formato exacto, despacho y `/muestra`. Incluyen
 recorrido FREE completo, callbacks manipulados, consentimiento sin compra,
 PRO recurrente e individual completos con APIs de Telegram simuladas y SQL
 real, rechazo comprador/payload/moneda/precio, idempotencia por cargo/update,
@@ -77,10 +114,13 @@ condiciones ni se crean facturas durante esa comprobación. Sin cambios en
 verifica antes y después; no publicar recibos, identificadores de comprador,
 secretos ni respaldo descifrado.
 
-Afinación de esta sesión (sin redeploy ni Stars): informe sin lenguaje de
+Afinación en la rama (sin redeploy ni Stars): informe sin lenguaje de
 recomendación; sello `UTC−4 / ET` cuando EDT coincide; CTA «Comprar análisis»;
-pruebas de competición omitida y campos prohibidos. Receptor en producción
-sigue en versión 6 hasta un deploy autorizado con este commit.
+plantilla con emojis; resultados PRO agrupados. Receptor en producción sigue
+en versión 6 y la migración de resultados **no está aplicada**. Tras merge
+autorizado: aplicar la migración, redesplegar `esport-stars`, y sólo entonces
+activar `TELEGRAM_RESULTADOS_PRO=true`. El respaldo diario de pagos no
+incluye las tablas de envíos (son operativas, no financieras).
 
 ## Cierre pendiente con pagos reales
 
