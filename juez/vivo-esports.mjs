@@ -15,7 +15,7 @@
 //      desde la última partida aplicada, no desde el principio.
 
 import { fileURLToPath } from 'node:url';
-import { seleccionar, upsert, parchear } from '../datos/supabase.mjs';
+import { seleccionar, upsert, parchear, rpc } from '../datos/supabase.mjs';
 import { DISCIPLINAS, normalizar, esUtilizable } from '../datos/juegos/bo3.mjs';
 import { fetchConReintentos } from '../datos/reintentar.mjs';
 import { probabilidadGanar, actualizar } from '../motor/glicko2.mjs';
@@ -211,12 +211,31 @@ export async function predecirProximas(
   // Garantía 2: lo ya predicho no se toca.
   const yaEstan = new Set(existentes.map((e) => e.match_id));
   const nuevas = noEmpezadas.filter((p) => !yaEstan.has(p.matchId));
-  if (nuevas.length === 0) return { predichas: 0, yaEmpezaron, yaPredichas: yaEstan.size };
 
   const inicial = estadoInicialDe(cfg);
   const porEquipo = new Map(
     filasRatings.map((f) => [f.team_id, { rating: Number(f.rating), rd: Number(f.rd), vol: Number(f.vol) }]),
   );
+
+  // Seguimiento PRO: recalcula una lectura ACTUAL, pero jamás toca la
+  // predicción oficial. Sólo crea un evento si cambia el favorito o se mueve
+  // >=5 puntos porcentuales desde el último aviso.
+  if (process.env.TELEGRAM_CAMBIOS_PRO === 'true' && noEmpezadas.length) {
+    const observadas = noEmpezadas.map((p) => {
+      const ea = porEquipo.get(p.equipoA) ?? inicial;
+      const eb = porEquipo.get(p.equipoB) ?? inicial;
+      return { match_id: p.matchId, prob_a: probabilidadGanar(ea, eb) };
+    });
+    try {
+      await rpc('eslo_stars_cambios', { p_accion: 'observar', p_datos: { filas: observadas } },
+        { fetchImpl: fetchImplSupabase });
+    } catch (e) {
+      // Una función comercial nunca puede tumbar el ciclo predictivo.
+      console.warn(`CAMBIOS_PRO ${juego}: ${e.message}`);
+    }
+  }
+
+  if (nuevas.length === 0) return { predichas: 0, yaEmpezaron, yaPredichas: yaEstan.size };
 
   const filas = nuevas.map((p) => {
     const ea = porEquipo.get(p.equipoA) ?? inicial;
