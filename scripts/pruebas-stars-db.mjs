@@ -21,8 +21,8 @@ before(async()=>{
     insert into public.eslo_predicciones(match_id) values (20),(21);
     grant usage on schema public to anon,authenticated,service_role;
     grant select on public.eslo_predicciones to service_role;`);
-  for (const m of ['20260926174331_telegram_stars','20260926181029_telegram_stars_operacion','20260926230000_telegram_stars_resultados',
-    '20260927002000_telegram_stars_engagement','20260927003000_telegram_stars_credibilidad'])
+  for (const m of ['20260926174331_telegram_stars','20260926181029_telegram_stars_operacion','20260927003751_telegram_stars_resultados',
+    '20260927003753_telegram_stars_engagement','20260927003755_telegram_stars_credibilidad'])
     await db.exec(await readFile(new URL(`../supabase/migrations/${m}.sql`,import.meta.url),'utf8'));
 });
 after(async()=>db?.close());
