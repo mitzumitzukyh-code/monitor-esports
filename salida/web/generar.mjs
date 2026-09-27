@@ -68,6 +68,16 @@ function zona(html, nombre, contenido) {
   return html.replace(patron, `<!--ZONA:${nombre}-->${contenido}<!--/ZONA:${nombre}-->`);
 }
 
+// La web pública demuestra el historial, pero no reemplaza al producto PRO.
+// Hasta que exista resultado, se publican calendario/equipos/formato sin
+// probabilidad ni estado interno del motor. Al cerrarse el partido, la fila
+// histórica vuelve a ser auditable completa.
+export function publicarSinPremium(f) {
+  if (['ganaA', 'ganaB'].includes(f?.resultado_real)) return f;
+  return { ...f, prob_a: null, prob_b: null, rating_a: null, rd_a: null,
+    rating_b: null, rd_b: null, motor: null };
+}
+
 async function copiarLogosDelRail() {
   const destino = new URL('logos/', AQUI);
   await mkdir(destino, { recursive: true });
@@ -129,6 +139,8 @@ async function main() {
     console.log(`eslo_predicciones: sin datos (${String(e.message).slice(0, 80)}) — la página sale vacía, no rota.`);
   }
 
+  const publicas = todas.map(publicarSinPremium);
+
   const ahoraMs = Date.now();
   const desde = ahoraMs - VENTANA_HORAS * 3600 * 1000;
   const hasta = ahoraMs + VENTANA_HORAS * 3600 * 1000;
@@ -138,7 +150,7 @@ async function main() {
   // juzgado. Ver ordenarParaLaTabla() en sala.mjs -- antes el panel abría
   // mostrando las vencidas, que es lo más viejo y lo que menos sirve.
   const enVentana = ordenarParaLaTabla(
-    todas.filter((f) => {
+    publicas.filter((f) => {
       const t = new Date(f.inicio_programado).getTime();
       return Number.isFinite(t) && t >= desde && t <= hasta;
     }),
@@ -329,7 +341,7 @@ async function main() {
 
   // --- un perfil por serie ---------------------------------------------------
   const perfiles = await generarPerfiles({
-    todas,
+    todas: publicas,
     stats,
     cuotasPorPartido,
     nombre,
