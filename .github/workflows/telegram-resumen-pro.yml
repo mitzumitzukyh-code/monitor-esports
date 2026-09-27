@@ -1,0 +1,27 @@
+name: Resumen diario PRO Telegram
+on:
+  schedule:
+    # 8:15 AM en UTC−4 fijo.
+    - cron: '15 12 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: telegram-resumen-pro
+  cancel-in-progress: false
+jobs:
+  enviar:
+    if: vars.TELEGRAM_ENGAGEMENT_PRO == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_ENGAGEMENT_PRO: ${{ vars.TELEGRAM_ENGAGEMENT_PRO }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/enviar-resumen-pro.mjs

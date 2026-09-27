@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { PERIODO_PRO, VERSION_TERMINOS } from './config.mjs';
 import { informePremium } from './informe.mjs';
 import { MUESTRA } from './muestra.mjs';
+import { textoHistorial, textoGratis, selloCongelado, referenciaHistorica } from './engagement.mjs';
 import { esc } from '../telegram.mjs';
 import { JUEGOS, POR_PAGINA, PERIODOS, contextoLista, enlaceLista, ventanaPartidos,
   fechaPartido, nombreEncuentro, formatoSerie, zonaPublica } from './partidos.mjs';
@@ -26,7 +27,9 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
   });
   const menu = () => markup(
     [boton('Ver planes', 'planes'), boton('Ver partidos', 'partidos')],
-    [boton('Mi estado', 'estado'), boton('Ayuda', 'paysupport')],
+    [boton('🎁 Predicción FREE', 'gratis'), boton('⭐ Mis partidos', 'mios')],
+    [boton('📊 Historial', 'resultados'), boton('Mi estado', 'estado')],
+    [boton('Ayuda', 'paysupport')],
   );
   const volver = () => markup([boton('Menú principal', 'inicio')]);
   const elegirJuego = (id, individual = false) => {
@@ -95,13 +98,14 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
   const verPro = id => presentar(id,
     `<b>Monitor eSports PRO</b>\n${config.pro ?? 'Precio por confirmar'} Stars cada 30 días.${config.recurrente ? ' Renovación automática.' : ' Pago único, sin renovación.'}\n\n` +
     'Acceso a los informes completos de los partidos disponibles durante tu suscripción.\n' +
-    'Incluye probabilidades estimadas, forma reciente, últimos resultados y H2H; fecha, hora y formato cuando esté disponible.\n\n' +
+    'Incluye probabilidades estimadas, forma reciente, últimos resultados y H2H; fecha, hora y formato cuando esté disponible.\n' +
+    'También incluye favoritos, Mis partidos, alertas previas, resultados agrupados y resumen diario.\n\n' +
     'El acceso se activa después del pago confirmado. Cancelar detiene futuras renovaciones y conserva el período pagado.',
     'pro',markup([boton('Revisar condiciones','condiciones:p')],[boton('Ver partidos','partidos'),boton('Mi estado','estado')]));
   const planes = (id) => presentar(id, [
     '<b>Planes Monitor eSports</b>',
-    'FREE: partidos, ficha básica, muestra e historial publicado. Entrar, consultar y aceptar condiciones no cobra Stars.',
-    config.pro ? `PRO: probabilidades estimadas, forma reciente, últimos resultados y H2H.\n${config.pro} Stars cada 30 días.${config.recurrente ? ' Renovación automática.' : ' Pago único, sin renovación automática.'}` : 'PRO: próximamente.',
+    'FREE: partidos, ficha básica, una predicción diaria, muestra e historial actualizado. Entrar, consultar y aceptar condiciones no cobra Stars.',
+    config.pro ? `PRO: informes completos + favoritos + Mis partidos + alertas previas + resultados agrupados + resumen diario.\n${config.pro} Stars cada 30 días.${config.recurrente ? ' Renovación automática.' : ' Pago único, sin renovación automática.'}` : 'PRO: próximamente.',
     config.partido ? `Un análisis: ${config.partido} Stars. Pago único, sin renovación.` : '',
     'Las predicciones son estimaciones.',
   ].filter(Boolean).join('\n\n'), 'pro', markup(
@@ -164,10 +168,57 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
     }
     const p = await almacen.prediccion(matchId);
     if (!p) return decir(id, 'No hay una predicción guardada para ese ID.');
-    const [historial, mapa] = await Promise.all([almacen.historial(p), nombres(p).catch(() => new Map())]);
+    const [historial, mapa, metricas] = await Promise.all([
+      almacen.historial(p),
+      nombres(p).catch(() => new Map()),
+      almacen.metricas ? almacen.metricas(p.juego, p.prob_a).catch(() => null) : Promise.resolve(null),
+    ]);
     const nombre = (teamId) => mapa.get(teamId)?.nombre ?? `#${teamId}`;
-    return decir(id, informePremium(p, historial, nombre), markup(
-      [boton('Volver a partidos', regresar), boton('Mi estado', 'estado')],
+    const auditoria = [selloCongelado(p), referenciaHistorica(metricas)].filter(Boolean).join('\n');
+    return decir(id, informePremium(p, historial, nombre) + (auditoria ? `\n\n${auditoria}` : ''), markup(
+      [boton('⭐ Guardar en Mis partidos', `favorito:${matchId}`)],
+      [boton('Volver a partidos', regresar), boton('⭐ Mis partidos', 'mios')],
+      [boton('Mi estado', 'estado')],
+    ), true);
+  }
+
+  async function verGratis(id) {
+    if (!almacen.engagement || !almacen.prediccion) return decir(id, 'La predicción FREE no está disponible todavía.', volver());
+    const r = await almacen.engagement('gratis', { user_id: id });
+    if (!r?.ok || !partidoId(String(r.match_id ?? ''))) {
+      return decir(id, 'Hoy no hay una predicción FREE disponible todavía. Revisa más tarde.', volver());
+    }
+    const p = await almacen.prediccion(Number(r.match_id));
+    if (!p) return decir(id, 'La predicción FREE asignada ya no está disponible.', volver());
+    const [mapa, metricas] = await Promise.all([
+      nombresPartidos([p]).catch(() => new Map()),
+      almacen.metricas ? almacen.metricas(p.juego, p.prob_a).catch(() => null) : Promise.resolve(null),
+    ]);
+    return decir(id, textoGratis(p, { mapa, metricas }), markup(
+      [boton('Ver partidos', 'partidos'), boton('Ver PRO', 'pro')],
+      [boton('📊 Historial', 'resultados'), boton('Menú principal', 'inicio')],
+    ));
+  }
+
+  async function verMisPartidos(id) {
+    if (!almacen.engagement || !almacen.predicciones) return decir(id, 'Mis partidos no está disponible todavía.', volver());
+    const r = await almacen.engagement('favoritos', { user_id: id });
+    if (!r?.premium) {
+      return decir(id, '⭐ Mis partidos, favoritos y alertas previas son funciones PRO.', markup(
+        [boton('Ver PRO', 'pro'), boton('Ver partidos', 'partidos')], [boton('Menú principal', 'inicio')],
+      ));
+    }
+    const ids = (r.match_ids ?? []).map(Number).filter(idValido).slice(0, 12);
+    const filas = await almacen.predicciones(ids);
+    const mapa = filas.length ? await nombresPartidos(filas).catch(() => new Map()) : new Map();
+    const lineas = ['⭐ <b>Mis partidos</b>', 'Tus favoritos próximos. Recibirás una alerta previa mientras PRO esté vigente.'];
+    for (const [i,p] of filas.entries()) {
+      lineas.push(`\n${i + 1}. ${esc(fechaPartido(p.inicio_programado, { dateStyle: 'short', timeStyle: 'short' }))} · ${esc(nombreEncuentro(p, mapa))}`);
+    }
+    if (!filas.length) lineas.push('\nAún no guardaste partidos próximos.');
+    return decir(id, lineas.join('\n'), markup(
+      ...filas.map((p,i) => [boton(`${i + 1}. Abrir`, `analisis:${p.match_id}`), boton('Quitar', `quitar_favorito:${p.match_id}`)]),
+      [boton('Ver partidos', 'partidos'), boton('Menú principal', 'inicio')],
     ), true);
   }
 
@@ -256,12 +307,25 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
       markup([boton('Ver partidos disponibles','partidos'),boton('Ver planes','planes')])) : presentar(id,
       '<b>Plantilla visual · valores demostrativos</b>\nLos porcentajes, forma y H2H de esta imagen son ejemplos de diseño; no son datos verificados de ese partido.', 'muestra',
       markup([boton('Ver partidos disponibles', 'partidos'), boton('Ver planes', 'planes')]));
-    if (['resultados','historial'].includes(comando)) return decir(id,
-      '<b>Historial de pruebas · corte estático</b>\nMaterial de validación publicado, separado de los planes comerciales.\n' +
-      '27 AGO–25 SEP 2026 · UTC−4\n1.896 partidos evaluados.\n\n' +
-      'CS2: 755/1.289 · 58,6%\nDota 2: 122/190 · 64,2%\nLoL: 204/296 · 68,9%\nValorant: 63/121 · 52,1%\n\n' +
-      'Porcentaje de predicciones acertadas sobre partidos con resultado registrado. Los 166 pendientes quedan fuera del cálculo.\n' +
-      'Predicciones registradas antes del inicio programado. Estas cifras describen esas pruebas y no son una tasa general de rendimiento del servicio.', volver());
+    if (['resultados','historial'].includes(comando)) {
+      if (!almacen.metricas) return decir(id, 'El historial actualizado no está disponible todavía.', volver());
+      const metricas = await almacen.metricas().catch(() => null);
+      return decir(id, metricas ? textoHistorial(metricas) : 'No se pudo consultar el historial en este momento.', volver());
+    }
+    if (['gratis','free'].includes(comando)) return verGratis(id);
+    if (['mios','mis_partidos','favoritos'].includes(comando)) return verMisPartidos(id);
+    if (comando === 'favorito' && cb) {
+      const matchId = partidoId(arg);
+      if (!matchId || !almacen.engagement) return verMisPartidos(id);
+      const r = await almacen.engagement('favorito_agregar', { user_id: id, match_id: matchId });
+      if (r?.error === 'pro') return decir(id, 'Guardar favoritos y recibir alertas previas requiere PRO.', markup([boton('Ver PRO','pro')],[boton('Menú principal','inicio')]));
+      return decir(id, r?.ok ? '⭐ Partido guardado en Mis partidos.' : 'No se pudo guardar ese partido.', markup([boton('⭐ Mis partidos','mios'),boton('Volver a partidos','partidos')]), true);
+    }
+    if (comando === 'quitar_favorito' && cb) {
+      const matchId = partidoId(arg);
+      if (matchId && almacen.engagement) await almacen.engagement('favorito_quitar', { user_id: id, match_id: matchId });
+      return verMisPartidos(id);
+    }
     if (['terms','terminos'].includes(comando)) return terminos(id);
     if (comando === 'pro') return verPro(id);
     if (comando === 'pagar_pro') return comprar(id, 'pro');

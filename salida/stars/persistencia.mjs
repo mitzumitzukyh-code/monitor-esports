@@ -5,8 +5,20 @@ const CAMPOS_PUBLICOS = 'match_id,juego,equipo_a,equipo_b,inicio_programado,form
 
 export function almacenStars({ fetchImpl = fetch } = {}) {
   const accion = (nombre, datos) => rpc('eslo_stars', { p_accion: nombre, p_datos: datos }, { fetchImpl });
+  const engagement = (nombre, datos = {}) => rpc('eslo_stars_engagement', { p_accion: nombre, p_datos: datos }, { fetchImpl });
   return {
     accion,
+    engagement,
+    metricas: (juego = null, prob_a = null) => engagement('metricas', {
+      ...(juego ? { juego } : {}),
+      ...(prob_a != null && Number.isFinite(Number(prob_a)) ? { prob_a: Number(prob_a) } : {}),
+    }),
+    predicciones: async (ids = []) => {
+      const limpios = [...new Set(ids.map(Number).filter(id => Number.isSafeInteger(id) && id > 0))].slice(0, 50);
+      if (!limpios.length) return [];
+      return seleccionar('eslo_predicciones',
+        `?select=*&match_id=in.(${limpios.join(',')})&order=inicio_programado.asc,match_id.asc`, { fetchImpl });
+    },
     partidos: ({ juego, desde = new Date().toISOString(), hasta, offset = 0, limite = 10 } = {}) => {
       if (juego && !Object.hasOwn(JUEGOS, juego)) throw new Error('Juego no válido');
       if (!Number.isInteger(offset) || offset < 0 || offset > 6000 || !Number.isInteger(limite) || limite < 1 || limite > 10) {
