@@ -22,7 +22,7 @@ export function esc(s) {
 
 export function recortar(texto, limite = LIMITE) {
   if (texto.length <= limite) return texto;
-  return texto.slice(0, limite - 40).trimEnd() + '\n… (recortado, ver el panel)';
+  return texto.slice(0, limite - 24).trimEnd() + '\n… (recortado)';
 }
 
 export async function enviar(texto, {
@@ -41,6 +41,7 @@ export async function enviar(texto, {
       chat_id: chatId,
       text: recortar(texto),
       parse_mode: 'HTML',
+      protect_content: true,
       // La previa es la ÚNICA forma de que Telegram muestre una imagen
       // pequeña: sendPhoto la pinta siempre a todo el ancho del mensaje,
       // que con un logo de 200px se ve enorme y feo. Con prefer_small_media

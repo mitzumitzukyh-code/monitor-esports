@@ -41,21 +41,10 @@ concurrency:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 jobs:
-  # El ciclo NO declara `environment`. Lo declaraba, y el 2026-08-17 eso lo
-  # tumbó entero: al renombrar el repo, GitHub Pages quedó desconfigurado
-  # (GET /repos/.../pages devolvía 404) y el job empezó a fallar en "Set up
-  # job" -- el paso previo a todo. Consecuencia: no corrió NI UNA cosa del
-  # ciclo (ni cuotas, ni predicciones, ni calificar) durante horas, y el
-  # propio aviso de fallo tampoco, porque `if: failure()` necesita que el job
-  # arranque para ejecutarse.
-  #
-  # Ahora publicar el panel vive en su propio job. Que Pages se rompa deja el
-  # panel viejo publicado, pero la recolección de datos sigue -- y eso es lo
-  # que no se recupera después (regla 6, y las cuotas que se borran).
+  # Ciclo de datos + canales internos. La web estática quedó desconectada:
+  # este workflow ya no genera artefactos ni publica GitHub Pages.
   ciclo:
     runs-on: ubuntu-latest
 
@@ -65,6 +54,8 @@ jobs:
       DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      # Canal privado de laboratorio. Este opt-in NO existe en el bot comercial.
+      TELEGRAM_LAB_PREDICTIONS_ENABLED: 'true'
       TELEGRAM_CAMBIOS_PRO: ${{ vars.TELEGRAM_CAMBIOS_PRO }}
 
     steps:
@@ -166,92 +157,27 @@ jobs:
         if: always()
         run: node salida/discord-esports.mjs dota2 cs2 lol valorant
 
-      # Segundo canal, mismo contenido. Los constructores de mensaje son los
-      # mismos (salida/telegram-esports.mjs los reutiliza); lo que NO se
-      # comparte es el registro de "ya avisado": cada canal lleva sus columnas
-      # avisado_telegram_* en eslo_predicciones. Sin eso, el primero que
-      # avisara marcaría la fila y el otro callaría para siempre.
-      - name: Avisar Dota 2, CS2, LoL y Valorant por Telegram
+      # Canal privado de laboratorio: predicciones completas, resultados y
+      # métricas. Está separado del bot comercial FREE/PRO.
+      - name: Avisar laboratorio por Telegram
         if: always()
         run: node salida/telegram-esports.mjs dota2 cs2 lol valorant
 
-      # 4. Regenerar el panel y publicarlo en GitHub Pages.
-      # UN SOLO generador: salida/web/generar.mjs lee disenos/A-sala-de-control.html
-      # y llena sus zonas <!--ZONA:*--> con datos reales de eslo_predicciones.
-      # Sin credenciales la página sale vacía pero válida — por eso corre
-      # aunque un paso anterior haya fallado.
-      # Ver CLAUDE.md y el encabezado del propio generador.
-      - name: Generar el panel desde el diseño
-        if: always()
-        run: node salida/web/generar.mjs
 
-      # Resumen diario de los tres juegos. Se protege solo: lleva marcado en
-      # eslo_estado si ya salió hoy (día de Venezuela), así que correr cada 10
-      # minutos no lo repite.
-      - name: Resumen diario de los tres juegos
+      # Resumen global de laboratorio. Discord conserva el suyo y Telegram
+      # lleva un marcador diario separado para no interferirse.
+      - name: Resumen diario por Discord
         if: always()
         run: node salida/resumen-global.mjs
 
-      # Aviso de fallo. Sin esto, una corrida rota se descubre por casualidad
-      # días después: GitHub manda correo, pero se pierde entre el resto.
-      # Va a Discord, que es donde el dueño ya mira.
-      #
-      # `if: failure()` sólo se dispara si algo anterior falló de verdad, y
-      # `continue-on-error` evita que un problema avisando tape el problema
-      # real en el resumen de la corrida.
-      # Antes esto era un curl con un mensaje de dos líneas. Ahora usa
-      # salida/errores.mjs, que arma el aviso con QUÉ paso falló, QUIÉN
-      # disparó la corrida, de qué commit salió y a qué hora de Venezuela.
-      # Sin eso, cada aviso obligaba a abrir GitHub para entender lo mínimo.
-      #
-      # Va a DISCORD_WEBHOOK_ERRORES si está puesto; si no, al webhook normal.
-      # `continue-on-error` evita que un problema avisando tape el problema
-      # real en el resumen de la corrida.
-      - name: Subir el panel como artefacto
+      - name: Resumen diario del laboratorio por Telegram
         if: always()
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: salida/web
+        run: node salida/resumen-telegram-lab.mjs
 
-  # Publicar el panel, aparte. `continue-on-error` en el job entero: si Pages
-  # está mal configurado, el panel se queda como estaba y el ciclo NO se marca
-  # como fallido por eso. Un panel desactualizado es un problema menor; perder
-  # una tanda de cuotas o de predicciones no se arregla después.
-  #
-  # NOTA del 2026-08-22: NO usar aquí `enablement: true` de configure-pages
-  # con GITHUB_TOKEN -- la propia acción lo dice en action.yml: exige un
-  # token DISTINTO de GITHUB_TOKEN (PAT con permiso de Pages o App con
-  # administration:write). Y `administration` no existe como scope de
-  # `permissions:` de workflow: ponerlo invalida TODO el archivo y tumba el
-  # pipeline entero al parsearse (corrida sin jobs, sin check-runs). Fue
-  # exactamente el fallo del commit 5b36fc6, revertido aquí.
-  #
-  # Autopsia del mismo día: este job estuvo VERDE en todas las corridas
-  # programadas (API de deployments: uno cada ~20 min durante todo el día),
-  # así que si el panel pareciera desactualizado, la causa NO es Pages --
-  # revisar antes qué generó salida/web dentro del artefacto.
-  publicar:
-    needs: ciclo
-    if: always()
-    continue-on-error: true
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.despliegue.outputs.page_url }}
-    steps:
-      - name: Preparar Pages
-        uses: actions/configure-pages@v5
 
-      - name: Publicar en Pages
-        id: despliegue
-        uses: actions/deploy-pages@v4
-
-  # El aviso de fallo también va en su propio job, y depende de los dos.
-  # Estando aparte, se dispara aunque `ciclo` muera en "Set up job" -- que es
-  # exactamente lo que pasó el 2026-08-17 y dejó seis fallos seguidos sin un
-  # solo aviso a Discord.
+  # El aviso de fallo vive aparte para que un fallo del ciclo pueda notificarse.
   avisar-fallo:
-    needs: [ciclo, publicar]
+    needs: ciclo
     if: failure()
     runs-on: ubuntu-latest
     steps:
@@ -266,9 +192,6 @@ jobs:
           DISCORD_WEBHOOK_ERRORES: ${{ secrets.DISCORD_WEBHOOK_ERRORES }}
           MENSAJE_COMMIT: ${{ github.event.head_commit.message }}
         run: |
-          # Decir CUÁL job murió, no "el ciclo": con tres jobs, "falló algo" no
-          # orienta. `ciclo` es el que recoge datos y el que de verdad importa;
-          # `publicar` sólo deja el panel viejo.
           node salida/errores.mjs \
-            "ciclo=${{ needs.ciclo.result }} · publicar=${{ needs.publicar.result }}" \
+            "ciclo=${{ needs.ciclo.result }}" \
             "Revisar los pasos en rojo del enlace de abajo."

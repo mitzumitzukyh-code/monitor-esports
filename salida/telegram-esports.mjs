@@ -27,7 +27,6 @@ import {
   NOMBRE_JUEGO,
   calcularMetricas,
 } from './discord-esports.mjs';
-import { perfilUrl } from './web/sala.mjs';
 import { diaEnPalabras, enVenezuela, hora12 } from './formato.mjs';
 
 // Los constructores son de Discord y usan su markdown (**negrita**,
@@ -118,9 +117,9 @@ export async function avisarTelegram(juego = 'cs2', { fetchImpl, fetchImplSupaba
   // Mismo criterio que Discord: sólo lo que no empezó y cae dentro de las
   // próximas 24 h. Lo de pasado mañana se avisa cuando se acerque.
   const limite = ahoraMs + HORAS_DE_ANTICIPACION * 3600 * 1000;
-  // El canal legacy ya no regala el producto de pago. Sólo se habilita de
-  // forma explícita en un entorno controlado; producción comercial lo deja apagado.
-  const publicarPredicciones = process.env.PUBLIC_PREDICTIONS_ENABLED === 'true';
+  // Canal interno de laboratorio: requiere un opt-in distinto al del bot comercial.
+  // Aunque alguien active una variable pública/legacy, este canal no se abre.
+  const publicarPredicciones = process.env.TELEGRAM_LAB_PREDICTIONS_ENABLED === 'true';
   const nuevasPredichas = publicarPredicciones ? todas.filter((p) => {
     if (p.avisado_telegram_prediccion_en || p.resultado_real || !deTier(p)) return false;
     const arranca = new Date(p.inicio_programado).getTime();
@@ -135,16 +134,13 @@ export async function avisarTelegram(juego = 'cs2', { fetchImpl, fetchImplSupaba
   const enviados = [];
   const ahora = new Date();
 
-  // Cada partida sale en su propio mensaje, con la previa de SU perfil: el
-  // perfil declara og:site_name (el juego), og:title (el enfrentamiento),
-  // og:description (hora → favorito y su número) y og:image (el escudo del
-  // protagonista), que es lo que Telegram dibuja como tarjeta.
+  // Cada partida sale en su propio mensaje. No depende de ninguna web pública.
   async function mandarTanda(filas, linea, tipo, columna) {
     const anunciadas = [];
     const tanda = filas.slice(0, TOPE_TARJETAS);
     for (const [i, f] of tanda.entries()) {
       if (i > 0) await respirar();
-      const r = await enviar(linea(f), { previa: { url: perfilUrl(f.match_id) }, fetchImpl });
+      const r = await enviar(linea(f), { fetchImpl });
       enviados.push({ tipo, partida: f.match_id, ...r });
       // Sólo se marca lo que DE VERDAD salió: lo que falló reintenta el
       // próximo ciclo en vez de perderse.
@@ -153,7 +149,7 @@ export async function avisarTelegram(juego = 'cs2', { fetchImpl, fetchImplSupaba
     if (filas.length > TOPE_TARJETAS) {
       const resto = filas.slice(TOPE_TARJETAS);
       await respirar();
-      const r = await enviar(`…y ${resto.length} más. <a href="${perfilUrl(filas[0].match_id)}">Ver el panel</a>.`, { fetchImpl });
+      const r = await enviar(`…y ${resto.length} más quedaron registrados en esta tanda.`, { fetchImpl });
       enviados.push({ tipo: `${tipo}-resto`, cuantas: resto.length, ...r });
       // El resumen confirma que esas filas sí fueron notificadas aunque no
       // tuvieran tarjeta individual. Si el resumen falla, quedan pendientes
