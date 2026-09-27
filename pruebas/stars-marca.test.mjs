@@ -66,7 +66,7 @@ test('una imagen comercial rechazada conserva el contenido de texto y no crea ó
   assert.ok(!f.acciones.some(c => c.a === 'crear'));
 });
 test('muestra real e historial dinámico están separados y no leen informes privados', async () => {
-  const f = fixture(); await f.bot.procesar(callback('muestra')); await f.bot.procesar(callback('resultados'));
+  const f = fixture(); await f.bot.procesar(callback('muestra')); await f.bot.procesar(callback('historial'));
   const mensajes = f.llamadas.filter(c => c.metodo === 'sendMessage');
   assert.match(mensajes[0].datos.text, /Ejemplo real · partido cerrado/);
   assert.match(mensajes[0].datos.text, /Últimos resultados/);
