@@ -6,7 +6,10 @@
     "test": "node --test \"pruebas/**/*.test.mjs\"",
     "test:stars-db": "node --test scripts/pruebas-stars-db.mjs",
     "telegram": "node --env-file=.env salida/stars/webhook.mjs",
-    "telegram:configurar": "node --env-file=.env scripts/configurar-stars.mjs"
+    "telegram:configurar": "node --env-file=.env scripts/configurar-stars.mjs",
+    "benchmark:market": "node juez/benchmark-mercado.mjs"
   },
-  "devDependencies": { "@electric-sql/pglite": "0.5.8" }
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8"
+  }
 }
