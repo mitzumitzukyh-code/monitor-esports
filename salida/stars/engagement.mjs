@@ -13,16 +13,26 @@ export function selloCongelado(p) {
   return '🔒 <b>Predicción congelada</b> · una vez registrada, esta predicción no se modifica.';
 }
 
-export function referenciaHistorica(metricas) {
+export function nivelConfianza(probA) {
+  if (probA == null || probA === '') return null;
+  const p=Number(probA);
+  if (!Number.isFinite(p) || p<0 || p>1) return null;
+  const favorito=Math.max(p,1-p);
+  return favorito>=0.70 ? 'Alta' : favorito>=0.56 ? 'Media' : 'Baja';
+}
+
+export function referenciaHistorica(metricas, probA = null) {
   const b = metricas?.banda;
   const n = Number(b?.n ?? 0);
   const pct = porcentaje(b?.porcentaje);
-  if (!n || pct == null) return '';
+  const nivel=nivelConfianza(probA);
+  if (!n || pct == null) return nivel ? `🎚️ <b>Confianza del modelo</b> · ${nivel}.` : '';
   const desde = Math.round(Number(b.desde ?? 0) * 100);
   const hasta = Math.round(Number(b.hasta ?? 0) * 100);
-  return n >= 20
+  const prefijo=nivel ? `🎚️ <b>Confianza del modelo</b> · ${nivel}.\n` : '';
+  return prefijo + (n >= 20
     ? `🎯 <b>Referencia histórica</b> · ${pct}% de acierto en ${n} predicciones con confianza ${desde}–${hasta}%.`
-    : `🎯 <b>Referencia histórica</b> · banda ${desde}–${hasta}% con muestra pequeña (${n}); aún no se etiqueta como alta/media/baja.`;
+    : `🎯 <b>Referencia histórica</b> · banda ${desde}–${hasta}% con muestra pequeña (${n}).`);
 }
 
 export function textoHistorial(metricas) {
@@ -59,7 +69,7 @@ export function textoGratis(p, { mapa = new Map(), metricas = null } = {}) {
     valida ? `${esc(nombreA)}: ${Math.round(pa * 100)}%\n${esc(nombreB)}: ${100 - Math.round(pa * 100)}%` : 'Probabilidad pendiente.',
     '',
     selloCongelado(p),
-    referenciaHistorica(metricas),
+    referenciaHistorica(metricas, p.prob_a),
     '',
     'Una predicción FREE por usuario y día. El informe completo permanece en PRO o compra individual.',
   ].filter(Boolean);
