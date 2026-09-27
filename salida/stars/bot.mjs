@@ -12,6 +12,12 @@ const partidoId = (s) => /^\d{1,15}$/.test(s ?? '') && idValido(Number(s)) ? Num
 const boton = (text, callback_data) => ({ text, callback_data });
 const markup = (...filas) => ({ inline_keyboard: filas });
 const fecha = (iso) => fechaPartido(iso, { dateStyle: 'short', timeStyle: 'short' });
+const ORDEN_JUEGOS = ['cs2', 'dota2', 'lol', 'valorant'];
+const ventanaDiaUtcMenos4 = (ahoraMs) => {
+  const local = new Date(Number(ahoraMs) - 4 * 60 * 60 * 1000);
+  const inicio = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), 4);
+  return { desde: new Date(inicio).toISOString(), hasta: new Date(inicio + 86400000).toISOString() };
+};
 
 export const TERMINOS = 'Compras acceso a análisis, predicciones y estadísticas. Son estimaciones, sin resultados ni ganancias garantizadas. ' +
   'PRO dura 30 días; si eliges suscripción, Telegram cobra automáticamente cada 30 días mientras esté activa y tengas Stars. ' +
@@ -28,7 +34,7 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
   const menu = () => markup(
     [boton('🎁 Ver FREE', 'gratis'), boton('👑 Ver PRO', 'pro')],
     [boton('🎯 Comprar análisis', 'individual'), boton('📋 Ver partidos', 'partidos')],
-    [boton('📊 Resultados de hoy', 'resultados'), boton('⚙️ Configuración', 'estado')],
+    [boton('📊 Resultados de hoy', 'resultados'), boton('👤 Mi cuenta', 'estado')],
     [boton('❓ Soporte / Ayuda', 'paysupport')],
   );
   const volver = () => markup([boton('Menú principal', 'inicio')]);
@@ -89,7 +95,7 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
     '<b>Monitor eSports</b>\nPredicciones y estadísticas para entender cada partido.\n' +
     '🎮 CS2 · Dota 2 · LoL · Valorant\n\n' +
     '🎁 <b>FREE</b>\n• 1 predicción diaria\n• Resultados e historial actualizado\n\n' +
-    `👑 <b>PRO — ${config.pro ?? 250} Stars / 30 días</b>\n• Informes completos\n• Alertas previas\n• Mis partidos y favoritos\n• Resultados agrupados\n• Resumen diario\n• Cambios del modelo\n\n` +
+    `👑 <b>PRO — ${config.pro ?? 250} Stars / 30 días</b>\n• Informes completos\n• Alertas previas\n• Mis partidos y favoritos\n• Resultados agrupados\n• Resumen diario\n• Alertas si cambia la predicción\n\n` +
     `🎯 <b>Análisis individual — ${config.partido ?? 50} Stars</b>\n• Informe completo por partido\n• Probabilidades, contexto y estadísticas clave\n\n` +
     '📊 <b>Contexto, no solo predicciones.</b>', menu());
   const soporte = () => config.soporte ? `Soporte de compras: ${esc(config.soporte)}. Envía el recibo y explica el problema.` : 'Las compras aún no están habilitadas.';
@@ -103,13 +109,13 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
     `<b>Monitor eSports PRO</b>\n${config.pro ?? 'Precio por confirmar'} Stars cada 30 días.${config.recurrente ? ' Renovación automática.' : ' Pago único, sin renovación.'}\n\n` +
     'Acceso a los informes completos de los partidos disponibles durante tu suscripción.\n' +
     'Incluye probabilidades estimadas, forma reciente, últimos resultados y H2H; fecha, hora y formato cuando esté disponible.\n' +
-    'También incluye favoritos, Mis partidos, alertas previas, resultados agrupados y resumen diario.\n\n' +
+    'También incluye favoritos, Mis partidos, alertas previas, resultados agrupados, resumen diario y alertas si cambia la predicción.\n\n' +
     'El acceso se activa después del pago confirmado. Cancelar detiene futuras renovaciones y conserva el período pagado.',
     'pro',markup([boton('Revisar condiciones','condiciones:p')],[boton('Ver partidos','partidos'),boton('Mi estado','estado')]));
   const planes = (id) => presentar(id, [
     '<b>Planes Monitor eSports</b>',
     'FREE: partidos, ficha básica, una predicción diaria, muestra e historial actualizado. Entrar, consultar y aceptar condiciones no cobra Stars.',
-    config.pro ? `PRO: informes completos + favoritos + Mis partidos + alertas previas + resultados agrupados + resumen diario.\n${config.pro} Stars cada 30 días.${config.recurrente ? ' Renovación automática.' : ' Pago único, sin renovación automática.'}` : 'PRO: próximamente.',
+    config.pro ? `PRO: informes completos + favoritos + Mis partidos + alertas previas + resultados agrupados + resumen diario + alertas si cambia la predicción.\n${config.pro} Stars cada 30 días.${config.recurrente ? ' Renovación automática.' : ' Pago único, sin renovación automática.'}` : 'PRO: próximamente.',
     config.partido ? `Un análisis: ${config.partido} Stars. Pago único, sin renovación.` : '',
     'Las predicciones son estimaciones.',
   ].filter(Boolean).join('\n\n'), 'pro', markup(
@@ -199,9 +205,68 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
       almacen.metricas ? almacen.metricas(p.juego, p.prob_a).catch(() => null) : Promise.resolve(null),
     ]);
     return decir(id, textoGratis(p, { mapa, metricas }), markup(
-      [boton('Ver partidos', 'partidos'), boton('Ver PRO', 'pro')],
-      [boton('📊 Historial', 'resultados'), boton('Menú principal', 'inicio')],
+      [boton('👑 Desbloquear informe completo', 'pro')],
+      [boton('🎯 Comprar solo este análisis', `comprar:${p.match_id}`)],
+      [boton('Ver partidos', 'partidos'), boton('📊 Historial', 'historial')],
+      [boton('Menú principal', 'inicio')],
     ));
+  }
+
+  async function verResultadosHoy(id) {
+    if (!almacen.resultados) return decir(id, 'Los resultados de hoy no están disponibles todavía.', volver());
+    const rango = ventanaDiaUtcMenos4(ahora());
+    const filas = await almacen.resultados({ ...rango, limite: 100 }).catch(() => null);
+    if (!filas) return decir(id, 'No se pudieron consultar los resultados de hoy en este momento.', volver());
+    if (!filas.length) return decir(id, '🏁 <b>Resultados de hoy</b>\nAún no hay resultados registrados hoy.',
+      markup([boton('📊 Ver historial', 'historial'), boton('Menú principal', 'inicio')]));
+    const mapa = await nombresPartidos(filas).catch(() => new Map());
+    const lineas = ['🏁 <b>Resultados de hoy</b>'];
+    for (const juego of ORDEN_JUEGOS) {
+      const delJuego = filas.filter(f => f.juego === juego);
+      if (!delJuego.length) continue;
+      lineas.push(`\n<b>${esc(JUEGOS[juego])}</b>`);
+      for (const p of delJuego) {
+        const nombreA = mapa.get(`${p.juego}:${p.equipo_a}`)?.nombre ?? `#${p.equipo_a}`;
+        const nombreB = mapa.get(`${p.juego}:${p.equipo_b}`)?.nombre ?? `#${p.equipo_b}`;
+        const acierto = (Number(p.prob_a) >= 0.5) === (p.resultado_real === 'ganaA');
+        const marcador = Number.isInteger(p.marcador_a) && Number.isInteger(p.marcador_b)
+          ? ` · ${p.marcador_a}–${p.marcador_b}` : '';
+        const ganador = p.resultado_real === 'ganaA' ? nombreA : nombreB;
+        lineas.push(`${esc(fechaPartido(p.inicio_programado, { timeStyle: 'short' }))} · ${esc(nombreA)} vs. ${esc(nombreB)}${marcador} · ganó <b>${esc(ganador)}</b> ${acierto ? '✅' : '❌'}`);
+      }
+    }
+    lineas.push('', '✅ predicción principal acertada · ❌ no acertada');
+    return decir(id, lineas.join('\n'), markup(
+      [boton('📊 Historial completo', 'historial'), boton('Ver partidos', 'partidos')],
+      [boton('Menú principal', 'inicio')],
+    ));
+  }
+
+  async function verCuenta(id) {
+    const [estado, individuales] = await Promise.all([
+      almacen.accion('estado', { user_id: id }),
+      almacen.comprasIndividuales ? almacen.comprasIndividuales(id).catch(() => []) : Promise.resolve([]),
+    ]);
+    const suscripciones = Array.isArray(estado.suscripciones) ? estado.suscripciones : [];
+    const activa = suscripciones.some(s => s.state === 'active' && !s.cancelada);
+    const fallo = suscripciones.some(s => s.state === 'failed');
+    const lineas = ['👤 <b>Mi cuenta</b>'];
+    if (estado.premium) {
+      lineas.push('Plan: <b>PRO</b>', `Vigente hasta: ${esc(fecha(estado.expira_en))} · ${zonaPublica(estado.expira_en)}`);
+      lineas.push(activa ? 'Renovación automática: <b>activa</b>.' :
+        fallo ? 'Renovación automática: <b>último intento fallido</b>.' :
+          'Renovación automática: <b>desactivada</b>.');
+    } else {
+      lineas.push('Plan: <b>FREE</b>', 'PRO: no activo.');
+    }
+    lineas.push(`Análisis individuales activos: <b>${individuales.length}</b>.`);
+    if (individuales.length) lineas.push(`IDs: ${individuales.slice(0, 8).map(x => `#${x}`).join(', ')}${individuales.length > 8 ? '…' : ''}`);
+    lineas.push('', 'Los análisis individuales comprados se conservan aunque no tengas PRO.');
+    const botones = [];
+    if (activa) botones.push([boton('Cancelar renovación', 'cancelar')]);
+    else if (!estado.premium) botones.push([boton('👑 Ver PRO', 'pro')]);
+    botones.push([boton('Ver partidos', 'partidos'), boton('Menú principal', 'inicio')]);
+    return decir(id, lineas.join('\n'), { inline_keyboard: botones });
   }
 
   async function verMisPartidos(id) {
@@ -321,7 +386,8 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
       markup([boton('Ver partidos disponibles','partidos'),boton('Ver planes','planes')])) : presentar(id,
       '<b>Plantilla visual · valores demostrativos</b>\nLos porcentajes, forma y H2H de esta imagen son ejemplos de diseño; no son datos verificados de ese partido.', 'muestra',
       markup([boton('Ver partidos disponibles', 'partidos'), boton('Ver planes', 'planes')]));
-    if (['resultados','historial'].includes(comando)) {
+    if (comando === 'resultados') return verResultadosHoy(id);
+    if (comando === 'historial') {
       if (!almacen.metricas) return decir(id, 'El historial actualizado no está disponible todavía.', volver());
       const metricas = await almacen.metricas().catch(() => null);
       return decir(id, metricas ? textoHistorial(metricas) : 'No se pudo consultar el historial en este momento.', volver());
@@ -371,22 +437,19 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
       return contexto ? elegirPeriodo(id,contexto.juego) : elegirJuego(id, comando === 'individual');
     }
     if (comando === 'estado' || comando === 'cancelar') {
+      if (comando === 'estado') return verCuenta(id);
       const estado = await almacen.accion('estado', { user_id: id });
       if (comando === 'cancelar') {
-        const pendientes = estado.suscripciones.filter(s => !s.cancelada);
+        const pendientes = (estado.suscripciones ?? []).filter(s => !s.cancelada);
         if (!pendientes.length) return decir(id,'No tienes una renovación automática activa para cancelar.',menu());
         for (const s of pendientes) {
           await api('editUserStarSubscription', { user_id: id, telegram_payment_charge_id: s.cargo, is_canceled: true });
           const r = await almacen.accion('cancelar', { user_id: id, payload: s.payload, telegram_payment_charge_id: s.cargo });
           if (!r.ok) throw Error('Cancelación pendiente de persistir');
         }
-        return decir(id, 'Renovación automática cancelada. Conservas PRO hasta el final del período pagado. /estado');
+        await decir(id, 'Renovación automática cancelada. Conservas PRO hasta el final del período pagado.');
+        return verCuenta(id);
       }
-      return decir(id, estado.premium ? `PRO activo hasta ${fecha(estado.expira_en)} (${zonaPublica(estado.expira_en)}).\n` +
-        (estado.suscripciones.some((s) => s.state === 'active' && !s.cancelada) ? 'Renovación automática activa. /cancelar para detenerla.' :
-          estado.suscripciones.some((s) => s.state === 'failed') ? 'El último intento de renovación falló. Revisa tu suscripción y Stars en Telegram.' :
-            'Renovación automática desactivada o pago único.') :
-        'Plan FREE. PRO no está activo. Tus análisis individuales comprados siguen disponibles.', menu());
     }
     return bienvenida(id);
   }
