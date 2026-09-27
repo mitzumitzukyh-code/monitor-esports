@@ -33,7 +33,7 @@ test('mensaje de cambio deja claro que la predicción oficial sigue congelada', 
     anterior_prob_a:0.65,nueva_prob_a:0.57,inicio_programado:'2026-09-27T18:00:00Z'};
   const mapa=new Map([['cs2:1',{nombre:'Liquid'}],['cs2:2',{nombre:'M80'}]]);
   const t=mensajeCambio(c,mapa);
-  assert.match(t,/Liquid: 65% → 57%/);
+  assert.match(t,/<b>Liquid<\/b>: 65% → 57%/);
   assert.match(t,/predicción oficial sigue congelada/);
   assert.doesNotMatch(t,/apuesta|cuota|ganancia/i);
 });
