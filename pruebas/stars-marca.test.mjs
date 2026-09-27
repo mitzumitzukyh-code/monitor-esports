@@ -16,7 +16,11 @@ function fixture(opciones = {}) {
     partidos: async () => opciones.partidos ?? [],
     prediccion: async () => { lecturas++; return { match_id: 20, juego: 'cs2', equipo_a: 1, equipo_b: 2,
       prob_a: 0.6, inicio_programado: '2026-09-27T15:00:00Z', formato: 'bo3', motor: 'glicko2', rating_a: 1550, rd_a: 50 }; },
-    historial: async () => [] };
+    historial: async () => [],
+    credibilidad: async (a) => a === 'historial' ? { ok:true, hasta:'2026-09-26T22:00:00Z', filas:[
+      {juego:'cs2',banda:'alta',n:10,aciertos:7},{juego:'dota2',banda:'media',n:5,aciertos:3},
+      {juego:'lol',banda:'alta',n:8,aciertos:6},{juego:'valorant',banda:'baja',n:4,aciertos:2},
+    ] } : { error:'no_fixture' } };
   const api = async (metodo, datos) => { llamadas.push({ metodo, datos });
     if (metodo === 'sendPhoto' && opciones.falloFoto) throw Error('rechazo'); return {}; };
   const bot = crearBotStars({ config: opciones.config ?? config, almacen, api, marca,
@@ -25,10 +29,10 @@ function fixture(opciones = {}) {
   return { bot, llamadas, acciones, lecturas: () => lecturas };
 }
 
-test('bienvenida muestra el pack y cuatro botones reales sin iniciar compras', async () => {
+test('bienvenida muestra el pack y accesos FREE/PRO sin iniciar compras', async () => {
   const f = fixture(); await f.bot.procesar(mensaje('/start'));
   const c = f.llamadas[0]; assert.equal(c.metodo, 'sendPhoto'); assert.equal(c.datos.photo, 'welcome');
-  assert.deepEqual(c.datos.reply_markup.inline_keyboard.flat().map(b => b.callback_data), ['planes','partidos','estado','paysupport']);
+  assert.deepEqual(c.datos.reply_markup.inline_keyboard.flat().map(b => b.callback_data), ['planes','partidos','gratis','resultados','mispartidos','estado','paysupport']);
   assert.equal(f.lecturas(), 0); assert.ok(f.acciones.every(c => c.a !== 'crear'));
 });
 test('los botones abren planes, estado y soporte sin consultar informes premium', async () => {
@@ -56,16 +60,16 @@ test('si cambia el precio o la renovación no se muestra una pieza con condicion
 test('una imagen rechazada conserva el menú de texto y no crea órdenes', async () => {
   const f = fixture({ falloFoto: true }); await f.bot.procesar(mensaje('/start'));
   assert.deepEqual(f.llamadas.map(c => c.metodo), ['sendPhoto','sendMessage']);
-  assert.equal(f.llamadas[1].datos.reply_markup.inline_keyboard.flat().length, 4);
+  assert.equal(f.llamadas[1].datos.reply_markup.inline_keyboard.flat().length, 7);
   assert.ok(!f.acciones.some(c => c.a === 'crear'));
 });
-test('muestra real e historial de pruebas están separados y no leen informes privados', async () => {
+test('muestra real e historial verificable están separados y no leen informes privados', async () => {
   const f = fixture(); await f.bot.procesar(callback('muestra')); await f.bot.procesar(callback('resultados'));
   const mensajes = f.llamadas.filter(c => c.metodo === 'sendMessage');
   assert.match(mensajes[0].datos.text, /Ejemplo real · partido cerrado/);
   assert.match(mensajes[0].datos.text, /Últimos resultados/);
-  assert.match(mensajes[1].datos.text, /Historial de pruebas/);
-  assert.match(mensajes[1].datos.text, /27 AGO–25 SEP 2026/); assert.match(mensajes[1].datos.text, /166 pendientes/);
+  assert.match(mensajes[1].datos.text, /Historial verificable/);
+  assert.match(mensajes[1].datos.text, /CS2: 7\/10/); assert.match(mensajes[1].datos.text, /fallos también se incluyen/);
   assert.doesNotMatch(mensajes[1].datos.text, /Venezuela|descubre el análisis/);
   assert.equal(f.llamadas.filter(c => c.metodo === 'sendPhoto').length,0);
   assert.ok(!mensajes[1].datos.reply_markup.inline_keyboard.flat().some(b => b.callback_data === 'planes'));
