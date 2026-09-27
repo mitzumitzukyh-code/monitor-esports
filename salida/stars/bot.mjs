@@ -387,8 +387,8 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
       markup([boton('Ver partidos disponibles','partidos'),boton('Ver planes','planes')])) : presentar(id,
       '<b>Plantilla visual · valores demostrativos</b>\nLos porcentajes, forma y H2H de esta imagen son ejemplos de diseño; no son datos verificados de ese partido.', 'muestra',
       markup([boton('Ver partidos disponibles', 'partidos'), boton('Ver planes', 'planes')]));
-    if ((cb && comando === 'resultados') || comando === 'resultados_hoy' || comando === 'hoy') return verResultadosHoy(id);
-    if (comando === 'resultados' || comando === 'historial') {
+    if (comando === 'resultados' || comando === 'resultados_hoy' || comando === 'hoy') return verResultadosHoy(id);
+    if (comando === 'historial') {
       if (!almacen.metricas) return decir(id, 'El historial actualizado no está disponible todavía.', volver());
       const metricas = await almacen.metricas().catch(() => null);
       return decir(id, metricas ? textoHistorial(metricas) : 'No se pudo consultar el historial en este momento.', volver());
