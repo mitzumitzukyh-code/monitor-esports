@@ -3,6 +3,12 @@ on:
   schedule:
     - cron: '*/10 * * * *'
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/telegram-cambios-pro.yml'
+      - 'scripts/enviar-cambios-pro.mjs'
+      - 'salida/stars/**'
 permissions:
   contents: read
 concurrency:
