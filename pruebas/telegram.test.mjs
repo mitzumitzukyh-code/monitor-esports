@@ -10,7 +10,7 @@ test('recortar: Telegram permite 4.096, el recorte respeta eso y avisa', () => {
   const largo = 'x'.repeat(4200);
   const cortado = recortar(largo);
   assert.ok(cortado.length <= 4000);
-  assert.ok(cortado.endsWith('(recortado, ver el panel)'));
+  assert.ok(cortado.endsWith('(recortado)'));
   const corto = recortar('corto');
   assert.equal(corto, 'corto');
 });
