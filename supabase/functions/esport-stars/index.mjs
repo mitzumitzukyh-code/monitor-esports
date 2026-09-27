@@ -10,6 +10,9 @@ const [{ configuracionStars }, { clienteTelegram }, { almacenStars }, { crearBot
   import('../../../salida/stars/marca.mjs'), import('../../../salida/stars/catalogo.mjs'),
 ]);
 const config = configuracionStars();
+// Esta función es el receptor COMERCIAL de producción. El entorno de pruebas
+// se ejecuta fuera de este endpoint para evitar cobrar/entregar en el backend equivocado.
+if (config.test) throw new Error('TELEGRAM_TEST_ENV no puede estar activo en esport-stars de producción');
 if (!config.token || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error('Faltan credenciales Telegram/Supabase');
 }

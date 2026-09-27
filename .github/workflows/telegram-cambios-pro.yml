@@ -10,14 +10,13 @@ concurrency:
   cancel-in-progress: false
 jobs:
   enviar:
-    if: vars.TELEGRAM_CAMBIOS_PRO == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      TELEGRAM_CAMBIOS_PRO: ${{ vars.TELEGRAM_CAMBIOS_PRO }}
+      TELEGRAM_CAMBIOS_PRO: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
