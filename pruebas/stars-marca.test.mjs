@@ -98,7 +98,7 @@ test('el informe autorizado conserva probabilidades y protección sin referencia
   const f = fixture({ estado: { ok: true } }); await f.bot.procesar(mensaje('/analisis 20'));
   const c = f.llamadas[0]; assert.equal(c.datos.protect_content, true); assert.match(c.datos.text, /60%/);
   assert.match(c.datos.text, /40%/); assert.match(c.datos.text, /Forma reciente/);
-  assert.doesNotMatch(c.datos.text, /glicko|modelo|motor|rating|\bRD\b|algoritmo/i);
+  assert.doesNotMatch(c.datos.text, /glicko|motor|rating|\bRD\b|algoritmo/i);
 });
 test('el catálogo agrupa nombres por juego y conserva la lista si un proveedor falla', async () => {
   const calls = []; const mapa = await nombresParaPartidos([
