@@ -5,8 +5,10 @@ const CAMPOS_PUBLICOS = 'match_id,juego,equipo_a,equipo_b,inicio_programado,form
 
 export function almacenStars({ fetchImpl = fetch } = {}) {
   const accion = (nombre, datos) => rpc('eslo_stars', { p_accion: nombre, p_datos: datos }, { fetchImpl });
+  const credibilidad = (nombre, datos = {}) => rpc('eslo_stars_credibilidad', { p_accion: nombre, p_datos: datos }, { fetchImpl });
   return {
     accion,
+    credibilidad,
     partidos: ({ juego, desde = new Date().toISOString(), hasta, offset = 0, limite = 10 } = {}) => {
       if (juego && !Object.hasOwn(JUEGOS, juego)) throw new Error('Juego no válido');
       if (!Number.isInteger(offset) || offset < 0 || offset > 6000 || !Number.isInteger(limite) || limite < 1 || limite > 10) {
@@ -24,8 +26,11 @@ export function almacenStars({ fetchImpl = fetch } = {}) {
       if (!Number.isSafeInteger(id) || id <= 0) throw new Error('Partido no válido');
       return (await seleccionar('eslo_predicciones', `?select=${CAMPOS_PUBLICOS}&match_id=eq.${id}&limit=1`, { fetchImpl }))[0] ?? null;
     },
-    prediccion: async (id) => (await seleccionar('eslo_predicciones',
-      `?select=*&match_id=eq.${id}&limit=1`, { fetchImpl }))[0] ?? null,
+    prediccion: async (id) => {
+      if (!Number.isSafeInteger(id) || id <= 0) throw new Error('Partido no válido');
+      return (await seleccionar('eslo_stars_predicciones_fijas',
+        `?select=*&match_id=eq.${id}&limit=1`, { fetchImpl }))[0] ?? null;
+    },
     historial: async (p) => {
       if (![p.equipo_a, p.equipo_b].every(id => Number.isSafeInteger(id) && id > 0) ||
         !Object.hasOwn(JUEGOS, p.juego) || !Number.isFinite(Date.parse(p.inicio_programado))) throw Error('Historial no válido');
