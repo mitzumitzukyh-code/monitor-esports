@@ -30,5 +30,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Preparar avatar 1024x1024
+        run: |
+          python3 -m pip install --quiet pillow
+          python3 - <<'PY'
+          import base64, io
+          from pathlib import Path
+          from PIL import Image
+
+          path = Path('assets/telegram/avatar-aprobado.b64')
+          raw = base64.b64decode(path.read_text().strip())
+          image = Image.open(io.BytesIO(raw)).convert('RGB')
+          image = image.resize((1024, 1024), Image.Resampling.LANCZOS)
+          out = io.BytesIO()
+          image.save(out, format='JPEG', quality=90, optimize=True, progressive=False)
+          path.write_text(base64.b64encode(out.getvalue()).decode() + '\n')
+          assert Image.open(io.BytesIO(out.getvalue())).size == (1024, 1024)
+          PY
       - name: Aplicar perfil aprobado al bot comercial
         run: node scripts/sincronizar-perfil-telegram.mjs
