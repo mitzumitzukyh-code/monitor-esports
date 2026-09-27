@@ -43,17 +43,8 @@ permissions:
   contents: read
 
 jobs:
-  # El ciclo NO declara `environment`. Lo declaraba, y el 2026-08-17 eso lo
-  # tumbó entero: al renombrar el repo, GitHub Pages quedó desconfigurado
-  # (GET /repos/.../pages devolvía 404) y el job empezó a fallar en "Set up
-  # job" -- el paso previo a todo. Consecuencia: no corrió NI UNA cosa del
-  # ciclo (ni cuotas, ni predicciones, ni calificar) durante horas, y el
-  # propio aviso de fallo tampoco, porque `if: failure()` necesita que el job
-  # arranque para ejecutarse.
-  #
-  # Ahora publicar el panel vive en su propio job. Que Pages se rompa deja el
-  # panel viejo publicado, pero la recolección de datos sigue -- y eso es lo
-  # que no se recupera después (regla 6, y las cuotas que se borran).
+  # Ciclo de datos + canales internos. La web estática quedó desconectada:
+  # este workflow ya no genera artefactos ni publica GitHub Pages.
   ciclo:
     runs-on: ubuntu-latest
 
@@ -166,22 +157,22 @@ jobs:
         if: always()
         run: node salida/discord-esports.mjs dota2 cs2 lol valorant
 
-      # Segundo canal, mismo contenido. Los constructores de mensaje son los
-      # mismos (salida/telegram-esports.mjs los reutiliza); lo que NO se
-      # comparte es el registro de "ya avisado": cada canal lleva sus columnas
-      # avisado_telegram_* en eslo_predicciones. Sin eso, el primero que
-      # avisara marcaría la fila y el otro callaría para siempre.
-      - name: Avisar Dota 2, CS2, LoL y Valorant por Telegram
+      # Canal privado de laboratorio: predicciones completas, resultados y
+      # métricas. Está separado del bot comercial FREE/PRO.
+      - name: Avisar laboratorio por Telegram
         if: always()
         run: node salida/telegram-esports.mjs dota2 cs2 lol valorant
 
 
-      # Resumen diario de los tres juegos. Se protege solo: lleva marcado en
-      # eslo_estado si ya salió hoy (día de Venezuela), así que correr cada 10
-      # minutos no lo repite.
-      - name: Resumen diario de los tres juegos
+      # Resumen global de laboratorio. Discord conserva el suyo y Telegram
+      # lleva un marcador diario separado para no interferirse.
+      - name: Resumen diario por Discord
         if: always()
         run: node salida/resumen-global.mjs
+
+      - name: Resumen diario del laboratorio por Telegram
+        if: always()
+        run: node salida/resumen-telegram-lab.mjs
 
 
   # El aviso de fallo vive aparte para que un fallo del ciclo pueda notificarse.
