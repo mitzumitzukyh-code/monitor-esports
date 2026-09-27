@@ -15,6 +15,28 @@ export function almacenStars({ fetchImpl = fetch } = {}) {
       ...(juego ? { juego } : {}),
       ...(prob_a != null && Number.isFinite(Number(prob_a)) ? { prob_a: Number(prob_a) } : {}),
     }),
+    resultados: ({ desde, hasta, limite = 100 } = {}) => {
+      if (![desde, hasta].every(x => Number.isFinite(Date.parse(x)))) throw new Error('Fecha no válida');
+      if (!Number.isInteger(limite) || limite < 1 || limite > 100) throw new Error('Límite no válido');
+      return seleccionar('eslo_predicciones',
+        '?select=match_id,juego,equipo_a,equipo_b,inicio_programado,resultado_real,prob_a,marcador_a,marcador_b' +
+        `&inicio_programado=gte.${encodeURIComponent(desde)}&inicio_programado=lt.${encodeURIComponent(hasta)}` +
+        '&resultado_real=in.(ganaA,ganaB)&order=inicio_programado.asc,match_id.asc' +
+        `&limit=${limite}`, { fetchImpl });
+    },
+    comprasIndividuales: async (userId) => {
+      if (!Number.isSafeInteger(userId) || userId <= 0) throw new Error('Usuario no válido');
+      const [ordenes, pagos] = await Promise.all([
+        seleccionar('eslo_stars_ordenes',
+          `?select=payload,match_id,pagada_en&user_id=eq.${userId}&producto=eq.partido&pagada_en=not.is.null&order=pagada_en.desc&limit=50`,
+          { fetchImpl }),
+        seleccionar('eslo_stars_pagos',
+          `?select=payload&user_id=eq.${userId}&reembolsado_en=is.null&limit=100`, { fetchImpl }),
+      ]);
+      const activos = new Set(pagos.map(p => p.payload));
+      return [...new Set(ordenes.filter(o => activos.has(o.payload)).map(o => Number(o.match_id))
+        .filter(id => Number.isSafeInteger(id) && id > 0))];
+    },
     predicciones: async (ids = []) => {
       const limpios = [...new Set(ids.map(Number).filter(id => Number.isSafeInteger(id) && id > 0))].slice(0, 50);
       if (!limpios.length) return [];
