@@ -15,7 +15,7 @@ test('sello congelado usa la hora guardada y no expone internals del modelo',()=
 test('referencia histórica separa nivel del modelo y tamaño de muestra',()=>{
   assert.equal(nivelConfianza(.67),'Media');
   assert.match(referenciaHistorica({banda:{n:8,porcentaje:62.5,desde:.6,hasta:.7}},.67),/muestra pequeña/);
-  assert.match(referenciaHistorica({banda:{n:8,porcentaje:62.5,desde:.6,hasta:.7}},.67),/Confianza del modelo<\\/b> · Media/);
+  assert.match(referenciaHistorica({banda:{n:8,porcentaje:62.5,desde:.6,hasta:.7}},.67),/Confianza del modelo<\/b> · Media/);
   assert.match(referenciaHistorica({banda:{n:30,porcentaje:70,desde:.6,hasta:.7}},.67),/70% de acierto/);
 });
 test('historial dinámico muestra rendimiento por juego y también errores',()=>{
