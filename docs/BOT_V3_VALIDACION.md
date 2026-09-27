@@ -69,9 +69,24 @@ sin renovación. Soporte @mitzukyhs; destino https://t.me/monitor_esports_avisos
   (el job ni arranca sin ella). El cron de GitHub es best-effort: la latencia
   real queda entre 30 y ~45 minutos.
 
+## Engagement bot-only añadido el 26/09/2026
+
+Sin web ni TikTok. La rama incorpora únicamente funciones del bot y persistencia asociada:
+
+- Historial dinámico general y por juego (CS2, Dota 2, LoL y Valorant), incluyendo aciertos y fallos evaluados.
+- Sello de predicción congelada. Las nuevas filas guardan `predicha_en`; el motor mantiene su garantía previa de no reescribir una predicción existente.
+- Referencia histórica por banda de probabilidad. Con menos de 20 observaciones se marca muestra pequeña y no se inventa una etiqueta de confianza.
+- Una predicción FREE diaria por usuario, persistida para que recargar o reiniciar no entregue otra ese mismo día.
+- Favoritos y «Mis partidos» para PRO vigente.
+- Alertas previas PRO para favoritos cuando faltan hasta 60 minutos. Reserva/confirmación evita duplicados y vuelve a comprobar PRO antes del envío.
+- Resumen diario PRO a las 8:15 AM UTC−4 con partidos restantes del día y resultado agregado del día anterior.
+- Los resultados agrupados PRO existentes se conservan sin cambios de concepto.
+
+Migración nueva: `20260927002000_telegram_stars_engagement.sql`. Workflows nuevos: `telegram-alertas-pro.yml` y `telegram-resumen-pro.yml`. Ambos quedan apagados hasta definir `TELEGRAM_ENGAGEMENT_PRO=true`. No se aplicó la migración, no se redeployó producción y no se activó ninguna variable desde esta rama.
+
 ## Validación
 
-512 pruebas JS y 34 con Postgres local, todas correctas (546). Las 11 nuevas
+519 pruebas JS y 40 con Postgres local, todas correctas (559). Las 11 nuevas
 en Postgres cubren la cola real: FREE nunca recibe, bloque agrupado único,
 dos resultados en 20 minutos juntos, atrasado ordenado, sin duplicados en
 ejecuciones simultáneas, PRO vencido (también justo antes del envío), PRO

@@ -2,9 +2,11 @@
 
 ## Estado que prevalece: Bot v3 afinado, PR #6, 26/09/2026
 
+**Añadido en esta misma rama (bot-only, sin web/TikTok):** historial dinámico por juego, sello auditable de predicción congelada, referencia histórica por banda, predicción FREE diaria, favoritos/Mis partidos PRO, alertas previas PRO y resumen diario PRO. Migración `20260927002000_telegram_stars_engagement.sql`; nuevos crons apagados por defecto mediante `TELEGRAM_ENGAGEMENT_PRO`. CI: 519 JS + 40 Postgres = 559/559. No aplicado ni desplegado a producción.
+
 Esta sección sustituye las decisiones de presentación de v2 que aparecen
 en el historial inferior. Integración v3 en Supabase Edge `esport-stars`
-versión 6. 512 pruebas JS + 34 Postgres local = 546 correctas.
+versión 6. 519 pruebas JS + 40 Postgres local = 559 correctas.
 Nuevo en la rama: resultados automáticos sólo para PRO vigente, agrupados en
 ventanas de 30 minutos (migración `20260926230000` sin aplicar; workflow
 `Resultados PRO Telegram` apagado hasta `TELEGRAM_RESULTADOS_PRO=true`).
