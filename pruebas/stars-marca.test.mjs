@@ -31,7 +31,10 @@ function fixture(opciones = {}) {
 test('bienvenida muestra el pack y accesos FREE/PRO sin iniciar compras', async () => {
   const f = fixture(); await f.bot.procesar(mensaje('/start'));
   const c = f.llamadas[0]; assert.equal(c.metodo, 'sendPhoto'); assert.equal(c.datos.photo, 'welcome');
-  assert.deepEqual(c.datos.reply_markup.inline_keyboard.flat().map(b => b.callback_data), ['planes','partidos','gratis','mios','resultados','estado','paysupport']);
+  assert.deepEqual(c.datos.reply_markup.inline_keyboard.flat().map(b => b.callback_data), ['gratis','pro','individual','partidos','resultados','estado','paysupport']);
+  assert.match(c.datos.caption, /PRO — 250 Stars \/ 30 días/);
+  assert.match(c.datos.caption, /Análisis individual — 50 Stars/);
+  assert.match(c.datos.caption, /Contexto, no solo predicciones/);
   assert.equal(f.lecturas(), 0); assert.ok(f.acciones.every(c => c.a !== 'crear'));
 });
 test('los botones abren planes, estado y soporte sin consultar informes premium', async () => {
