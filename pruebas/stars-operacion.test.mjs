@@ -24,10 +24,22 @@ test('vigilancia comprueba receptor, bloqueo público, webhook y base sin pagos'
   const urls = [];
   const r = await comprobarStars({ url: 'https://host/telegram', api: async () => ({ url: 'https://host/telegram', pending_update_count: 0 }),
     diagnostico: async () => ({ ok: true, ultima_incidencia: null }), fetchImpl: async (u, o) => {
-      urls.push(u); return o.method ? { status: 403 } : { ok: true, json: async () => ({ ok: true }) };
+      urls.push(u); return o.method ? { status: 403 } : { ok: true, json: async () => ({ ok: true, compras_habilitadas: true }) };
     } });
   assert.deepEqual(r.fallos, []); assert.equal(urls.length, 2);
 });
+test('vigilancia falla si el receptor responde pero las compras están apagadas', async () => {
+  const r = await comprobarStars({
+    url: 'https://host/telegram',
+    api: async () => ({ url: 'https://host/telegram', pending_update_count: 0 }),
+    diagnostico: async () => ({ ok: true }),
+    fetchImpl: async (_u, o) => o?.method
+      ? { status: 403 }
+      : { ok: true, json: async () => ({ ok: true, compras_habilitadas: false }) },
+  });
+  assert.deepEqual(r.fallos, ['Receptor HTTPS']);
+});
+
 test('vigilancia detecta caída, webhook ajeno y base caída', async () => {
   const r = await comprobarStars({ url: 'https://host/telegram', api: async () => ({ url: 'https://otra/telegram' }),
     diagnostico: async () => { throw Error(); }, fetchImpl: async () => { throw Error(); } });
@@ -35,7 +47,7 @@ test('vigilancia detecta caída, webhook ajeno y base caída', async () => {
 });
 test('vigilancia alerta una cola con error antiguo y reconoce recuperación sin pendientes', async () => {
   const base = { url: 'https://host/telegram', diagnostico: async () => ({ ok: true }),
-    fetchImpl: async (_u, o) => o.method ? { status: 403 } : { ok: true, json: async () => ({ ok: true }) } };
+    fetchImpl: async (_u, o) => o.method ? { status: 403 } : { ok: true, json: async () => ({ ok: true, compras_habilitadas: true }) } };
   const webhook = { url: base.url, pending_update_count: 3, last_error_date: 1 };
   assert.deepEqual((await comprobarStars({ ...base, api: async () => webhook })).fallos, ['Webhook Telegram']);
   assert.deepEqual((await comprobarStars({ ...base, api: async () => ({ ...webhook, pending_update_count: 0 }) })).fallos, []);
