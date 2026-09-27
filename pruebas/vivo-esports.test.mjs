@@ -66,6 +66,7 @@ test('predecirProximas: sí predice una que arranca en el futuro', async () => {
   const fila = escrituras[0].filas[0];
   assert.equal(fila.match_id, 2);
   assert.equal(fila.motor, 'glicko2');
+  assert.equal(fila.predicha_en, new Date(AHORA * 1000).toISOString());
   // Dos equipos sin historial: rating inicial igual, así que 50-50 exacto.
   assert.equal(Number(fila.prob_a).toFixed(6), '0.500000');
   assert.equal((Number(fila.prob_a) + Number(fila.prob_b)).toFixed(6), '1.000000');

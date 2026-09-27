@@ -24,7 +24,7 @@ console.log('Destino comercial y conversación del propietario verificados. Prec
 if (process.argv.includes('--aplicar')) {
 
 const pack = resolve(argumento('pack') ?? 'assets/telegram');
-const fotos = { bienvenida: 'bienvenida.png', pro: 'pro.png', individual: 'individual.png', muestra: 'muestra.png', resultados: 'resultados-v2.png' };
+const fotos = { bienvenida: 'bienvenida.png', pro: 'pro.png', individual: 'individual.png', muestra: 'muestra.png' };
 // Sin reintentos automáticos de envíos. Ningún archivo se manda al canal de pruebas.
 async function multipart(metodo, datos, archivo, bytes, mime) {
   const form = new FormData();
@@ -51,7 +51,7 @@ const marca = { botId: me.id, fecha: new Date().toISOString(), proStars: config.
 for (const [nombre, archivo] of Object.entries(fotos)) {
   const enviado = await multipart('sendPhoto', {
     chat_id: chat, photo: 'attach://archivo', disable_notification: true,
-    caption: `Monitor eSports · ${nombre === 'muestra' ? 'ejemplo de diseño, con campos pendientes' : nombre}`,
+    caption: `Monitor eSports · ${nombre === 'muestra' ? 'plantilla visual con valores demostrativos, no datos verificados' : nombre}`,
   }, archivo, await readFile(resolve(pack, archivo)), 'image/png');
   marca.imagenes[nombre] = enviado.photo.at(-1).file_id;
   // Guardar cada avance permite recuperar la carga sin repetir todos los envíos.
@@ -70,5 +70,5 @@ for (const language_code of ['', 'es']) {
   await api('setMyCommands', { commands: COMANDOS, language_code });
 }
 await api('setChatMenuButton', { menu_button: { type: 'commands' } });
-console.log(`Pack cargado y perfil aplicado a @${me.username}. Cinco imágenes disponibles. Respaldo local guardado.`);
+console.log(`Pack v3 cargado y perfil aplicado a @${me.username}. Cuatro imágenes públicas disponibles. Respaldo local guardado.`);
 }

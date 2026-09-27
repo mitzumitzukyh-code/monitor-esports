@@ -1,5 +1,5 @@
 export const PERIODO_PRO = 2592000; // Único período recurrente admitido por Telegram.
-export const VERSION_TERMINOS = '2026-09-26';
+export const VERSION_TERMINOS = '2026-09-26-v3';
 
 export function configuracionStars(env = process.env) {
   const habilitado = env.TELEGRAM_STARS_ENABLED === 'true';

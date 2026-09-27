@@ -14,7 +14,7 @@ function fixture(accion = async () => ({ ok: true, terminos_version: VERSION_TER
   return { llamadas, almacen, api, lecturas: () => lecturas, bot: crearBotStars({ config, almacen, api }) };
 }
 test('PRO recurrente usa createInvoiceLink XTR, un precio y 30 días', async () => {
-  const f = fixture(); await f.bot.procesar(mensaje('/pro'));
+  const f = fixture(); await f.bot.procesar(mensaje('/pagar_pro'));
   const invoice = f.llamadas.find((c) => c.metodo === 'createInvoiceLink').datos;
   assert.equal(invoice.currency, 'XTR'); assert.equal(invoice.provider_token, '');
   assert.deepEqual(invoice.prices, [{ label: 'PRO 30 días', amount: 250 }]);
@@ -22,7 +22,7 @@ test('PRO recurrente usa createInvoiceLink XTR, un precio y 30 días', async () 
 });
 test('compra individual usa sendInvoice y factura vinculada al usuario', async () => {
   const acciones = []; const f = fixture(async (a, d) => { acciones.push({ a,d }); return { ok:true, terminos_version:VERSION_TERMINOS }; });
-  await f.bot.procesar(mensaje('/comprar 20'));
+  await f.bot.procesar({update_id:124,callback_query:{id:'cb',from:{id:10},message:{chat:{id:10,type:'private'}},data:'pagar_individual:20'}});
   const invoice = f.llamadas.find((c) => c.metodo === 'sendInvoice').datos;
   assert.equal(invoice.currency, 'XTR'); assert.equal(invoice.chat_id, 10);
   assert.equal(invoice.prices[0].amount, 50); assert.equal(invoice.subscription_period, undefined);
@@ -30,10 +30,10 @@ test('compra individual usa sendInvoice y factura vinculada al usuario', async (
 });
 test('PRO no recurrente factura pago único', async () => {
   const f=fixture(); const bot=crearBotStars({config:{...config,recurrente:false},almacen:f.almacen,api:f.api});
-  await bot.procesar(mensaje('/pro')); assert.equal(f.llamadas[0].metodo,'sendInvoice');
+  await bot.procesar(mensaje('/pagar_pro')); assert.equal(f.llamadas[0].metodo,'sendInvoice');
 });
 test('sin consentimiento no hay factura', async () => {
-  const f=fixture(async () => ({ok:true})); await f.bot.procesar(mensaje('/pro'));
+  const f=fixture(async () => ({ok:true})); await f.bot.procesar(mensaje('/pagar_pro'));
   assert.ok(f.llamadas.every((c) => c.metodo === 'sendMessage'));
   assert.match(f.llamadas[0].datos.text,/Compras acceso/);
 });

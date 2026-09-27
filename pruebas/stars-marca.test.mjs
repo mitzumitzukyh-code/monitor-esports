@@ -14,6 +14,9 @@ function fixture(opciones = {}) {
   const llamadas = [], acciones = []; let lecturas = 0;
   const almacen = { accion: async (a, d) => { acciones.push({ a, d }); return opciones.estado ?? { premium: false, suscripciones: [], terminos_version: VERSION_TERMINOS }; },
     partidos: async () => opciones.partidos ?? [],
+    metricas: async () => opciones.metricas ?? ({ total: 100, aciertos: 64, porcentaje: 64,
+      por_juego: [{ juego:'cs2', n:25, aciertos:15, porcentaje:60 }, { juego:'dota2', n:25, aciertos:16, porcentaje:64 },
+        { juego:'lol', n:25, aciertos:18, porcentaje:72 }, { juego:'valorant', n:25, aciertos:15, porcentaje:60 }] }),
     prediccion: async () => { lecturas++; return { match_id: 20, juego: 'cs2', equipo_a: 1, equipo_b: 2,
       prob_a: 0.6, inicio_programado: '2026-09-27T15:00:00Z', formato: 'bo3', motor: 'glicko2', rating_a: 1550, rd_a: 50 }; },
     historial: async () => [] };
@@ -25,10 +28,10 @@ function fixture(opciones = {}) {
   return { bot, llamadas, acciones, lecturas: () => lecturas };
 }
 
-test('bienvenida muestra el pack y cuatro botones reales sin iniciar compras', async () => {
+test('bienvenida muestra el pack y accesos FREE/PRO sin iniciar compras', async () => {
   const f = fixture(); await f.bot.procesar(mensaje('/start'));
   const c = f.llamadas[0]; assert.equal(c.metodo, 'sendPhoto'); assert.equal(c.datos.photo, 'welcome');
-  assert.deepEqual(c.datos.reply_markup.inline_keyboard.flat().map(b => b.callback_data), ['planes','partidos','estado','paysupport']);
+  assert.deepEqual(c.datos.reply_markup.inline_keyboard.flat().map(b => b.callback_data), ['planes','partidos','gratis','mios','resultados','estado','paysupport']);
   assert.equal(f.lecturas(), 0); assert.ok(f.acciones.every(c => c.a !== 'crear'));
 });
 test('los botones abren planes, estado y soporte sin consultar informes premium', async () => {
@@ -38,8 +41,8 @@ test('los botones abren planes, estado y soporte sin consultar informes premium'
   assert.ok(f.llamadas.some(c => /@mitzukyhs/.test(c.datos.text ?? ''))); assert.equal(f.lecturas(), 0);
 });
 test('PRO con imagen sigue exigiendo consentimiento antes de crear factura', async () => {
-  const f = fixture({ estado: { premium: false, suscripciones: [] } }); await f.bot.procesar(mensaje('/pro'));
-  const c = f.llamadas[0]; assert.equal(c.metodo, 'sendPhoto'); assert.equal(c.datos.photo, 'pro');
+  const f = fixture({ estado: { premium: false, suscripciones: [] } }); await f.bot.procesar(callback('condiciones:p'));
+  const c = f.llamadas.find(c => c.metodo === 'sendPhoto'); assert.equal(c.datos.photo, 'pro');
   assert.match(c.datos.caption, /cobra automáticamente/); assert.ok(c.datos.caption.length <= 1024);
   assert.equal(c.datos.reply_markup.inline_keyboard[0][0].callback_data, `aceptar:${VERSION_TERMINOS}:p`);
   assert.ok(!f.acciones.some(c => c.a === 'crear')); assert.equal(f.lecturas(), 0);
@@ -56,15 +59,19 @@ test('si cambia el precio o la renovación no se muestra una pieza con condicion
 test('una imagen rechazada conserva el menú de texto y no crea órdenes', async () => {
   const f = fixture({ falloFoto: true }); await f.bot.procesar(mensaje('/start'));
   assert.deepEqual(f.llamadas.map(c => c.metodo), ['sendPhoto','sendMessage']);
-  assert.equal(f.llamadas[1].datos.reply_markup.inline_keyboard.flat().length, 4);
+  assert.equal(f.llamadas[1].datos.reply_markup.inline_keyboard.flat().length, 7);
   assert.ok(!f.acciones.some(c => c.a === 'crear'));
 });
-test('muestra e historial identifican plantilla y período, sin leer informes privados', async () => {
+test('muestra real e historial dinámico están separados y no leen informes privados', async () => {
   const f = fixture(); await f.bot.procesar(callback('muestra')); await f.bot.procesar(callback('resultados'));
-  const fotos = f.llamadas.filter(c => c.metodo === 'sendPhoto');
-  assert.match(fotos[0].datos.caption, /plantilla no es un resultado confirmado/);
-  assert.match(fotos[1].datos.caption, /27 AGO–25 SEP 2026/); assert.match(fotos[1].datos.caption, /166 pendientes/);
-  assert.doesNotMatch(fotos[1].datos.caption, /Venezuela|no garantiza resultados futuros/);
+  const mensajes = f.llamadas.filter(c => c.metodo === 'sendMessage');
+  assert.match(mensajes[0].datos.text, /Ejemplo real · partido cerrado/);
+  assert.match(mensajes[0].datos.text, /Últimos resultados/);
+  assert.match(mensajes[1].datos.text, /Historial actualizado/);
+  assert.match(mensajes[1].datos.text, /64\/100/); assert.match(mensajes[1].datos.text, /LoL: 18\/25 · 72%/);
+  assert.doesNotMatch(mensajes[1].datos.text, /Venezuela|descubre el análisis/);
+  assert.equal(f.llamadas.filter(c => c.metodo === 'sendPhoto').length,0);
+  assert.ok(!mensajes[1].datos.reply_markup.inline_keyboard.flat().some(b => b.callback_data === 'planes'));
   assert.equal(f.lecturas(), 0); assert.ok(!f.acciones.some(c => c.a === 'acceso'));
 });
 test('seleccionar un análisis individual muestra 50 Stars y opciones de acceso', async () => {
@@ -75,7 +82,7 @@ test('seleccionar un análisis individual muestra 50 Stars y opciones de acceso'
   await f.bot.procesar(callback('individual'));
   const c = f.llamadas.find(c => c.metodo === 'sendPhoto'); assert.equal(c.datos.photo, 'one');
   assert.match(c.datos.caption, /50 Stars/);
-  assert.equal(c.datos.reply_markup.inline_keyboard[0][0].callback_data, 'juego:cs2:0:proximos');
+  assert.equal(c.datos.reply_markup.inline_keyboard[0][0].callback_data, 'filtro:cs2');
   await f.bot.procesar(callback('juego:cs2:0:proximos'));
   const lista = f.llamadas.find(c => c.metodo === 'sendMessage' && c.datos.text.includes('&lt;Equipo A&gt;'));
   assert.ok(lista); assert.equal(lista.datos.reply_markup.inline_keyboard[1][0].callback_data, 'partido:20:cs2:0:proximos');

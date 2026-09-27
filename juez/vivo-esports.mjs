@@ -236,6 +236,7 @@ export async function predecirProximas(
       torneo_id: p.torneoId,
       tier: p.tier,
       motor: cfg.motor,
+      predicha_en: new Date(ahora * 1000).toISOString(),
       prob_a: probA,
       prob_b: 1 - probA,
       rating_a: ea.rating,

@@ -1,15 +1,14 @@
-// Pack del propietario. Historial actualizado por petición del dueño; sin credenciales.
+// Pack aprobado por el propietario. file_id reutilizables de este bot; sin credenciales.
 export const MARCA = {
   "botId": 8904052961,
-  "fecha": "2026-09-26T20:31:16.929Z",
+  "fecha": "2026-09-26T21:57:44.115Z",
   "proStars": 250,
   "matchStars": 50,
   "recurrente": true,
   "imagenes": {
-    "bienvenida": "AgACAgEAAxkDAAMjargmtXmHN-1MDgeUO7vXfaZWFkAAArIMaxsP-sFF1xNebwz4Y8oBAAMCAAN3AAM9BA",
-    "pro": "AgACAgEAAxkDAAMkargmtbLS98GfFAjcadq3hRvpKF8AArMMaxsP-sFFBZ0nd67FgVUBAAMCAAN5AAM9BA",
-    "individual": "AgACAgEAAxkDAAMlargmuLW6-olBMSn5QnCGO7EXMYwAArQMaxsP-sFFzUHIppBdmqIBAAMCAAN5AAM9BA",
-    "muestra": "AgACAgEAAxkDAAMmargmuTScCj8RS3cvKIEBo9V9LhQAArUMaxsP-sFF0070qW5djY4BAAMCAAN3AAM9BA",
-    "resultados": "AgACAgEAAxkDAANDargrlP5W21-ix46YYtCpGipUd2MAArkMaxsP-sFFRdxWXrOUcjIBAAMCAAN3AAM9BA"
+    "bienvenida": "AgACAgEAAxkDAANiarg_2sUBpcAPNn-vGlhkg3lP0CwAAsQMaxsP-sFF0v9KwQIHlaEBAAMCAAN3AAM9BA",
+    "pro": "AgACAgEAAxkDAANjarg_257_qw11U-eP4Bhi2ESwLDAAAsUMaxsP-sFFs0JjY3XNqK4BAAMCAAN5AAM9BA",
+    "individual": "AgACAgEAAxkDAANkarg_3GEJ982d1nbHu4HswubFviYAAsYMaxsP-sFF23bUgbaAfLcBAAMCAAN5AAM9BA",
+    "muestra": "AgACAgEAAxkDAANlarg_3P9qVYS6uk0IYyFXyNqhsz8AAscMaxsP-sFFSHkOOGkv8gwBAAMCAAN3AAM9BA"
   }
 };
