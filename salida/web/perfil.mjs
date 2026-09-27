@@ -349,7 +349,7 @@ export function cabeza(f, nombreA, nombreB, { etiqueta = null, logoDe = null, ho
   const ganoA = f.resultado_real === 'ganaA';
 
   const resumen = fav.prob == null
-    ? 'Sin probabilidad guardada.'
+    ? (decidido ? 'Sin probabilidad histórica guardada.' : 'El análisis previo está protegido.')
     : fav.hay
       ? `${pct1(fav.prob)}% para ${quien}.`
       : '50/50 exacto: el motor no se jugó por ninguno.';
@@ -358,9 +358,11 @@ export function cabeza(f, nombreA, nombreB, { etiqueta = null, logoDe = null, ho
   // y su número. Si ya se jugó, quién ganó.
   const linea = decidido
     ? `${ganoA ? nombreA : nombreB} ganó${f.marcador_a != null ? ` ${ganoA ? f.marcador_a : f.marcador_b}–${ganoA ? f.marcador_b : f.marcador_a}` : ''}`
-    : fav.hay
-      ? `${hora ? `${hora} → ` : ''}${quien} ${Math.round(fav.prob * 100)}%`
-      : `${hora ? `${hora} · ` : ''}50/50, sin favorito`;
+    : fav.prob == null
+      ? `${hora ? `${hora} · ` : ''}análisis previo protegido`
+      : fav.hay
+        ? `${hora ? `${hora} → ` : ''}${quien} ${Math.round(fav.prob * 100)}%`
+        : `${hora ? `${hora} · ` : ''}50/50, sin favorito`;
 
   // El escudo del protagonista: el favorito antes de jugarse, el ganador
   // después. Es la miniatura de la tarjeta, igual que el thumbnail de Discord.
@@ -370,7 +372,9 @@ export function cabeza(f, nombreA, nombreB, { etiqueta = null, logoDe = null, ho
   const escudo = logoDe ? logoDe(idProta) : null;
 
   const titulo = `${nombreA} vs ${nombreB} · Monitor eSports`;
-  const desc = `${resumen} La predicción quedó congelada antes de la serie y acá están los números con los que se hizo.`;
+  const desc = fav.prob == null && !decidido
+    ? `${resumen} Calendario y resultado seguirán visibles públicamente; el contenido previo del modelo no se publica aquí.`
+    : `${resumen} La predicción quedó congelada antes de la serie y acá están los números con los que se hizo.`;
   return [
     `<title>${esc(titulo)}</title>`,
     `<meta name="description" content="${esc(desc)}">`,
@@ -422,12 +426,14 @@ export function encabezado(f, { nombreA, nombreB, etiqueta, chip, logoDe = null,
 
   const estado = decidido
     ? `<span class="${(fav.hay ? fav.ladoA === ganoA : null) === null ? '' : fav.ladoA === ganoA ? 'curso' : 'viejo'}">` +
-      `${fav.hay ? (fav.ladoA === ganoA ? '✓ Acertó' : '✗ Falló') : '· 50/50'}</span>`
+      `${fav.prob == null ? '· sin dato previo' : fav.hay ? (fav.ladoA === ganoA ? '✓ Acertó' : '✗ Falló') : '· 50/50'}</span>`
     : `<span class="estado-vivo" data-formato="${esc(f.formato ?? '')}"></span>`;
 
-  const quien = fav.hay
-    ? `<span class="aquien">→ <b>${esc(fav.ladoA ? nombreA : nombreB)}</b></span>`
-    : '<span class="aquien">sin favorito · moneda al aire</span>';
+  const quien = fav.prob == null && !decidido
+    ? '<span class="aquien">análisis previo protegido</span>'
+    : fav.hay
+      ? `<span class="aquien">→ <b>${esc(fav.ladoA ? nombreA : nombreB)}</b></span>`
+      : '<span class="aquien">sin favorito · moneda al aire</span>';
   const parejo = fav.prob != null && fav.prob <= 0.55 ? '<span class="parejo">MUY PAREJO</span>' : '';
 
   return (
