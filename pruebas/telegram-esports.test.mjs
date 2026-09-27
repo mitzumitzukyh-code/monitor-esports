@@ -26,9 +26,9 @@ const PRED = {
 
 const respuesta = (cuerpo) => ({ ok: true, json: async () => cuerpo });
 
-test('avisarTelegram: sólo con opt-in explícito manda predicción legacy y marca SUS columnas', async () => {
-  const anterior = process.env.PUBLIC_PREDICTIONS_ENABLED;
-  process.env.PUBLIC_PREDICTIONS_ENABLED = 'true';
+test('avisarTelegram: sólo con opt-in de laboratorio manda predicción y marca SUS columnas', async () => {
+  const anterior = process.env.TELEGRAM_LAB_PREDICTIONS_ENABLED;
+  process.env.TELEGRAM_LAB_PREDICTIONS_ENABLED = 'true';
   const llamadas = { telegram: [], parches: [] };
 
   const fetchImpl = async (url, opts) => {
@@ -64,29 +64,23 @@ test('avisarTelegram: sólo con opt-in explícito manda predicción legacy y mar
     },
   });
 
-  // UN mensaje POR PARTIDA, cada uno con la tarjeta de su perfil. Con una
-  // sola partida en el mock, un solo mensaje.
-  assert.equal(llamadas.telegram.length, 1, 'una tarjeta por partida');
+  assert.equal(llamadas.telegram.length, 1, 'un mensaje por partida');
   assert.match(llamadas.telegram[0].url, /bot.*\/sendMessage/);
   assert.match(llamadas.telegram[0].body.text, /Team Falcons/);
-  assert.equal(llamadas.telegram[0].body.link_preview_options.prefer_small_media, true);
-  // La previa apunta al PERFIL de la partida, no a una imagen suelta: es el
-  // perfil el que trae los og: que dibujan la tarjeta.
-  assert.match(llamadas.telegram[0].body.link_preview_options.url, /\/serie-900\.html$/);
-  assert.ok(!llamadas.telegram.some((l) => /sendPhoto|sendMediaGroup/.test(l.url)),
-    'ni una foto: es lo que se veía enorme en el teléfono');
+  assert.equal(llamadas.telegram[0].body.link_preview_options.is_disabled, true);
+  assert.ok(!llamadas.telegram.some((l) => /sendPhoto|sendMediaGroup/.test(l.url)));
   assert.equal(llamadas.parches.length, 1, 'debió marcar la fila');
   assert.ok(llamadas.parches[0].url.includes('match_id=in.(900)'), 'marcó el match_id equivocado');
   const columna = Object.keys(llamadas.parches[0].body)[0];
   assert.match(columna, /avisado_telegram_prediccion_en/, `marcó la columna equivocada: ${columna}`);
   assert.equal(r.enviados[0].enviado, true);
-  if (anterior === undefined) delete process.env.PUBLIC_PREDICTIONS_ENABLED;
-  else process.env.PUBLIC_PREDICTIONS_ENABLED = anterior;
+  if (anterior === undefined) delete process.env.TELEGRAM_LAB_PREDICTIONS_ENABLED;
+  else process.env.TELEGRAM_LAB_PREDICTIONS_ENABLED = anterior;
 });
 
 test('avisarTelegram: por defecto no publica predicciones previas', async () => {
-  const anterior = process.env.PUBLIC_PREDICTIONS_ENABLED;
-  delete process.env.PUBLIC_PREDICTIONS_ENABLED;
+  const anterior = process.env.TELEGRAM_LAB_PREDICTIONS_ENABLED;
+  delete process.env.TELEGRAM_LAB_PREDICTIONS_ENABLED;
   const llamadas = [];
   const fetchImpl = async (url) => {
     if (String(url).includes('api.telegram.org')) llamadas.push(String(url));
@@ -98,14 +92,33 @@ test('avisarTelegram: por defecto no publica predicciones previas', async () => 
   });
   assert.equal(r.enviados.length, 0);
   assert.equal(llamadas.length, 0);
-  if (anterior === undefined) delete process.env.PUBLIC_PREDICTIONS_ENABLED;
-  else process.env.PUBLIC_PREDICTIONS_ENABLED = anterior;
+  if (anterior === undefined) delete process.env.TELEGRAM_LAB_PREDICTIONS_ENABLED;
+  else process.env.TELEGRAM_LAB_PREDICTIONS_ENABLED = anterior;
 });
 
-// Acá vivían las pruebas de fotosDe(), el álbum de logos. La función se
-// botó: en Telegram toda imagen ocupa el ancho completo del mensaje, así
-// que un álbum de escudos era una pared de logos gigantes. El logo del
-// juego sobrevive como previa pequeña y los escudos de equipo no van.
+// El canal de laboratorio no depende de Pages ni de previas web.
+
+
+test('PUBLIC_PREDICTIONS_ENABLED no abre por accidente el canal laboratorio', async () => {
+  const anteriorLab = process.env.TELEGRAM_LAB_PREDICTIONS_ENABLED;
+  const anteriorPublic = process.env.PUBLIC_PREDICTIONS_ENABLED;
+  delete process.env.TELEGRAM_LAB_PREDICTIONS_ENABLED;
+  process.env.PUBLIC_PREDICTIONS_ENABLED = 'true';
+  const llamadas = [];
+  const r = await avisarTelegram('dota2', {
+    fetchImpl: async (url) => {
+      if (String(url).includes('api.telegram.org')) llamadas.push(String(url));
+      return respuesta({ results: [{ id: 111, name: 'Team Falcons' }, { id: 222, name: 'GG' }] });
+    },
+    fetchImplSupabase: async (url) => String(url).includes('eslo_predicciones?select') ? respuesta([PRED]) : respuesta([]),
+  });
+  assert.equal(r.enviados.length, 0);
+  assert.equal(llamadas.length, 0);
+  if (anteriorLab === undefined) delete process.env.TELEGRAM_LAB_PREDICTIONS_ENABLED;
+  else process.env.TELEGRAM_LAB_PREDICTIONS_ENABLED = anteriorLab;
+  if (anteriorPublic === undefined) delete process.env.PUBLIC_PREDICTIONS_ENABLED;
+  else process.env.PUBLIC_PREDICTIONS_ENABLED = anteriorPublic;
+});
 
 // --- las líneas de cada tarjeta -------------------------------------------------
 const nombreEq = (id) => ({ 111: 'Natus Vincere', 222: 'M80' }[id] ?? `#${id}`);
