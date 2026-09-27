@@ -279,6 +279,16 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
       return decir(id, `PRO activado · período de 30 días. Vigente hasta ${fecha(r.expira_en)} (${zonaPublica(r.expira_en)}).`,
         markup([boton('Ver partidos','partidos'),boton('Mi estado','estado')]));
     }
+    // Los recibos y eventos de suscripción nunca pasan por este límite: perder un
+    // update de pago sería peor que aceptar spam. Sólo limita interacción del usuario.
+    if (almacen.limite) {
+      const limite = await almacen.limite(id).catch(() => ({ ok: false }));
+      if (!limite?.ok) {
+        if (cb) await api('answerCallbackQuery', { callback_query_id: cb.id,
+          text: 'Demasiadas solicitudes. Intenta de nuevo más tarde.' }).catch(() => {});
+        return;
+      }
+    }
     if (cb) await api('answerCallbackQuery', { callback_query_id: cb.id });
     await almacen.accion('usuario', { user_id: id });
     let comando, arg;
