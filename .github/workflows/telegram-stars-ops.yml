@@ -4,6 +4,13 @@ on:
     - cron: '13,33,53 * * * *'
     - cron: '17 4 * * *'
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'salida/stars/**'
+      - 'supabase/functions/esport-stars/**'
+      - 'scripts/vigilar-stars.mjs'
+      - '.github/workflows/telegram-stars-ops.yml'
 permissions:
   contents: read
 concurrency:
@@ -37,7 +44,7 @@ jobs:
           path: work/stars-estado.json
           key: stars-vigilancia-v1-${{ github.run_id }}-${{ github.run_attempt }}
   respaldo:
-    if: github.event_name != 'schedule' || github.event.schedule == '17 4 * * *'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && github.event.schedule == '17 4 * * *')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
