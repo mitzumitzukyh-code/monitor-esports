@@ -14,11 +14,14 @@ before(async()=>{
   db=new PGlite();
   await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
     create table public.eslo_predicciones(match_id bigint primary key, juego text, equipo_a bigint, equipo_b bigint,
-      prob_a numeric, resultado_real text, inicio_programado timestamptz, calificada_en timestamptz);
+      inicio_programado timestamptz, formato text, motor text default 'glicko2', prob_a numeric default 0.5,
+      prob_b numeric default 0.5, rating_a numeric, rd_a numeric, rating_b numeric, rd_b numeric,
+      creada_en timestamptz default now(), resultado_real text, marcador_a integer, marcador_b integer,
+      brier numeric, calificada_en timestamptz, tier text, torneo_id bigint);
     insert into public.eslo_predicciones(match_id) values (20),(21);
     grant usage on schema public to anon,authenticated,service_role;
     grant select on public.eslo_predicciones to service_role;`);
-  for (const m of ['20260926174331_telegram_stars','20260926181029_telegram_stars_operacion','20260926230000_telegram_stars_resultados'])
+  for (const m of ['20260926174331_telegram_stars','20260926181029_telegram_stars_operacion','20260926230000_telegram_stars_resultados','20260927000000_telegram_stars_credibilidad'])
     await db.exec(await readFile(new URL(`../supabase/migrations/${m}.sql`,import.meta.url),'utf8'));
 });
 after(async()=>db?.close());
@@ -378,6 +381,95 @@ test('resultados PRO: la RPC de envíos no está disponible a usuarios públicos
     try {
       await assert.rejects(resultadosSQL('preparar',{}),/permission denied/);
       await assert.rejects(db.query('select * from public.eslo_stars_resultados_envios'),/permission denied/);
+    } finally { await db.exec('reset role'); }
+  }
+});
+
+
+// Credibilidad: snapshots inmutables, FREE diario, calibración y favoritos.
+const credSQL=async(a,d={})=>(await db.query(
+  'select public.eslo_stars_credibilidad($1,$2::jsonb) as r',[a,JSON.stringify(d)]
+)).rows[0].r;
+let credSeq=80000;
+async function predCred({juego='cs2',prob=0.72,resultado=null,minutos=180,inicioSql=null}={}) {
+  const id=++credSeq;
+  const sqlInicio=inicioSql ?? `now()+interval '${minutos} minutes'`;
+  await db.query(`insert into public.eslo_predicciones(
+    match_id,juego,equipo_a,equipo_b,inicio_programado,formato,motor,prob_a,prob_b,creada_en,resultado_real,calificada_en,tier
+  ) values($1,$2,$3,$4,${sqlInicio},'bo3','glicko2',$5,$6,now()-interval '30 minutes',$7,
+    case when $7::text is null then null else now() end,'a')`,
+    [id,juego,id*10,id*10+1,prob,1-prob,resultado]);
+  return id;
+}
+
+test('credibilidad: la copia congelada no cambia aunque la fila operativa cambie',async()=>{
+  const id=await predCred({prob:0.72,resultado:'ganaA'});
+  let fija=(await db.query('select prob_a,creada_en,inicio_programado from eslo_stars_predicciones_fijas where match_id=$1',[id])).rows[0];
+  assert.equal(Number(fija.prob_a),0.72);
+  assert.ok(new Date(fija.creada_en)<new Date(fija.inicio_programado));
+  await db.query('update eslo_predicciones set prob_a=0.11,prob_b=0.89 where match_id=$1',[id]);
+  fija=(await db.query('select prob_a from eslo_stars_predicciones_fijas where match_id=$1',[id])).rows[0];
+  assert.equal(Number(fija.prob_a),0.72);
+  await assert.rejects(db.query('update eslo_stars_predicciones_fijas set prob_a=0.2 where match_id=$1',[id]),/prediccion_fija_inmutable/);
+});
+
+test('credibilidad: historial incluye aciertos y fallos por juego y banda',async()=>{
+  const a=await predCred({juego:'lol',prob:0.75,resultado:'ganaA'});
+  const b=await predCred({juego:'lol',prob:0.80,resultado:'ganaB'});
+  assert.ok(a&&b);
+  const h=await credSQL('historial');
+  const alta=h.filas.find(x=>x.juego==='lol'&&x.banda==='alta');
+  assert.ok(alta); assert.ok(Number(alta.n)>=2);
+  assert.ok(Number(alta.aciertos)>=1);
+  assert.ok(Number(alta.aciertos)<Number(alta.n),'el fallo debe quedar visible');
+});
+
+test('credibilidad: FREE del día queda fijo y no rota entre consultas',async()=>{
+  const inicio=`(((now()-interval '4 hours')::date + interval '23 hours') + interval '4 hours')`;
+  const primero=await predCred({prob:0.61,inicioSql:inicio});
+  await predCred({prob:0.66,inicioSql:`(${inicio}) + interval '20 minutes'`});
+  const a=await credSQL('gratis'); const b=await credSQL('gratis');
+  assert.equal(a.ok,true); assert.equal(b.ok,true);
+  assert.equal(a.prediccion.match_id,primero);
+  assert.equal(b.prediccion.match_id,primero);
+});
+
+test('credibilidad: favoritos son PRO y los cambios materiales se deduplican',async()=>{
+  const id=await predCred({prob:0.70,minutos:240});
+  const libre=++secuencia; await accion('usuario',{user_id:libre});
+  assert.equal((await credSQL('favorito_agregar',{user_id:libre,match_id:id})).error,'pro');
+
+  const usuario=(await pro()).datos.user_id;
+  assert.equal((await credSQL('favorito_agregar',{user_id:usuario,match_id:id})).ok,true);
+  let lista=await credSQL('favoritos',{user_id:usuario});
+  assert.ok(lista.partidos.some(p=>p.match_id===id));
+
+  await credSQL('observar',{filas:[{match_id:id,prob_a:0.73}]});
+  assert.equal((await db.query('select count(*)::int n from eslo_stars_cambios where match_id=$1',[id])).rows[0].n,0);
+  await credSQL('observar',{filas:[{match_id:id,prob_a:0.77}]});
+  assert.equal((await db.query('select count(*)::int n from eslo_stars_cambios where match_id=$1',[id])).rows[0].n,1);
+
+  const preparados=await credSQL('cambios_preparar');
+  const cambio=preparados.cambios.find(x=>x.match_id===id);
+  assert.ok(cambio.destinatarios.includes(usuario));
+  assert.equal((await credSQL('cambio_reservar',{cambio_id:cambio.cambio_id,user_id:usuario})).ok,true);
+  assert.equal((await credSQL('cambio_reservar',{cambio_id:cambio.cambio_id,user_id:usuario})).ok,false);
+  await credSQL('cambio_confirmar',{cambio_id:cambio.cambio_id,user_id:usuario});
+  assert.equal((await credSQL('cambios_preparar')).cambios
+    .find(x=>x.cambio_id===cambio.cambio_id).destinatarios.includes(usuario),false);
+
+  assert.equal((await credSQL('favorito_quitar',{user_id:usuario,match_id:id})).ok,true);
+  lista=await credSQL('favoritos',{user_id:usuario});
+  assert.ok(!lista.partidos.some(p=>p.match_id===id));
+});
+
+test('credibilidad: RPC y tablas privadas siguen cerradas a anon/authenticated',async()=>{
+  for(const rol of ['anon','authenticated']) {
+    await db.exec(`set role ${rol}`);
+    try {
+      await assert.rejects(credSQL('historial'),/permission denied/);
+      await assert.rejects(db.query('select * from public.eslo_stars_predicciones_fijas'),/permission denied/);
+      await assert.rejects(db.query('select * from public.eslo_stars_favoritos'),/permission denied/);
     } finally { await db.exec('reset role'); }
   }
 });
