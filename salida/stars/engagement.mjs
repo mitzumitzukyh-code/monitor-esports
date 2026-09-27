@@ -10,7 +10,7 @@ export function selloCongelado(p) {
   if (Number.isFinite(guardada) && Number.isFinite(inicio) && guardada < inicio) {
     return `🔒 <b>Predicción congelada</b> · guardada ${esc(fechaPartido(p.predicha_en))} · ${zonaPublica(p.predicha_en)}`;
   }
-  return '🔒 <b>Predicción congelada</b> · el motor no reescribe una predicción ya registrada.';
+  return '🔒 <b>Predicción congelada</b> · una vez registrada, esta predicción no se modifica.';
 }
 
 export function referenciaHistorica(metricas) {
@@ -31,7 +31,7 @@ export function textoHistorial(metricas) {
   const general = porcentaje(metricas?.porcentaje);
   const porJuego = new Map((metricas?.por_juego ?? []).map(x => [x.juego, x]));
   const lineas = [
-    '📊 <b>Historial actualizado del motor</b>',
+    '📊 <b>Historial actualizado</b>',
     total ? `${aciertos}/${total} predicciones principales correctas · ${general}%` : 'Todavía no hay resultados evaluados.',
     '',
   ];
@@ -41,7 +41,7 @@ export function textoHistorial(metricas) {
     lineas.push(`${JUEGOS[juego]}: ${n ? `${x.aciertos}/${n} · ${porcentaje(x.porcentaje)}%` : 'sin muestra'}`);
   }
   lineas.push('', 'Se cuentan sólo partidos con resultado registrado y probabilidad válida.');
-  lineas.push('🔒 Las predicciones del motor no se reescriben después de guardarse.');
+  lineas.push('🔒 Las predicciones no se modifican después de guardarse.');
   lineas.push('El historial describe resultados observados; no garantiza resultados futuros.');
   return lineas.join('\n');
 }

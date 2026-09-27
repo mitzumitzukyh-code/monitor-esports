@@ -18,7 +18,8 @@ before(async()=>{
     insert into public.eslo_predicciones(match_id) values (20),(21);
     grant usage on schema public to anon,authenticated,service_role;
     grant select on public.eslo_predicciones to service_role;`);
-  for (const m of ['20260926174331_telegram_stars','20260926181029_telegram_stars_operacion','20260926230000_telegram_stars_resultados'])
+  for (const m of ['20260926174331_telegram_stars','20260926181029_telegram_stars_operacion','20260926230000_telegram_stars_resultados',
+    '20260927002000_telegram_stars_engagement'])
     await db.exec(await readFile(new URL(`../supabase/migrations/${m}.sql`,import.meta.url),'utf8'));
 });
 after(async()=>db?.close());
@@ -378,6 +379,78 @@ test('resultados PRO: la RPC de envíos no está disponible a usuarios públicos
     try {
       await assert.rejects(resultadosSQL('preparar',{}),/permission denied/);
       await assert.rejects(db.query('select * from public.eslo_stars_resultados_envios'),/permission denied/);
+    } finally { await db.exec('reset role'); }
+  }
+});
+
+
+const engagementSQL=async(a,d={})=>(await db.query(
+  'select public.eslo_stars_engagement($1,$2::jsonb) as r',[a,JSON.stringify(d)])).rows[0].r;
+
+test('engagement: FREE recibe una sola predicción diaria estable',async()=>{
+  const u=++secuencia;
+  const id=++partidoSeq;
+  await db.query(`insert into eslo_predicciones(match_id,juego,equipo_a,equipo_b,prob_a,inicio_programado)
+    values($1,'cs2',$2,$3,0.64,now()+interval '2 hours')`,[id,id*10,id*10+1]);
+  const a=await engagementSQL('gratis',{user_id:u});
+  const b=await engagementSQL('gratis',{user_id:u});
+  assert.equal(a.ok,true); assert.equal(a.match_id,b.match_id);
+  assert.equal((await db.query('select count(*)::int n from eslo_stars_gratis_diario where user_id=$1',[u])).rows[0].n,1);
+});
+
+test('engagement: favoritos y Mis partidos requieren PRO y se pueden quitar',async()=>{
+  const id=++partidoSeq;
+  await db.query(`insert into eslo_predicciones(match_id,juego,equipo_a,equipo_b,prob_a,inicio_programado)
+    values($1,'lol',$2,$3,0.61,now()+interval '3 hours')`,[id,id*10,id*10+1]);
+  const free=++secuencia; await accion('usuario',{user_id:free});
+  assert.equal((await engagementSQL('favorito_agregar',{user_id:free,match_id:id})).error,'pro');
+  const o=await pro(); const u=o.datos.user_id;
+  assert.equal((await engagementSQL('favorito_agregar',{user_id:u,match_id:id})).ok,true);
+  assert.ok((await engagementSQL('favoritos',{user_id:u})).match_ids.includes(id));
+  assert.equal((await engagementSQL('favorito_quitar',{user_id:u,match_id:id})).ok,true);
+  assert.ok(!(await engagementSQL('favoritos',{user_id:u})).match_ids.includes(id));
+});
+
+test('engagement: alerta previa PRO se reserva una vez y no duplica',async()=>{
+  const o=await pro(); const u=o.datos.user_id; const id=++partidoSeq;
+  await db.query(`insert into eslo_predicciones(match_id,juego,equipo_a,equipo_b,prob_a,inicio_programado)
+    values($1,'valorant',$2,$3,0.58,now()+interval '30 minutes')`,[id,id*10,id*10+1]);
+  await engagementSQL('favorito_agregar',{user_id:u,match_id:id});
+  const preparado=await engagementSQL('preparar_alertas',{});
+  assert.ok(preparado.items.some(x=>Number(x.user_id)===u&&Number(x.match_id)===id));
+  assert.equal((await engagementSQL('reservar_alerta',{user_id:u,match_id:id})).ok,true);
+  assert.equal((await engagementSQL('reservar_alerta',{user_id:u,match_id:id})).ok,false);
+  await engagementSQL('confirmar_alerta',{user_id:u,match_id:id});
+  const estado=(await db.query('select estado from eslo_stars_alertas_envios where user_id=$1 and match_id=$2',[u,id])).rows[0].estado;
+  assert.equal(estado,'enviado');
+});
+
+test('engagement: resumen diario sólo se reserva una vez para PRO vigente',async()=>{
+  const o=await pro(); const u=o.datos.user_id;
+  const preparado=await engagementSQL('preparar_resumen',{});
+  assert.ok(preparado.destinatarios.map(Number).includes(u));
+  assert.equal((await engagementSQL('reservar_resumen',{user_id:u,dia:preparado.dia})).ok,true);
+  assert.equal((await engagementSQL('reservar_resumen',{user_id:u,dia:preparado.dia})).ok,false);
+  await engagementSQL('confirmar_resumen',{user_id:u,dia:preparado.dia});
+});
+
+test('engagement: historial calcula aciertos por juego y banda sin inventar etiqueta',async()=>{
+  const ids=[++partidoSeq,++partidoSeq,++partidoSeq];
+  await db.query(`insert into eslo_predicciones(match_id,juego,equipo_a,equipo_b,prob_a,resultado_real,inicio_programado,calificada_en)
+    values($1,'cs2',1,2,0.65,'ganaA',now()-interval '3 hours',now()),
+          ($2,'cs2',3,4,0.35,'ganaA',now()-interval '2 hours',now()),
+          ($3,'lol',5,6,0.72,'ganaA',now()-interval '1 hour',now())`,ids);
+  const m=await engagementSQL('metricas',{juego:'cs2',prob_a:0.65});
+  assert.ok(Number(m.total)>=2); assert.ok(m.por_juego.some(x=>x.juego==='cs2'));
+  assert.ok(Number(m.banda.n)>=1);
+});
+
+test('engagement: RPC y tablas privadas no son accesibles para anon/authenticated',async()=>{
+  for(const rol of ['anon','authenticated']) {
+    await db.exec(`set role ${rol}`);
+    try {
+      await assert.rejects(engagementSQL('metricas',{}),/permission denied/);
+      await assert.rejects(db.query('select * from public.eslo_stars_favoritos'),/permission denied/);
     } finally { await db.exec('reset role'); }
   }
 });
