@@ -4,6 +4,7 @@ import { JUEGOS, fechaPartido, nombreEncuentro, zonaPublica } from './partidos.m
 const ORDEN_JUEGOS = ['cs2','dota2','lol','valorant'];
 
 export function nivelConfianza(probA) {
+  if (probA == null || probA === '') return null;
   const p = Number(probA);
   if (!Number.isFinite(p) || p < 0 || p > 1) return null;
   const favorito = Math.max(p, 1 - p);
