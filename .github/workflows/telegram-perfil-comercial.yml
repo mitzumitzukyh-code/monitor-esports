@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'assets/telegram/avatar-approved.jpg'
+      - 'scripts/generar-avatar-telegram.py'
       - 'salida/stars/perfil.mjs'
       - 'salida/stars/comandos.mjs'
       - 'scripts/configurar-perfil-telegram.mjs'
@@ -29,5 +29,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Preparar generador de avatar
+        run: python3 -m pip install --disable-pip-version-check pillow==11.3.0
+      - name: Generar avatar aprobado
+        run: python3 scripts/generar-avatar-telegram.py
       - name: Actualizar nombre, descripción, comandos y avatar
-        run: node scripts/configurar-perfil-telegram.mjs --avatar
+        run: node scripts/configurar-perfil-telegram.mjs --avatar=/tmp/monitor-esports-avatar.jpg
