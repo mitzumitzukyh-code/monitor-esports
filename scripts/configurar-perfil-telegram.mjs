@@ -22,8 +22,8 @@ async function api(metodo, datos = {}) {
   return cuerpo.result;
 }
 
-async function subirAvatar() {
-  const bytes = await readFile(new URL('../assets/telegram/avatar-approved.jpg', import.meta.url));
+async function subirAvatar(ruta) {
+  const bytes = await readFile(ruta);
   const form = new FormData();
   form.append('photo', JSON.stringify({ type: 'static', photo: 'attach://avatar' }));
   form.append('avatar', new Blob([bytes], { type: 'image/jpeg' }), 'avatar-approved.jpg');
@@ -41,7 +41,8 @@ for (const language_code of ['', 'es']) {
 
 await api('setChatMenuButton', { menu_button: { type: 'commands' } });
 
-if (process.argv.includes('--avatar')) await subirAvatar();
+const avatarArg = process.argv.find((x) => x.startsWith('--avatar='));
+if (avatarArg) await subirAvatar(avatarArg.slice('--avatar='.length));
 
 const [nombre, descripcion, corta] = await Promise.all([
   api('getMyName', {}),
