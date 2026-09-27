@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { publicarSinPremium } from '../salida/web/generar.mjs';
 import { crearBotStars } from '../salida/stars/bot.mjs';
+import { cabeza, encabezado } from '../salida/web/perfil.mjs';
 
 test('web pública no expone probabilidad ni estado interno antes del resultado', () => {
   const futura = {
@@ -70,4 +71,17 @@ test('rate limit no bloquea recibos de pago', async () => {
   });
   assert.equal(limiteLlamado, false);
   assert.ok(llamadas.some(x => x.metodo === 'sendMessage'));
+});
+
+
+test('perfil público redactado no inventa 50/50 ni expone porcentaje previo', () => {
+  const f = { match_id: 77, juego: 'cs2', equipo_a: 1, equipo_b: 2,
+    inicio_programado: '2026-09-28T12:00:00Z', formato: 'bo3',
+    prob_a: null, prob_b: null, rating_a: null, rd_a: null, rating_b: null, rd_b: null,
+    resultado_real: null };
+  const head = cabeza(f, 'Alpha', 'Beta', { etiqueta: 'CS2', hora: '8:00 AM' });
+  const body = encabezado(f, { nombreA: 'Alpha', nombreB: 'Beta', etiqueta: 'CS2', chip: 'cs2' });
+  assert.match(head, /análisis previo protegido/i);
+  assert.match(body, /análisis previo protegido/i);
+  assert.doesNotMatch(head + body, /50\/50|\b[0-9]{1,3}(?:\.[0-9])?%/);
 });
