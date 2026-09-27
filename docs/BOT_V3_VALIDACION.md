@@ -45,7 +45,7 @@ sin renovación. Soporte @mitzukyhs; destino https://t.me/monitor_esports_avisos
 - FREE e individual nunca reciben resultados automáticos, resúmenes ni
   alertas push. Sólo PRO vigente. Cancelar renovación mantiene los envíos
   hasta el vencimiento del período pagado; PRO vencido no recibe.
-- Migración nueva `20260926230000_telegram_stars_resultados.sql` (tablas
+- Migración nueva `20260927003751_telegram_stars_resultados.sql` (tablas
   bloques/items/envíos + RPC `eslo_stars_resultados`, sólo service_role).
   Lee `eslo_predicciones.calificada_en`; no escribe predicciones ni motor.
 - Regla de bloque: se cierra cuando el resultado pendiente más antiguo lleva
@@ -82,7 +82,7 @@ Sin web ni TikTok. La rama incorpora únicamente funciones del bot y persistenci
 - Resumen diario PRO a las 8:15 AM UTC−4 con partidos restantes del día y resultado agregado del día anterior.
 - Los resultados agrupados PRO existentes se conservan sin cambios de concepto.
 
-Migración nueva: `20260927002000_telegram_stars_engagement.sql`. Workflows nuevos: `telegram-alertas-pro.yml` y `telegram-resumen-pro.yml`. Ambos quedan apagados hasta definir `TELEGRAM_ENGAGEMENT_PRO=true`. No se aplicó la migración, no se redeployó producción y no se activó ninguna variable desde esta rama.
+Migración aplicada: `20260927003753_telegram_stars_engagement.sql`. Workflows nuevos: `telegram-alertas-pro.yml` y `telegram-resumen-pro.yml`. Ambos quedan apagados hasta definir `TELEGRAM_ENGAGEMENT_PRO=true`. La migración ya está aplicada en Supabase; no se redeployó el bot ni se activó ninguna variable.
 
 ## Validación
 
@@ -100,7 +100,7 @@ reembolso repetido y refund anterior al recibo. También permisos del ledger,
 respaldo cifrado, recuperación, zona UTC−4/ET, omisión de competición ausente
 y ausencia de campos inventados o de recomendación.
 
-Las migraciones existentes no cambian ni se vuelven a aplicar. La RPC
+Las migraciones de resultados y engagement ya están aplicadas en Supabase y no se vuelven a ejecutar. La RPC
 transaccional valida y serializa pagos; sólo successful_payment activa.
 Eventos subscription canceled/active/failed actualizan renovación sin
 otorgar períodos nuevos. Un pago confirmado nuevo es necesario para extender.
@@ -131,10 +131,10 @@ secretos ni respaldo descifrado.
 
 Afinación en la rama (sin redeploy ni Stars): informe sin lenguaje de
 recomendación; sello `UTC−4 / ET` cuando EDT coincide; CTA «Comprar análisis»;
-plantilla con emojis; resultados PRO agrupados. Receptor en producción sigue
-en versión 6 y la migración de resultados **no está aplicada**. Tras merge
-autorizado: aplicar la migración, redesplegar `esport-stars`, y sólo entonces
-activar `TELEGRAM_RESULTADOS_PRO=true`. El respaldo diario de pagos no
+plantilla con emojis; resultados PRO agrupados. Receptor en producción sigue en versión 6. Las migraciones de resultados, engagement y
+credibilidad ya están aplicadas en Supabase. Tras merge autorizado: redesplegar
+`esport-stars` y sólo entonces activar `TELEGRAM_RESULTADOS_PRO=true`,
+`TELEGRAM_ENGAGEMENT_PRO=true` y `TELEGRAM_CAMBIOS_PRO=true`. El respaldo diario de pagos no
 incluye las tablas de envíos (son operativas, no financieras).
 
 ## Cierre pendiente con pagos reales
@@ -167,3 +167,13 @@ Referencias actuales: [Stars y successful_payment](https://core.telegram.org/bot
 [suscripciones](https://core.telegram.org/bots/api#botsubscriptionupdated),
 [cancelación](https://core.telegram.org/bots/api#edituserstarsubscription),
 [reembolsos](https://core.telegram.org/bots/api#refundstarpayment).
+
+
+## Credibilidad v4 — listo para deploy
+
+- Migración aplicada: `20260927003755_telegram_stars_credibilidad.sql`.
+- La base bloquea reescritura de campos predictivos; la calificación sigue permitida.
+- Confianza visible: Baja / Media / Alta, acompañada de referencia histórica real.
+- Los favoritos PRO pueden recibir aviso si cambia el favorito del modelo o la lectura se mueve al menos 5 puntos porcentuales.
+- El seguimiento vive separado de la predicción oficial y no la modifica.
+- `TELEGRAM_CAMBIOS_PRO` permanece apagado hasta el deploy y smoke test.
