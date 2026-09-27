@@ -3,6 +3,12 @@ on:
   schedule:
     - cron: '*/10 * * * *'
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/telegram-resultados-pro.yml'
+      - 'scripts/enviar-resultados-pro.mjs'
+      - 'salida/stars/**'
 permissions:
   contents: read
 concurrency:
