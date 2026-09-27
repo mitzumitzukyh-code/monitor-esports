@@ -26,7 +26,9 @@ const PRED = {
 
 const respuesta = (cuerpo) => ({ ok: true, json: async () => cuerpo });
 
-test('avisarTelegram: manda por Telegram y marca SUS columnas, no las de Discord', async () => {
+test('avisarTelegram: sólo con opt-in explícito manda predicción legacy y marca SUS columnas', async () => {
+  const anterior = process.env.PUBLIC_PREDICTIONS_ENABLED;
+  process.env.PUBLIC_PREDICTIONS_ENABLED = 'true';
   const llamadas = { telegram: [], parches: [] };
 
   const fetchImpl = async (url, opts) => {
@@ -78,6 +80,26 @@ test('avisarTelegram: manda por Telegram y marca SUS columnas, no las de Discord
   const columna = Object.keys(llamadas.parches[0].body)[0];
   assert.match(columna, /avisado_telegram_prediccion_en/, `marcó la columna equivocada: ${columna}`);
   assert.equal(r.enviados[0].enviado, true);
+  if (anterior === undefined) delete process.env.PUBLIC_PREDICTIONS_ENABLED;
+  else process.env.PUBLIC_PREDICTIONS_ENABLED = anterior;
+});
+
+test('avisarTelegram: por defecto no publica predicciones previas', async () => {
+  const anterior = process.env.PUBLIC_PREDICTIONS_ENABLED;
+  delete process.env.PUBLIC_PREDICTIONS_ENABLED;
+  const llamadas = [];
+  const fetchImpl = async (url) => {
+    if (String(url).includes('api.telegram.org')) llamadas.push(String(url));
+    return respuesta({ results: [{ id: 111, name: 'Team Falcons' }, { id: 222, name: 'GG' }] });
+  };
+  const r = await avisarTelegram('dota2', {
+    fetchImpl,
+    fetchImplSupabase: async (url) => String(url).includes('eslo_predicciones?select') ? respuesta([PRED]) : respuesta([]),
+  });
+  assert.equal(r.enviados.length, 0);
+  assert.equal(llamadas.length, 0);
+  if (anterior === undefined) delete process.env.PUBLIC_PREDICTIONS_ENABLED;
+  else process.env.PUBLIC_PREDICTIONS_ENABLED = anterior;
 });
 
 // Acá vivían las pruebas de fotosDe(), el álbum de logos. La función se
