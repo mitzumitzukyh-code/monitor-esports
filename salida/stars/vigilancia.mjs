@@ -4,7 +4,11 @@ export async function comprobarStars({ url, api, diagnostico, fetchImpl = fetch 
   await Promise.all([
     comprobar('Receptor HTTPS', async () => {
       const r = await fetchImpl(url.replace(/\/telegram$/, '/health'), { signal: AbortSignal.timeout(8000) });
-      if (!r.ok || (await r.json()).ok !== true) throw Error();
+      if (!r.ok) throw Error();
+      const salud = await r.json();
+      // En el bot COMERCIAL, "sano pero compras apagadas" también es una caída:
+      // el usuario podría ver PRO pero no completar la compra.
+      if (salud.ok !== true || salud.compras_habilitadas !== true) throw Error();
       const cerrado = await fetchImpl(url, { method: 'POST', body: '{}', signal: AbortSignal.timeout(8000) });
       if (cerrado.status !== 403) throw Error();
     }),
