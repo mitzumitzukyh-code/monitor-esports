@@ -60,11 +60,23 @@ for (const [nombre, archivo] of Object.entries(fotos)) {
 await writeFile(resolve(raiz, 'salida/stars/marca.mjs'),
   '// Pack aprobado por el propietario. file_id reutilizables de este bot; sin credenciales.\n' +
   `export const MARCA = ${JSON.stringify(marca, null, 2)};\n`);
+const avatarAprobado = Buffer.from((await readFile(resolve(raiz, 'assets/telegram/avatar-aprobado.b64'), 'utf8')).trim(), 'base64');
 await multipart('setMyProfilePhoto', { photo: { type: 'static', photo: 'attach://archivo' } },
-  'avatar.jpg', await readFile(resolve(pack, 'avatar.jpg')), 'image/jpeg');
-const descripcion = 'Predicciones y estadísticas para entender cada partido.\nCS2 · Dota 2 · LoL · Valorant\n\nPRO: 250 Stars cada 30 días, con renovación automática.\nUn análisis: 50 Stars, pago único.\n\nEmpieza con los botones del menú. Soporte: @mitzukyhs.';
-const breve = 'Predicciones, estadísticas y resultados de eSports. Planes y análisis disponibles en Telegram.';
+  'avatar.jpg', avatarAprobado, 'image/jpeg');
+const nombre = 'Monitor eSports';
+const descripcion = [
+  'Tu bot de predicciones y estadísticas de eSports.',
+  'CS2 · Dota 2 · LoL · Valorant',
+  '',
+  '🎁 FREE: 1 predicción diaria e historial actualizado.',
+  '👑 PRO: 250 Stars / 30 días · renovación automática.',
+  '🎯 Análisis individual: 50 Stars · pago único.',
+  '',
+  'Contexto, no solo predicciones. Soporte: @mitzukyhs.',
+].join('\n');
+const breve = 'Predicciones, estadísticas y resultados de CS2, Dota 2, LoL y Valorant. FREE, PRO y análisis por partido.';
 for (const language_code of ['', 'es']) {
+  await api('setMyName', { name: nombre, language_code });
   await api('setMyDescription', { description: descripcion, language_code });
   await api('setMyShortDescription', { short_description: breve, language_code });
   await api('setMyCommands', { commands: COMANDOS, language_code });
