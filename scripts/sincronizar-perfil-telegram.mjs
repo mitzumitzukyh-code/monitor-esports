@@ -42,7 +42,7 @@ await api('setChatMenuButton', { menu_button: { type: 'commands' } });
 
 const b64 = (await readFile(resolve(raiz, 'assets/telegram/avatar-aprobado.b64'), 'utf8')).trim();
 const bytes = Buffer.from(b64, 'base64');
-if (bytes.length < 10000 || bytes.length > 10 * 1024 * 1024) throw new Error('Avatar comercial inválido');
+if (bytes.length < 1024 || bytes.length > 10 * 1024 * 1024) throw new Error('Avatar comercial inválido');
 const form = new FormData();
 form.set('photo', JSON.stringify({ type: 'static', photo: 'attach://avatar' }));
 form.set('avatar', new Blob([bytes], { type: 'image/jpeg' }), 'monitor-esports.jpg');
