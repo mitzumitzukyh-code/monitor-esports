@@ -1,0 +1,34 @@
+name: Sincronizar perfil comercial Telegram
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'salida/stars/bot.mjs'
+      - 'salida/stars/comandos.mjs'
+      - 'scripts/sincronizar-perfil-telegram.mjs'
+      - 'scripts/configurar-marca-telegram.mjs'
+      - 'assets/telegram/avatar-aprobado.b64'
+      - '.github/workflows/telegram-brand-sync.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: telegram-brand-sync
+  cancel-in-progress: false
+jobs:
+  sincronizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_PRO_STARS: '250'
+      TELEGRAM_MATCH_STARS: '50'
+      TELEGRAM_PRO_RECURRING: 'true'
+      TELEGRAM_TEST_ENV: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Aplicar perfil aprobado al bot comercial
+        run: node scripts/sincronizar-perfil-telegram.mjs
