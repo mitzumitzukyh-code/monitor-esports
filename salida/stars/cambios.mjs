@@ -12,12 +12,12 @@ export function mensajeCambioModelo(c,mapa=new Map()) {
     ? `El favorito del modelo cambió: <b>${esc(favAntes)}</b> → <b>${esc(favAhora)}</b>.`
     : `<b>${esc(favAhora)}</b>: ${pa}% → ${pn}%.`;
   return [
-    '🔔 <b>Cambio en un favorito</b>',
+    '🔔 <b>Cambio en la predicción</b>',
     `${esc(JUEGOS[c.juego]??c.juego)} · ${esc(nombreEncuentro(c,mapa))}`,
     cambio,
     `${esc(fechaPartido(c.inicio_programado))} · ${zonaPublica(c.inicio_programado)}`,
     '',
-    '🔒 La predicción oficial sigue congelada; este aviso muestra una lectura posterior del modelo.',
+    '🔒 La predicción oficial que viste sigue congelada; este aviso te informa que el análisis posterior cambió.',
   ].join('\n');
 }
 
