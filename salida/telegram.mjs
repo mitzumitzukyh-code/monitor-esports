@@ -22,7 +22,7 @@ export function esc(s) {
 
 export function recortar(texto, limite = LIMITE) {
   if (texto.length <= limite) return texto;
-  return texto.slice(0, limite - 40).trimEnd() + '\n… (recortado, ver el panel)';
+  return texto.slice(0, limite - 24).trimEnd() + '\n… (recortado)';
 }
 
 export async function enviar(texto, {
