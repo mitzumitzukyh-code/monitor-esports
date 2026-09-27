@@ -1,0 +1,33 @@
+name: Perfil comercial Telegram
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'assets/telegram/avatar-approved.jpg'
+      - 'salida/stars/perfil.mjs'
+      - 'salida/stars/comandos.mjs'
+      - 'scripts/configurar-perfil-telegram.mjs'
+      - '.github/workflows/telegram-perfil-comercial.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: telegram-perfil-comercial
+  cancel-in-progress: false
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Actualizar nombre, descripción, comandos y avatar
+        run: node scripts/configurar-perfil-telegram.mjs --avatar
