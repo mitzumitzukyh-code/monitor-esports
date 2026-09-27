@@ -1,8 +1,9 @@
 import { esc } from '../telegram.mjs';
 import { JUEGOS, fechaPartido, formatoSerie, zonaPublica } from './partidos.mjs';
+import { nivelConfianza, textoCalibracion } from './credibilidad.mjs';
 
 // Sólo presenta predicciones guardadas. No recalcula ni modifica el motor.
-export function informePremium(p, historial, nombre = (id) => `#${id}`) {
+export function informePremium(p, historial, nombre = (id) => `#${id}`, calibracion = null) {
   const resultados = historial.filter(f => ['ganaA', 'ganaB'].includes(f.resultado_real) &&
     (!f.inicio_programado || Date.parse(f.inicio_programado) < Date.parse(p.inicio_programado)))
     .sort((a,b) => Date.parse(b.inicio_programado) - Date.parse(a.inicio_programado) ||
@@ -21,6 +22,8 @@ export function informePremium(p, historial, nombre = (id) => `#${id}`) {
   const nombreA = esc(nombre(p.equipo_a)), nombreB = esc(nombre(p.equipo_b));
   const mayorA = Number(p.prob_a) >= 0.5;
   const a = forma(p.equipo_a), b = forma(p.equipo_b), preferido = mayorA ? a : b;
+  const confianza = p.congelada_en ? nivelConfianza(p.prob_a) : null;
+  const calibracionTexto = confianza ? textoCalibracion(calibracion) : '';
   const sinDatos = 'Sin datos suficientes';
   const formaTexto = f => f.total ? `${f.victorias} de ${f.total} series ganadas` : sinDatos;
   return [
@@ -29,6 +32,9 @@ export function informePremium(p, historial, nombre = (id) => `#${id}`) {
     `📅 ${fechaPartido(p.inicio_programado)} · ${zonaPublica(p.inicio_programado)}`,
     formatoSerie(p.formato),
     p.competicion ? `Competición: ${esc(p.competicion)}` : '',
+    p.congelada_en && p.creada_en ? `🔒 Predicción registrada: ${fechaPartido(p.creada_en)} · ${zonaPublica(p.creada_en)}` : '',
+    confianza ? `🎚️ Confianza del modelo: <b>${confianza}</b>` : '',
+    calibracionTexto,
     probValida ? `\n📊 <b>Probabilidad: ${Math.max(probA,100-probA)}% · Forma: ${preferido.total ? `${preferido.victorias}/${preferido.total}` : 'Sin datos'} · H2H: ${h2h.length ? `${ganadosA}–${h2h.length-ganadosA}` : 'Sin datos'}</b>` : '',
     probValida && probA === 50 && Number(p.prob_a) !== 0.5 ? 'Los porcentajes se muestran redondeados.' : '',
     '\n<b>Probabilidades estimadas</b>',
