@@ -52,7 +52,10 @@ const foto = await fetch(`https://api.telegram.org/bot${config.token}/setMyProfi
   signal: AbortSignal.timeout(20000),
 });
 const fotoJson = await foto.json();
-if (!foto.ok || fotoJson.ok !== true) throw new Error(`Telegram setMyProfilePhoto: ${foto.status}`);
+if (!foto.ok || fotoJson.ok !== true) {
+  const detalle = typeof fotoJson?.description === 'string' ? fotoJson.description.slice(0, 180) : 'sin detalle';
+  throw new Error(`Telegram setMyProfilePhoto: ${foto.status} · ${detalle}`);
+}
 
 const [n, d, s, menu] = await Promise.all([
   api('getMyName', {}),
