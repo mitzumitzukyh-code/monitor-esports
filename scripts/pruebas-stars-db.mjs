@@ -14,12 +14,15 @@ before(async()=>{
   db=new PGlite();
   await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
     create table public.eslo_predicciones(match_id bigint primary key, juego text, equipo_a bigint, equipo_b bigint,
-      prob_a numeric, resultado_real text, inicio_programado timestamptz, calificada_en timestamptz);
+      inicio_programado timestamptz, formato text, motor text, prob_a numeric, prob_b numeric,
+      rating_a numeric, rd_a numeric, rating_b numeric, rd_b numeric, predicha_en timestamptz,
+      resultado_real text, marcador_a integer, marcador_b integer, brier numeric, calificada_en timestamptz,
+      tier text, torneo_id bigint);
     insert into public.eslo_predicciones(match_id) values (20),(21);
     grant usage on schema public to anon,authenticated,service_role;
     grant select on public.eslo_predicciones to service_role;`);
-  for (const m of ['20260926174331_telegram_stars','20260926181029_telegram_stars_operacion','20260926230000_telegram_stars_resultados',
-    '20260927002000_telegram_stars_engagement'])
+  for (const m of ['20260926174331_telegram_stars','20260926181029_telegram_stars_operacion','20260927003751_telegram_stars_resultados',
+    '20260927003753_telegram_stars_engagement','20260927003755_telegram_stars_credibilidad'])
     await db.exec(await readFile(new URL(`../supabase/migrations/${m}.sql`,import.meta.url),'utf8'));
 });
 after(async()=>db?.close());
@@ -451,6 +454,55 @@ test('engagement: RPC y tablas privadas no son accesibles para anon/authenticate
     try {
       await assert.rejects(engagementSQL('metricas',{}),/permission denied/);
       await assert.rejects(db.query('select * from public.eslo_stars_favoritos'),/permission denied/);
+    } finally { await db.exec('reset role'); }
+  }
+});
+
+
+const cambiosSQL=async(a,d={})=>(await db.query(
+  'select public.eslo_stars_cambios($1,$2::jsonb) as r',[a,JSON.stringify(d)])).rows[0].r;
+
+test('credibilidad DB: resultado puede calificarse pero la predicción no puede reescribirse',async()=>{
+  const id=++partidoSeq;
+  await db.query(`insert into eslo_predicciones(match_id,juego,equipo_a,equipo_b,prob_a,prob_b,inicio_programado,predicha_en,motor)
+    values($1,'cs2',$2,$3,0.70,0.30,now()+interval '2 hours',now()-interval '1 minute','glicko2')`,[id,id*10,id*10+1]);
+  await db.query("update eslo_predicciones set resultado_real='ganaA',calificada_en=now() where match_id=$1",[id]);
+  assert.equal((await db.query('select resultado_real from eslo_predicciones where match_id=$1',[id])).rows[0].resultado_real,'ganaA');
+  await assert.rejects(db.query('update eslo_predicciones set prob_a=0.2 where match_id=$1',[id]),/prediccion_inmutable/);
+  await assert.rejects(db.query("update eslo_predicciones set equipo_a=999 where match_id=$1",[id]),/prediccion_inmutable/);
+});
+
+test('credibilidad DB: cambio menor no avisa; >=5 puntos sí y se deduplica por usuario',async()=>{
+  const o=await pro(); const u=o.datos.user_id; const id=++partidoSeq;
+  await db.query(`insert into eslo_predicciones(match_id,juego,equipo_a,equipo_b,prob_a,prob_b,inicio_programado,predicha_en,motor)
+    values($1,'lol',$2,$3,0.70,0.30,now()+interval '3 hours',now()-interval '1 minute','glicko2')`,[id,id*10,id*10+1]);
+  await engagementSQL('favorito_agregar',{user_id:u,match_id:id});
+  await cambiosSQL('observar',{filas:[{match_id:id,prob_a:0.73}]});
+  assert.equal((await db.query('select count(*)::int n from eslo_stars_cambios_modelo where match_id=$1',[id])).rows[0].n,0);
+  await cambiosSQL('observar',{filas:[{match_id:id,prob_a:0.76}]});
+  assert.equal((await db.query('select count(*)::int n from eslo_stars_cambios_modelo where match_id=$1',[id])).rows[0].n,1);
+  const preparado=await cambiosSQL('preparar',{});
+  const cambio=preparado.cambios.find(x=>Number(x.match_id)===id);
+  assert.ok(cambio); assert.ok(cambio.destinatarios.map(Number).includes(u));
+  assert.equal((await cambiosSQL('reservar',{cambio_id:cambio.cambio_id,user_id:u})).ok,true);
+  assert.equal((await cambiosSQL('reservar',{cambio_id:cambio.cambio_id,user_id:u})).ok,false);
+  await cambiosSQL('confirmar',{cambio_id:cambio.cambio_id,user_id:u});
+});
+
+test('credibilidad DB: si cambia el favorito también crea evento aunque el salto sea pequeño',async()=>{
+  const id=++partidoSeq;
+  await db.query(`insert into eslo_predicciones(match_id,juego,equipo_a,equipo_b,prob_a,prob_b,inicio_programado,predicha_en,motor)
+    values($1,'valorant',$2,$3,0.51,0.49,now()+interval '3 hours',now()-interval '1 minute','glicko2')`,[id,id*10,id*10+1]);
+  await cambiosSQL('observar',{filas:[{match_id:id,prob_a:0.49}]});
+  assert.equal((await db.query('select count(*)::int n from eslo_stars_cambios_modelo where match_id=$1',[id])).rows[0].n,1);
+});
+
+test('credibilidad DB: RPC y tablas de cambios están cerradas a anon/authenticated',async()=>{
+  for(const rol of ['anon','authenticated']) {
+    await db.exec(`set role ${rol}`);
+    try {
+      await assert.rejects(cambiosSQL('preparar',{}),/permission denied/);
+      await assert.rejects(db.query('select * from public.eslo_stars_cambios_modelo'),/permission denied/);
     } finally { await db.exec('reset role'); }
   }
 });

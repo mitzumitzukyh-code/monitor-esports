@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { selloCongelado, referenciaHistorica, textoHistorial, textoGratis,
+import { selloCongelado, nivelConfianza, referenciaHistorica, textoHistorial, textoGratis,
   despacharAlertas, despacharResumen } from '../salida/stars/engagement.mjs';
 
 const p={match_id:20,juego:'cs2',equipo_a:1,equipo_b:2,prob_a:0.67,
@@ -12,10 +12,11 @@ test('sello congelado usa la hora guardada y no expone internals del modelo',()=
   assert.match(t,/Predicción congelada/); assert.match(t,/guardada/);
   assert.doesNotMatch(t,/glicko|modelo|motor|rating|algoritmo/i);
 });
-test('referencia histórica no etiqueta confianza con muestra pequeña',()=>{
-  assert.match(referenciaHistorica({banda:{n:8,porcentaje:62.5,desde:.6,hasta:.7}}),/muestra pequeña/);
-  assert.doesNotMatch(referenciaHistorica({banda:{n:8,porcentaje:62.5,desde:.6,hasta:.7}}),/confianza (alta|media|baja)/i);
-  assert.match(referenciaHistorica({banda:{n:30,porcentaje:70,desde:.6,hasta:.7}}),/70% de acierto/);
+test('referencia histórica separa nivel del modelo y tamaño de muestra',()=>{
+  assert.equal(nivelConfianza(.67),'Media');
+  assert.match(referenciaHistorica({banda:{n:8,porcentaje:62.5,desde:.6,hasta:.7}},.67),/muestra pequeña/);
+  assert.match(referenciaHistorica({banda:{n:8,porcentaje:62.5,desde:.6,hasta:.7}},.67),/Confianza del modelo<\/b> · Media/);
+  assert.match(referenciaHistorica({banda:{n:30,porcentaje:70,desde:.6,hasta:.7}},.67),/70% de acierto/);
 });
 test('historial dinámico muestra rendimiento por juego y también errores',()=>{
   const t=textoHistorial({total:10,aciertos:6,porcentaje:60,por_juego:[

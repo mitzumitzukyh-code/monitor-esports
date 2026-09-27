@@ -1,5 +1,5 @@
 // Envía a PRO vigente los resultados agrupados en ventanas de 30 minutos.
-// Apagado salvo TELEGRAM_RESULTADOS_PRO=true; requiere la migración 20260926230000.
+// Apagado salvo TELEGRAM_RESULTADOS_PRO=true; requiere la migración 20260927003751.
 import { rpc } from '../datos/supabase.mjs';
 import { clienteTelegram } from '../salida/stars/api.mjs';
 import { nombresParaPartidos } from '../salida/stars/catalogo.mjs';
