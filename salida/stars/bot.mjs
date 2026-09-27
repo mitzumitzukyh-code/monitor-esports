@@ -174,7 +174,7 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
       almacen.metricas ? almacen.metricas(p.juego, p.prob_a).catch(() => null) : Promise.resolve(null),
     ]);
     const nombre = (teamId) => mapa.get(teamId)?.nombre ?? `#${teamId}`;
-    const auditoria = [selloCongelado(p), referenciaHistorica(metricas)].filter(Boolean).join('\n');
+    const auditoria = [selloCongelado(p), referenciaHistorica(metricas, p.prob_a)].filter(Boolean).join('\n');
     return decir(id, informePremium(p, historial, nombre) + (auditoria ? `\n\n${auditoria}` : ''), markup(
       [boton('⭐ Guardar en Mis partidos', `favorito:${matchId}`)],
       [boton('Volver a partidos', regresar), boton('⭐ Mis partidos', 'mios')],
