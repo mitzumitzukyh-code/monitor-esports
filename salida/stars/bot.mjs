@@ -26,10 +26,10 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
     ...(reply_markup ? { reply_markup } : {}), ...(premium ? { protect_content: true } : {}),
   });
   const menu = () => markup(
-    [boton('Ver planes', 'planes'), boton('Ver partidos', 'partidos')],
-    [boton('🎁 Predicción FREE', 'gratis'), boton('⭐ Mis partidos', 'mios')],
-    [boton('📊 Historial', 'resultados'), boton('Mi estado', 'estado')],
-    [boton('Ayuda', 'paysupport')],
+    [boton('🎁 Ver FREE', 'gratis'), boton('👑 Ver PRO', 'pro')],
+    [boton('🎯 Comprar análisis', 'individual'), boton('📋 Ver partidos', 'partidos')],
+    [boton('📊 Resultados', 'resultados'), boton('⚙️ Mi estado', 'estado')],
+    [boton('❓ Soporte / Ayuda', 'paysupport')],
   );
   const volver = () => markup([boton('Menú principal', 'inicio')]);
   const elegirJuego = (id, individual = false) => {
@@ -87,7 +87,11 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
   }
   const bienvenida = (id) => presentar(id,
     '<b>Monitor eSports</b>\nPredicciones y estadísticas para entender cada partido.\n' +
-    'CS2 · Dota 2 · LoL · Valorant\n\nElige una opción para continuar.', 'bienvenida', menu());
+    '🎮 CS2 · Dota 2 · LoL · Valorant\n\n' +
+    '🎁 <b>FREE</b>\n• 1 predicción diaria\n• Historial actualizado\n\n' +
+    `👑 <b>PRO — ${config.pro ?? 250} Stars / 30 días</b>\n• Informes completos\n• Alertas previas\n• Mis partidos y favoritos\n• Resultados agrupados\n• Resumen diario\n• Cambios del modelo\n\n` +
+    `🎯 <b>Análisis individual — ${config.partido ?? 50} Stars</b>\n• Informe completo por partido\n• Probabilidades, contexto y estadísticas clave\n\n` +
+    '📊 <b>Contexto, no solo predicciones.</b>', 'bienvenida', menu());
   const soporte = () => config.soporte ? `Soporte de compras: ${esc(config.soporte)}. Envía el recibo y explica el problema.` : 'Las compras aún no están habilitadas.';
   const terminos = (id, producto = 'p') => presentar(id,
     (producto === 'p' ? `PRO · ${config.pro} Stars cada 30 días.${config.recurrente ? ' Renovación automática.' : ' Pago único.'}\n` :
