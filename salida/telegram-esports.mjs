@@ -118,11 +118,14 @@ export async function avisarTelegram(juego = 'cs2', { fetchImpl, fetchImplSupaba
   // Mismo criterio que Discord: sólo lo que no empezó y cae dentro de las
   // próximas 24 h. Lo de pasado mañana se avisa cuando se acerque.
   const limite = ahoraMs + HORAS_DE_ANTICIPACION * 3600 * 1000;
-  const nuevasPredichas = todas.filter((p) => {
+  // El canal legacy ya no regala el producto de pago. Sólo se habilita de
+  // forma explícita en un entorno controlado; producción comercial lo deja apagado.
+  const publicarPredicciones = process.env.PUBLIC_PREDICTIONS_ENABLED === 'true';
+  const nuevasPredichas = publicarPredicciones ? todas.filter((p) => {
     if (p.avisado_telegram_prediccion_en || p.resultado_real || !deTier(p)) return false;
     const arranca = new Date(p.inicio_programado).getTime();
     return arranca > ahoraMs && arranca <= limite;
-  });
+  }) : [];
   const nuevasCalificadas = todas.filter((p) => p.resultado_real && !p.avisado_telegram_resultado_en && deTier(p));
 
   const idsEquipos = [...nuevasPredichas, ...nuevasCalificadas].flatMap((p) => [p.equipo_a, p.equipo_b]);

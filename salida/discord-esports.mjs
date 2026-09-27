@@ -225,13 +225,15 @@ export async function avisar(juego = 'cs2', { fetchImpl, fetchImplSupabase } = {
   // Sólo se anuncia lo que todavía no empezó: avisar de una partida en curso
   // no le sirve a nadie y encima invita a pensar que se predijo tarde.
   const limite = ahoraMs + HORAS_DE_ANTICIPACION * 3600 * 1000;
-  const nuevasPredichas = todas.filter((p) => {
+  // El canal legacy ya no publica el contenido que sostiene PRO. Sólo se
+  // habilita explícitamente en un entorno controlado.
+  const publicarPredicciones = process.env.PUBLIC_PREDICTIONS_ENABLED === 'true';
+  const nuevasPredichas = publicarPredicciones ? todas.filter((p) => {
     if (p.avisado_prediccion_en || p.resultado_real || !deTier(p)) return false;
     const arranca = new Date(p.inicio_programado).getTime();
-    // Ni lo que ya empezó (avisarlo no le sirve a nadie y hace pensar que se
-    // predijo tarde) ni lo que falta mucho: eso se avisa cuando se acerque.
+    // Ni lo que ya empezó ni lo que falta mucho.
     return arranca > ahoraMs && arranca <= limite;
-  });
+  }) : [];
   const nuevasCalificadas = todas.filter((p) => p.resultado_real && !p.avisado_resultado_en && deTier(p));
 
   const idsEquipos = [...nuevasPredichas, ...nuevasCalificadas].flatMap((p) => [p.equipo_a, p.equipo_b]);

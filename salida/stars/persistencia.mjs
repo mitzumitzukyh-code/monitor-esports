@@ -6,9 +6,11 @@ const CAMPOS_PUBLICOS = 'match_id,juego,equipo_a,equipo_b,inicio_programado,form
 export function almacenStars({ fetchImpl = fetch } = {}) {
   const accion = (nombre, datos) => rpc('eslo_stars', { p_accion: nombre, p_datos: datos }, { fetchImpl });
   const engagement = (nombre, datos = {}) => rpc('eslo_stars_engagement', { p_accion: nombre, p_datos: datos }, { fetchImpl });
+  const limite = (userId) => rpc('eslo_stars_rate_limit', { p_user_id: userId }, { fetchImpl });
   return {
     accion,
     engagement,
+    limite,
     metricas: (juego = null, prob_a = null) => engagement('metricas', {
       ...(juego ? { juego } : {}),
       ...(prob_a != null && Number.isFinite(Number(prob_a)) ? { prob_a: Number(prob_a) } : {}),
