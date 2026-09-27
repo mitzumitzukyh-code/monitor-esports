@@ -85,13 +85,13 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
     }
     return decir(id, text, reply_markup);
   }
-  const bienvenida = (id) => presentar(id,
+  const bienvenida = (id) => decir(id,
     '<b>Monitor eSports</b>\nPredicciones y estadísticas para entender cada partido.\n' +
     '🎮 CS2 · Dota 2 · LoL · Valorant\n\n' +
     '🎁 <b>FREE</b>\n• 1 predicción diaria\n• Historial actualizado\n\n' +
     `👑 <b>PRO — ${config.pro ?? 250} Stars / 30 días</b>\n• Informes completos\n• Alertas previas\n• Mis partidos y favoritos\n• Resultados agrupados\n• Resumen diario\n• Cambios del modelo\n\n` +
     `🎯 <b>Análisis individual — ${config.partido ?? 50} Stars</b>\n• Informe completo por partido\n• Probabilidades, contexto y estadísticas clave\n\n` +
-    '📊 <b>Contexto, no solo predicciones.</b>', 'bienvenida', menu());
+    '📊 <b>Contexto, no solo predicciones.</b>', menu());
   const soporte = () => config.soporte ? `Soporte de compras: ${esc(config.soporte)}. Envía el recibo y explica el problema.` : 'Las compras aún no están habilitadas.';
   const terminos = (id, producto = 'p') => presentar(id,
     (producto === 'p' ? `PRO · ${config.pro} Stars cada 30 días.${config.recurrente ? ' Renovación automática.' : ' Pago único.'}\n` :
