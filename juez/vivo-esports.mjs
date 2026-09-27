@@ -15,7 +15,7 @@
 //      desde la última partida aplicada, no desde el principio.
 
 import { fileURLToPath } from 'node:url';
-import { seleccionar, upsert, parchear } from '../datos/supabase.mjs';
+import { seleccionar, upsert, parchear, rpc } from '../datos/supabase.mjs';
 import { DISCIPLINAS, normalizar, esUtilizable } from '../datos/juegos/bo3.mjs';
 import { fetchConReintentos } from '../datos/reintentar.mjs';
 import { probabilidadGanar, actualizar } from '../motor/glicko2.mjs';
@@ -211,12 +211,35 @@ export async function predecirProximas(
   // Garantía 2: lo ya predicho no se toca.
   const yaEstan = new Set(existentes.map((e) => e.match_id));
   const nuevas = noEmpezadas.filter((p) => !yaEstan.has(p.matchId));
-  if (nuevas.length === 0) return { predichas: 0, yaEmpezaron, yaPredichas: yaEstan.size };
+  const seguirCambios = process.env.TELEGRAM_CAMBIOS_PRO === 'true';
+  if (nuevas.length === 0 && !seguirCambios) {
+    return { predichas: 0, yaEmpezaron, yaPredichas: yaEstan.size };
+  }
 
   const inicial = estadoInicialDe(cfg);
   const porEquipo = new Map(
     filasRatings.map((f) => [f.team_id, { rating: Number(f.rating), rd: Number(f.rd), vol: Number(f.vol) }]),
   );
+
+  // Para favoritos PRO se calcula una lectura ACTUAL aparte. Nunca se escribe
+  // sobre eslo_predicciones: el snapshot oficial permanece congelado. El RPC
+  // sólo crea un evento si el favorito cambia o la probabilidad se mueve >=5 pp.
+  if (seguirCambios && noEmpezadas.length) {
+    const observadas = noEmpezadas.map((p) => {
+      const ea = porEquipo.get(p.equipoA) ?? inicial;
+      const eb = porEquipo.get(p.equipoB) ?? inicial;
+      return { match_id:p.matchId, prob_a:probabilidadGanar(ea,eb) };
+    });
+    try {
+      await rpc('eslo_stars_credibilidad',
+        { p_accion:'observar', p_datos:{ filas:observadas } },
+        { fetchImpl:fetchImplSupabase });
+    } catch (e) {
+      // La monetización/seguimiento nunca puede tumbar el ciclo predictivo.
+      console.warn(`SEGUIMIENTO_PRO ${juego}: ${e.message}`);
+    }
+  }
+  if (nuevas.length === 0) return { predichas: 0, yaEmpezaron, yaPredichas: yaEstan.size };
 
   const filas = nuevas.map((p) => {
     const ea = porEquipo.get(p.equipoA) ?? inicial;
