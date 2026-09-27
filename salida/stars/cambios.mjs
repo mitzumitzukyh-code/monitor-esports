@@ -17,7 +17,7 @@ export function mensajeCambioModelo(c,mapa=new Map()) {
     cambio,
     `${esc(fechaPartido(c.inicio_programado))} · ${zonaPublica(c.inicio_programado)}`,
     '',
-    '🔒 La predicción oficial que viste sigue congelada; este aviso te informa que el análisis posterior cambió.',
+    '🔒 La predicción oficial sigue congelada; este aviso te informa que el análisis posterior cambió.',
   ].join('\n');
 }
 
