@@ -4,6 +4,12 @@ on:
     # 8:15 AM en UTC−4 fijo.
     - cron: '15 12 * * *'
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/telegram-resumen-pro.yml'
+      - 'scripts/enviar-resumen-pro.mjs'
+      - 'salida/stars/**'
 permissions:
   contents: read
 concurrency:
