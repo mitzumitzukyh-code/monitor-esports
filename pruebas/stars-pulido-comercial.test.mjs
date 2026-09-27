@@ -45,7 +45,7 @@ test('Resultados de hoy muestra sólo la vista diaria y separa Historial', async
       ['cs2:1', { nombre: 'Alpha' }], ['cs2:2', { nombre: 'Beta' }],
     ]),
   });
-  await f.bot.procesar(msg('/resultados'));
+  await f.bot.procesar(msg('/hoy'));
   const m = f.llamadas.find(x => x.metodo === 'sendMessage').datos;
   assert.match(m.text, /Resultados de hoy/);
   assert.match(m.text, /Alpha vs\. Beta/);
