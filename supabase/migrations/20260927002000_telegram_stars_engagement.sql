@@ -61,7 +61,7 @@ declare
   v_conf double precision;
   v_low double precision;
   v_high double precision;
-  dia date := (now() at time zone 'Etc/GMT+4')::date;
+  v_dia date := (now() at time zone 'Etc/GMT+4')::date;
   pedido_dia date;
   inicio_dia timestamptz;
   fin_dia timestamptz;
@@ -131,15 +131,15 @@ begin
   end if;
 
   if p_accion = 'preparar_resumen' then
-    inicio_dia := dia::timestamp at time zone 'Etc/GMT+4';
-    fin_dia := (dia + 1)::timestamp at time zone 'Etc/GMT+4';
-    ayer_inicio := (dia - 1)::timestamp at time zone 'Etc/GMT+4';
+    inicio_dia := v_dia::timestamp at time zone 'Etc/GMT+4';
+    fin_dia := (v_dia + 1)::timestamp at time zone 'Etc/GMT+4';
+    ayer_inicio := (v_dia - 1)::timestamp at time zone 'Etc/GMT+4';
     ayer_fin := inicio_dia;
     return jsonb_build_object(
-      'ok',true,'dia',dia,
+      'ok',true,'dia',v_dia,
       'destinatarios',coalesce((select jsonb_agg(u.user_id order by u.user_id)
         from public.eslo_stars_usuarios u where u.premium_expira_en > now()
-          and not exists(select 1 from public.eslo_stars_resumen_envios e where e.user_id=u.user_id and e.dia=dia)), '[]'::jsonb),
+          and not exists(select 1 from public.eslo_stars_resumen_envios e where e.user_id=u.user_id and e.dia=v_dia)), '[]'::jsonb),
       'conteos',jsonb_build_object(
         'cs2',(select count(*) from public.eslo_predicciones p where p.juego='cs2' and p.inicio_programado>=greatest(now(),inicio_dia) and p.inicio_programado<fin_dia),
         'dota2',(select count(*) from public.eslo_predicciones p where p.juego='dota2' and p.inicio_programado>=greatest(now(),inicio_dia) and p.inicio_programado<fin_dia),
@@ -163,18 +163,18 @@ begin
     from public.eslo_stars_usuarios where user_id=uid;
 
   if p_accion = 'gratis' then
-    select g.match_id into elegido from public.eslo_stars_gratis_diario g where g.user_id=uid and g.dia=dia;
+    select g.match_id into elegido from public.eslo_stars_gratis_diario g where g.user_id=uid and g.dia=v_dia;
     if elegido is null then
       select p.match_id into elegido from public.eslo_predicciones p
         where p.inicio_programado > now() and p.inicio_programado <= now()+interval '36 hours'
           and p.prob_a between 0 and 1 and p.juego in ('cs2','dota2','lol','valorant')
         order by p.inicio_programado,p.match_id limit 1;
-      if elegido is null then return jsonb_build_object('ok',false,'motivo','sin_partidos','dia',dia); end if;
-      insert into public.eslo_stars_gratis_diario(user_id,dia,match_id) values(uid,dia,elegido)
+      if elegido is null then return jsonb_build_object('ok',false,'motivo','sin_partidos','dia',v_dia); end if;
+      insert into public.eslo_stars_gratis_diario(user_id,dia,match_id) values(uid,v_dia,elegido)
         on conflict(user_id,dia) do nothing;
-      select g.match_id into elegido from public.eslo_stars_gratis_diario g where g.user_id=uid and g.dia=dia;
+      select g.match_id into elegido from public.eslo_stars_gratis_diario g where g.user_id=uid and g.dia=v_dia;
     end if;
-    return jsonb_build_object('ok',true,'dia',dia,'match_id',elegido);
+    return jsonb_build_object('ok',true,'dia',v_dia,'match_id',elegido);
   elsif p_accion = 'favoritos' then
     return jsonb_build_object('ok',true,'premium',premium,'match_ids',coalesce((select jsonb_agg(f.match_id order by p.inicio_programado,p.match_id)
       from public.eslo_stars_favoritos f join public.eslo_predicciones p using(match_id)
@@ -213,7 +213,7 @@ begin
     return jsonb_build_object('ok',true);
   elsif p_accion in ('reservar_resumen','confirmar_resumen','liberar_resumen','descartar_resumen') then
     pedido_dia := nullif(p_datos->>'dia','')::date;
-    if pedido_dia is null or pedido_dia<>dia then return jsonb_build_object('ok',false,'motivo','dia'); end if;
+    if pedido_dia is null or pedido_dia<>v_dia then return jsonb_build_object('ok',false,'motivo','dia'); end if;
     if p_accion='reservar_resumen' then
       if not premium then return jsonb_build_object('ok',false,'motivo','sin_pro'); end if;
       insert into public.eslo_stars_resumen_envios(user_id,dia,estado) values(uid,pedido_dia,'reservado') on conflict do nothing;
