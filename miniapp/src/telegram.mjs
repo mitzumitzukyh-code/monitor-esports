@@ -4,8 +4,8 @@
 // pruebas) el adaptador sigue funcionando y no hace nada: la app se tiene que
 // poder abrir y revisar sin el cliente de Telegram.
 //
-// Las compras siguen apagadas. Para datos reales, el adaptador expone únicamente
-// el initData crudo; la identidad se valida SIEMPRE en el servidor.
+// La identidad y la creación de facturas se validan SIEMPRE en el servidor.
+// Este adaptador sólo abre la factura nativa que entrega Telegram.
 
 const COLOR_FONDO = '#05070A';
 const COLOR_PANEL = '#080A0E';
@@ -87,6 +87,26 @@ export function crearTelegram(win = globalThis.window) {
       if (dentro && version('6.1')) app.openTelegramLink(url);
       else win?.open?.(url, '_blank', 'noopener');
       return true;
+    },
+
+    /** Abre una factura de Telegram Stars. El enlace viene firmado por Bot API. */
+    abrirFactura(url, alCerrar = () => {}) {
+      if (!/^https:\/\/t\.me\/(?:\$|invoice\/)[A-Za-z0-9_-]+$/.test(url)) return false;
+      if (dentro && version('6.1') && typeof app.openInvoice === 'function') {
+        app.openInvoice(url, (estado) => alCerrar(estado));
+        return true;
+      }
+      if (dentro && version('6.1') && typeof app.openTelegramLink === 'function') {
+        app.openTelegramLink(url);
+        return true;
+      }
+      win?.open?.(url, '_blank', 'noopener');
+      return true;
+    },
+
+    alerta(texto) {
+      if (dentro && version('6.2') && typeof app.showAlert === 'function') app.showAlert(String(texto));
+      else win?.alert?.(String(texto));
     },
 
     /** Cadena firmada que se manda al backend para validación. */
