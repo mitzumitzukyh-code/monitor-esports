@@ -102,7 +102,7 @@ function cuandoPartido(p, ahora) {
 
 function ladoTarjeta(p) {
   if (p.acceso === 'bloqueado') {
-    return `<span class="tarjeta__lado">${insignia('bloqueado')}<span class="tarjeta__nota">Probabilidad</span></span>`;
+    return `<span class="tarjeta__lado">${insignia('bloqueado')}<span class="tarjeta__nota">Disponible con PRO</span></span>`;
   }
   const f = favorito(p);
   if (!f) return '<span class="tarjeta__lado"><span class="tarjeta__nota">Pendiente</span></span>';
@@ -182,8 +182,12 @@ export function estadoError(mensaje) {
 
 export function estadoCargando() {
   return `<div class="estado estado--cargando" role="status" aria-live="polite">` +
-    `<img class="cargando" src="${ASSETS.cargando}" width="48" height="48" alt="">` +
-    '<p class="estado__texto">Cargando…</p></div>';
+    `<img class="cargando" src="${ASSETS.cargando}" width="40" height="40" alt="">` +
+    '<p class="estado__texto">Cargando partidos…</p>' +
+    '<div class="skeleton-lista" aria-hidden="true">' +
+      '<span class="skeleton-card"><i></i><b></b><b></b></span>' +
+      '<span class="skeleton-card"><i></i><b></b><b></b></span>' +
+    '</div></div>';
 }
 
 /** Chips de juego. `href(juego)` arma el enlace de cada filtro. */
