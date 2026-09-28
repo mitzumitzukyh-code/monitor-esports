@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createHmac } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { crearFuenteApi } from '../miniapp/src/datos/api.mjs';
 import { crearTelegram } from '../miniapp/src/telegram.mjs';
@@ -22,6 +23,19 @@ async function initFirmado({ authDate = AUTH, user = { id: 987654321, first_name
   const p = new URLSearchParams([...pares, ['hash', hash]]);
   return p.toString();
 }
+
+test('initData: el HMAC coincide con una implementación independiente de la fórmula oficial', async () => {
+  const pares = [
+    ['auth_date', String(AUTH)],
+    ['query_id', 'vector-independiente'],
+    ['user', JSON.stringify({ id: 123, first_name: 'A' })],
+  ];
+  const dataCheck = [...pares].sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${k}=${v}`).join('\n');
+  const secret = createHmac('sha256', 'WebAppData').update(TOKEN).digest();
+  const esperado = createHmac('sha256', secret).update(dataCheck).digest('hex');
+  assert.equal(await calcularHashInitData(pares, TOKEN), esperado);
+});
 
 test('initData: valida HMAC, edad e identidad desde la cadena firmada', async () => {
   const raw = await initFirmado();
