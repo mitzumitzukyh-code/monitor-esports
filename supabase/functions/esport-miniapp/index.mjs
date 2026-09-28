@@ -179,6 +179,172 @@ function equipo(mapa, juego, id) {
   return mapa.get(`${juego}:${id}`) ?? { id: Number(id), nombre: `Equipo #${id}`, logo: null };
 }
 
+const BO3_BASE = 'https://api.bo3.gg/api/v1';
+const HOST_MINIAPP = 'monitor-esports.vercel.app';
+
+function httpsUrl(valor) {
+  if (typeof valor !== 'string' || !valor) return null;
+  try {
+    const u = new URL(valor);
+    return u.protocol === 'https:' ? u : null;
+  } catch {
+    return null;
+  }
+}
+
+function youtubeId(...urls) {
+  for (const valor of urls) {
+    const u = httpsUrl(valor);
+    if (!u) continue;
+    let id = null;
+    if (u.hostname === 'youtu.be') id = u.pathname.split('/').filter(Boolean)[0] ?? null;
+    if (u.hostname.endsWith('youtube.com')) {
+      id = u.searchParams.get('v') ?? (u.pathname.match(/^\/embed\/([A-Za-z0-9_-]+)/)?.[1] ?? null);
+    }
+    if (id && /^[A-Za-z0-9_-]{6,32}$/.test(id)) return id;
+  }
+  return null;
+}
+
+function twitchChannel(...urls) {
+  for (const valor of urls) {
+    const u = httpsUrl(valor);
+    if (!u) continue;
+    if (u.hostname === 'player.twitch.tv') {
+      const canal = u.searchParams.get('channel');
+      if (canal && /^[A-Za-z0-9_]{2,64}$/.test(canal)) return canal;
+    }
+    if (u.hostname === 'twitch.tv' || u.hostname === 'www.twitch.tv') {
+      const canal = u.pathname.split('/').filter(Boolean)[0] ?? null;
+      if (canal && !['videos','directory','downloads'].includes(canal) && /^[A-Za-z0-9_]{2,64}$/.test(canal)) return canal;
+    }
+  }
+  return null;
+}
+
+function streamSeguro(stream) {
+  if (!stream || stream.blocked || stream.official !== true) return null;
+  const raw = httpsUrl(stream.raw_url)?.toString() ?? null;
+  const embedCrudo = httpsUrl(stream.embed_url)?.toString() ?? null;
+  const plataforma = Number(stream.platform);
+
+  if (plataforma === 2) {
+    const id = youtubeId(embedCrudo, raw);
+    if (!id) return null;
+    return {
+      plataforma: 'youtube',
+      embed_url: \`https://www.youtube-nocookie.com/embed/\${id}?rel=0&playsinline=1\`,
+      url: raw,
+      idioma: typeof stream.language === 'string' ? stream.language : null,
+      espectadores: Number.isFinite(Number(stream.viewers_number)) ? Number(stream.viewers_number) : 0,
+      oficial: true,
+    };
+  }
+
+  if (plataforma === 1) {
+    const canal = twitchChannel(embedCrudo, raw);
+    if (!canal) return null;
+    return {
+      plataforma: 'twitch',
+      embed_url: \`https://player.twitch.tv/?channel=\${encodeURIComponent(canal)}&parent=\${HOST_MINIAPP}&autoplay=false\`,
+      url: raw,
+      idioma: typeof stream.language === 'string' ? stream.language : null,
+      espectadores: Number.isFinite(Number(stream.viewers_number)) ? Number(stream.viewers_number) : 0,
+      oficial: true,
+    };
+  }
+
+  return null;
+}
+
+async function metadatosPartidasBo3(filas) {
+  const mapa = new Map();
+  const porJuego = new Map();
+  for (const row of filas) {
+    if (!JUEGOS.has(row.juego)) continue;
+    if (!porJuego.has(row.juego)) porJuego.set(row.juego, []);
+    porJuego.get(row.juego).push(Number(row.match_id));
+  }
+
+  await Promise.all([...porJuego].map(async ([juego, ids]) => {
+    const disciplina = DISCIPLINAS[juego];
+    if (!disciplina) return;
+    try {
+      const unicos = [...new Set(ids)].filter((id) => Number.isSafeInteger(id) && id > 0).slice(0, 50);
+      if (!unicos.length) return;
+      const url = BO3_BASE + '/matches?page[limit]=50' +
+        \`&filter[matches.discipline_id][eq]=\${disciplina}\` +
+        \`&filter[matches.id][in]=\${unicos.join(',')}\`;
+      const data = await pedirJson(url, { signal: AbortSignal.timeout(2500) });
+      for (const m of data?.results ?? []) {
+        if (m?.id && m?.slug) mapa.set(Number(m.id), {
+          slug: m.slug,
+          cobertura: Boolean(m.live_coverage),
+          status: m.status ?? null,
+        });
+      }
+    } catch {
+      // La portada no falla si la fuente de streams está temporalmente caída.
+    }
+  }));
+  return mapa;
+}
+
+async function directosEnVivo(filas, { ahora = Date.now() } = {}) {
+  const candidatas = filas
+    .filter((row) => {
+      const inicio = Date.parse(row.inicio_programado);
+      return Number.isFinite(inicio) && inicio <= ahora && inicio >= ahora - 8 * 3600_000 && !row.resultado_real;
+    })
+    .sort((a, b) => Date.parse(b.inicio_programado) - Date.parse(a.inicio_programado));
+
+  if (!candidatas.length) return [];
+
+  const meta = await metadatosPartidasBo3(candidatas);
+  const conCobertura = candidatas
+    .filter((row) => {
+      const m = meta.get(Number(row.match_id));
+      return m?.cobertura && (!m.status || m.status === 'live' || m.status === 'ongoing');
+    })
+    .slice(0, 6);
+
+  if (!conCobertura.length) return [];
+
+  const encontrados = await Promise.all(conCobertura.map(async (row) => {
+    const m = meta.get(Number(row.match_id));
+    try {
+      const detalle = await pedirJson(\`\${BO3_BASE}/matches/\${encodeURIComponent(m.slug)}\`, {
+        signal: AbortSignal.timeout(2500),
+      });
+      const streams = (detalle?.streams ?? [])
+        .map(streamSeguro)
+        .filter(Boolean)
+        .sort((a, b) => b.espectadores - a.espectadores);
+      return streams.length ? { row, stream: streams[0] } : null;
+    } catch {
+      return null;
+    }
+  }));
+
+  const seleccionados = encontrados.filter(Boolean).slice(0, 2);
+  if (!seleccionados.length) return [];
+
+  const filasSeleccionadas = seleccionados.map((x) => x.row);
+  const equipos = await resolverEquipos(filasSeleccionadas);
+  return seleccionados.map(({ row, stream }) => ({
+    match_id: Number(row.match_id),
+    juego: row.juego,
+    equipo_a: equipo(equipos, row.juego, row.equipo_a),
+    equipo_b: equipo(equipos, row.juego, row.equipo_b),
+    inicio_programado: row.inicio_programado,
+    plataforma: stream.plataforma,
+    embed_url: stream.embed_url,
+    url: stream.url,
+    idioma: stream.idioma,
+    oficial: true,
+  }));
+}
+
 async function normalizarFilas(filas, perfil, { incluirAnalisisId = null, ahora = Date.now() } = {}) {
   const equipos = await resolverEquipos(filas);
   const salida = [];
@@ -308,13 +474,15 @@ async function atender(req) {
 
   if (recurso === 'inicio') {
     const [a, h] = await Promise.all([abiertas(), cerradas({ limite: 6 })]);
-    const [proximos, recientes] = await Promise.all([
+    const [proximos, recientes, directos] = await Promise.all([
       normalizarFilas(a.slice(0, 8), perfil),
       normalizarFilas(h, perfil),
+      directosEnVivo(a).catch(() => []),
     ]);
     return json({ ok: true, data: {
       perfil,
       gratis: proximos.find((p) => p.match_id === perfil.gratis_hoy) ?? null,
+      directos,
       proximos: proximos.slice(0, 4),
       recientes,
     } });
