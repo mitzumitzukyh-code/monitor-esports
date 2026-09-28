@@ -6,8 +6,8 @@ import { ESCENARIOS } from '../datos/demo.mjs';
 import { dia, esc, formatoSerieLargo, pct, ZONA_PUBLICA } from '../formato.mjs';
 import { PERIODOS, hrefHistorial, hrefPartidos } from '../rutas.mjs';
 import {
-  ASSETS, acertado, barraProbabilidad, cuando, emblemaJuego, fondo, enlaceVerTodo, estadoVacio, favorito, filtrosJuego,
-  heroe, icono, insignia, monograma, seccion, tarjetaPartido, tarjetaResultado,
+  ASSETS, acertado, avatarEquipo, barraProbabilidad, cuando, emblemaJuego, fondo, enlaceVerTodo, estadoVacio, favorito, filtrosJuego,
+  heroe, icono, insignia, seccion, tarjetaPartido, tarjetaResultado,
 } from './componentes.mjs';
 
 export const VERSION = 'v1 · UI';
@@ -156,9 +156,9 @@ export function pantallaDetalle({ partido: p }, { ahora, catalogo, demo = false 
   const cabeza = `<section class="ficha juego--${p.juego}" style="${fondo(ASSETS.heroPartido)}">` +
     `<p class="ficha__juego">${emblemaJuego(p.juego, 22)}<span>${esc(JUEGOS[p.juego])}</span>` +
     (p.competicion ? `<span class="ficha__competicion">${esc(p.competicion)}</span>` : '') + '</p>' +
-    `<h1 class="ficha__equipos"><span class="equipo equipo--grande">${monograma(p.equipo_a.nombre)}<span>${esc(p.equipo_a.nombre)}</span></span>` +
+    `<h1 class="ficha__equipos"><span class="equipo equipo--grande">${avatarEquipo(p.equipo_a)}<span>${esc(p.equipo_a.nombre)}</span></span>` +
     '<span class="ficha__vs">vs</span>' +
-    `<span class="equipo equipo--grande">${monograma(p.equipo_b.nombre)}<span>${esc(p.equipo_b.nombre)}</span></span></h1>` +
+    `<span class="equipo equipo--grande">${avatarEquipo(p.equipo_b)}<span>${esc(p.equipo_b.nombre)}</span></span></h1>` +
     `<p class="ficha__cuando">${momento}</p><p class="ficha__formato">${esc(formatoSerieLargo(p.formato))}</p></section>`;
 
   const partes = [cabeza];
