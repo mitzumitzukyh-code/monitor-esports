@@ -326,16 +326,9 @@ async function directosEnVivo(filas, { ahora = Date.now() } = {}) {
     }
   }));
 
-  const seleccionados = encontrados.filter(Boolean).slice(0, 2);
-  if (!seleccionados.length) return [];
-
-  const filasSeleccionadas = seleccionados.map((x) => x.row);
-  const equipos = await resolverEquipos(filasSeleccionadas);
-  return seleccionados.map(({ row, stream }) => ({
+  return encontrados.filter(Boolean).slice(0, 2).map(({ row, stream }) => ({
     match_id: Number(row.match_id),
     juego: row.juego,
-    equipo_a: equipo(equipos, row.juego, row.equipo_a),
-    equipo_b: equipo(equipos, row.juego, row.equipo_b),
     inicio_programado: row.inicio_programado,
     plataforma: stream.plataforma,
     embed_url: stream.embed_url,
@@ -474,11 +467,35 @@ async function atender(req) {
 
   if (recurso === 'inicio') {
     const [a, h] = await Promise.all([abiertas(), cerradas({ limite: 6 })]);
-    const [proximos, recientes, directos] = await Promise.all([
-      normalizarFilas(a.slice(0, 8), perfil),
-      normalizarFilas(h, perfil),
-      directosEnVivo(a).catch(() => []),
+    const ahora = Date.now();
+    const baseProximos = a.slice(0, 8);
+    const candidatasDirecto = a
+      .filter((row) => {
+        const inicio = Date.parse(row.inicio_programado);
+        return Number.isFinite(inicio) && inicio <= ahora && inicio >= ahora - 8 * 3600_000;
+      })
+      .sort((x, y) => Date.parse(y.inicio_programado) - Date.parse(x.inicio_programado))
+      .slice(0, 8);
+    const filasInicio = [...new Map(
+      [...baseProximos, ...candidatasDirecto].map((row) => [Number(row.match_id), row]),
+    ).values()];
+
+    const [normalizadas, recientes, streams] = await Promise.all([
+      normalizarFilas(filasInicio, perfil, { ahora }),
+      normalizarFilas(h, perfil, { ahora }),
+      directosEnVivo(candidatasDirecto, { ahora }).catch(() => []),
     ]);
+    const porId = new Map(normalizadas.map((p) => [p.match_id, p]));
+    const proximos = baseProximos.map((row) => porId.get(Number(row.match_id))).filter(Boolean);
+    const directos = streams.map((d) => {
+      const p = porId.get(d.match_id);
+      return p ? {
+        ...d,
+        equipo_a: p.equipo_a,
+        equipo_b: p.equipo_b,
+      } : null;
+    }).filter(Boolean);
+
     return json({ ok: true, data: {
       perfil,
       gratis: proximos.find((p) => p.match_id === perfil.gratis_hoy) ?? null,
