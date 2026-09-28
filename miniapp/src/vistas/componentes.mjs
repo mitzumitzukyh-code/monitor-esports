@@ -183,8 +183,16 @@ export function estadoError(mensaje) {
 
 export function estadoCargando() {
   return `<div class="estado estado--cargando" role="status" aria-live="polite">` +
-    `<img class="cargando" src="${ASSETS.cargando}" width="40" height="40" alt="">` +
-    '<p class="estado__texto">Cargando partidos…</p>' +
+    '<div class="carga-premium" aria-hidden="true">' +
+      '<span class="carga-premium__halo"></span>' +
+      '<span class="carga-premium__aro carga-premium__aro--externo"></span>' +
+      '<span class="carga-premium__aro carga-premium__aro--interno"></span>' +
+      '<span class="carga-premium__orbita"><i></i></span>' +
+      `<span class="carga-premium__logo"><img src="${ASSETS.simbolo}" width="88" height="88" alt=""></span>` +
+    '</div>' +
+    '<div class="carga-premium__marca" aria-hidden="true"><strong>MONITOR</strong><span>eSPORTS</span></div>' +
+    '<p class="estado__texto carga-premium__texto">Cargando partidos…</p>' +
+    '<div class="carga-premium__barra" aria-hidden="true"><span></span></div>' +
     '<div class="skeleton-lista" aria-hidden="true">' +
       '<span class="skeleton-card"><i></i><b></b><b></b></span>' +
       '<span class="skeleton-card"><i></i><b></b><b></b></span>' +

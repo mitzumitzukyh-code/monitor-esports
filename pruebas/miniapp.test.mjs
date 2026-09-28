@@ -384,9 +384,16 @@ test('historial: aciertos y fallos con el mismo componente y el conteo completo'
 
 // ── Estados vacío / error ────────────────────────────────────────────────
 
-test('estado de carga usa skeletons para evitar una pantalla vacía', () => {
+test('estado de carga usa marca animada y skeletons para evitar una pantalla vacía', () => {
   const html = estadoCargando();
   assert.match(html, /Cargando partidos/);
+  assert.match(html, /carga-premium__orbita/);
+  assert.match(html, /carga-premium__aro--externo/);
+  assert.match(html, /carga-premium__logo/);
+  assert.match(html, /assets\/brand\/logo-symbol\.webp/);
+  assert.match(html, />MONITOR</);
+  assert.match(html, />eSPORTS</);
+  assert.match(html, /carga-premium__barra/);
   assert.equal((html.match(/class="skeleton-card"/g) ?? []).length, 2);
 });
 
