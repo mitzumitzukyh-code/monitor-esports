@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { NOMBRE_BOT, DESCRIPCION_BOT, DESCRIPCION_CORTA_BOT, validarPerfilTelegram } from '../salida/stars/perfil.mjs';
 import { COMANDOS } from '../salida/stars/comandos.mjs';
 
@@ -24,4 +25,14 @@ test('perfil comercial comunica propuesta, transparencia y CTA sin sonar genéri
   assert.match(DESCRIPCION_BOT, /Resultados reales, aciertos y fallos visibles/);
   assert.match(DESCRIPCION_BOT, /Contexto, no solo predicciones\./);
   assert.match(DESCRIPCION_CORTA_BOT, /Predicciones, probabilidades e historial real/);
+});
+
+test('sincronización de copy preserva el botón Mini App y tolera rate limit', () => {
+  const copy = readFileSync(new URL('../scripts/actualizar-copy-perfil-telegram.mjs', import.meta.url), 'utf8');
+  const perfil = readFileSync(new URL('../scripts/configurar-perfil-telegram.mjs', import.meta.url), 'utf8');
+  assert.match(copy, /retry_after/);
+  assert.match(copy, /setMyDescription/);
+  assert.match(copy, /setMyShortDescription/);
+  assert.doesNotMatch(copy, /setChatMenuButton|setMyProfilePhoto|setMyCommands/);
+  assert.doesNotMatch(perfil, /setChatMenuButton/);
 });
