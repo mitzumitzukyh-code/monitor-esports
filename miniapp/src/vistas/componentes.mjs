@@ -211,6 +211,7 @@ export function dialogoCompra(producto, catalogo) {
       (recurrente ? '<p class="compra-dialogo__texto">Telegram cobrará automáticamente cada 30 días mientras la suscripción esté activa y tengas Stars. Puedes cancelar la renovación y conservar el período pagado.</p>' : '') +
       (!esPro ? '<p class="compra-dialogo__texto">El análisis individual da acceso únicamente a este partido y no se renueva.</p>' : '') +
       '<p class="compra-dialogo__texto">Ante cobros duplicados o problemas de acceso, contacta soporte con tu recibo.</p>' +
+      '<p class="compra-dialogo__texto">Guardamos tu ID de Telegram, consentimiento, órdenes y recibos para gestionar compras. Telegram no atiende disputas de estas compras.</p>' +
       '<div class="compra-dialogo__acciones">' +
         '<button class="boton boton--secundario" type="button" data-accion="cerrar-compra">Cancelar</button>' +
         `<button class="boton boton--pro" type="button" data-accion="confirmar-compra" data-producto="${productoApi}"${match ? ` data-match-id="${match}"` : ''}>Acepto los términos · Continuar</button>` +
