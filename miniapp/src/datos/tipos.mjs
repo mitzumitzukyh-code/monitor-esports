@@ -69,6 +69,8 @@
  * @property {number} pro_dias
  * @property {number} analisis_stars
  * @property {boolean} compras_habilitadas
+ * @property {boolean} [pro_recurrente]
+ * @property {string} [terminos_version]
  * @property {string} soporte
  * @property {string} bot
  */
