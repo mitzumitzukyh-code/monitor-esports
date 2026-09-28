@@ -27,7 +27,7 @@ function secretKey() {
 function supabaseUrl() { return Deno.env.get('SUPABASE_URL') ?? ''; }
 
 async function pedirJson(url, opciones = {}) {
-  const res = await fetch(url, opciones);
+  const res = await fetch(url, { ...opciones, signal: opciones.signal ?? AbortSignal.timeout(4000) });
   const cuerpo = await res.json().catch(() => null);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return cuerpo;
@@ -88,7 +88,10 @@ async function resolverEquipos(filas) {
       if (!disciplina || !lista.length) return;
       const url = 'https://api.bo3.gg/api/v1/teams?page[limit]=100' +
         `&filter[teams.discipline_id][eq]=${disciplina}&filter[teams.id][in]=${lista.join(',')}`;
-      const res = await fetch(url, { headers: { 'User-Agent': 'monitor-esports-miniapp/1.0' } });
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'monitor-esports-miniapp/1.0' },
+        signal: AbortSignal.timeout(2500),
+      });
       if (!res.ok) return;
       const data = await res.json();
       for (const t of data.results ?? []) {
@@ -199,9 +202,8 @@ async function atender(req) {
 
   const url = new URL(req.url);
   const recurso = url.searchParams.get('recurso') ?? '';
-  const perfil = await perfilDe(sesion.user.id);
 
-  if (recurso === 'perfil') return json({ ok: true, data: perfil });
+  // El catálogo no necesita tocar perfil, pagos ni asignar la FREE diaria.
   if (recurso === 'catalogo') return json({ ok: true, data: {
     pro_stars: Number(Deno.env.get('TELEGRAM_PRO_STARS') ?? 250),
     pro_dias: 30,
@@ -210,6 +212,9 @@ async function atender(req) {
     soporte: (Deno.env.get('TELEGRAM_PAY_SUPPORT') ?? '@mitzukyhs').replace(/^@/, '@'),
     bot: 'monitor_esports_avisos_bot',
   } });
+
+  const perfil = await perfilDe(sesion.user.id);
+  if (recurso === 'perfil') return json({ ok: true, data: perfil });
 
   if (recurso === 'inicio') {
     const [a, h] = await Promise.all([abiertas(), cerradas({ limite: 6 })]);
