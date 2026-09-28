@@ -75,7 +75,8 @@ function logoHttps(url) {
 /** Logo real del equipo encima del monograma; si falla, el fallback queda visible. */
 export function avatarEquipo(equipo) {
   const logo = logoHttps(equipo?.logo);
-  return '<span class="equipo__avatar">' + monograma(equipo?.nombre ?? '') +
+  const clase = logo ? 'equipo__avatar equipo__avatar--con-logo' : 'equipo__avatar';
+  return `<span class="${clase}">` + monograma(equipo?.nombre ?? '') +
     (logo ? `<img class="equipo__logo" src="${esc(logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-logo-equipo>` : '') +
     '</span>';
 }
