@@ -12,7 +12,7 @@ npm run miniapp:capturas   # design/capturas-miniapp-v1/ (necesita Playwright)
 node --test pruebas/miniapp.test.mjs
 ```
 
-Con `<meta name="monitor-api-url" content="">` vacío, la app usa la demo. Estados: `?demo=free | pro | individual | vacio | error`, o desde **Más → Modo demostración**. Cuando esa meta apunte al Edge Function real, `?demo=` y el panel de escenarios dejan de controlar la fuente. En Windows sigue sirviendo
+El archivo fuente conserva `<meta name="monitor-api-url" content="">`: local y previews siguen en demo. El build de producción de Vercel (`VERCEL_ENV=production`) inyecta automáticamente `esport-miniapp`; así `?demo=` y el panel de escenarios no controlan producción. Estados de demo: `?demo=free | pro | individual | vacio | error`, o desde **Más → Modo demostración**. En Windows sigue sirviendo
 `design/unpack-miniapp-assets.ps1`; el script de Node da los mismos bytes.
 
 Detrás del proxy de este entorno, las capturas bajan las fuentes con
@@ -95,6 +95,5 @@ El endpoint vive en `supabase/functions/esport-miniapp/` y es separado de
    `SUPABASE_URL` y una llave server-side de Supabase. Opcional:
    `TELEGRAM_MINIAPP_MAX_AGE_SECONDS=3600`.
 3. Probar el endpoint dentro del cliente Telegram real.
-4. Recién entonces poner la URL del Edge Function en
-   `<meta name="monitor-api-url">` y publicar la Mini App.
+4. El build de producción ya está preparado para inyectar la URL del Edge Function; local y previews conservan demo.
 5. BotFather y compras Stars siguen siendo fases separadas.
