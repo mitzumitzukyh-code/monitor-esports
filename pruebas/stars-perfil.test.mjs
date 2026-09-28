@@ -15,3 +15,13 @@ test('comandos comerciales mantienen FREE, PRO, partidos, resultados y soporte',
   const nombres = new Set(COMANDOS.map(x => x.command));
   for (const c of ['start','gratis','pro','partidos','resultados','paysupport']) assert.ok(nombres.has(c));
 });
+
+test('perfil comercial comunica propuesta, transparencia y CTA sin sonar genérico', () => {
+  assert.match(DESCRIPCION_BOT, /Tu centro de análisis de eSports\./);
+  assert.match(DESCRIPCION_BOT, /FREE · Predicción diaria/);
+  assert.match(DESCRIPCION_BOT, /PRO · Probabilidades, alertas y análisis completos/);
+  assert.match(DESCRIPCION_BOT, /Análisis individual · Elige solo el partido que te interesa/);
+  assert.match(DESCRIPCION_BOT, /Resultados reales, aciertos y fallos visibles/);
+  assert.match(DESCRIPCION_BOT, /Contexto, no solo predicciones\./);
+  assert.match(DESCRIPCION_CORTA_BOT, /Predicciones, probabilidades e historial real/);
+});
