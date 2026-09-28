@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CATALOGO_DEMO, ESCENARIOS, conAcceso, crearFuenteDemo, partidosDemo, perfilDemo } from '../miniapp/src/datos/demo.mjs';
@@ -10,7 +10,7 @@ import { crearTelegram } from '../miniapp/src/telegram.mjs';
 import { estadoError, tarjetaPartido, tarjetaResultado } from '../miniapp/src/vistas/componentes.mjs';
 import { barraNavegacion } from '../miniapp/src/vistas/marco.mjs';
 import { PANTALLA, cargarPantalla, filaForma } from '../miniapp/src/vistas/pantallas.mjs';
-import { MINIAPP, construir, revisar } from '../miniapp/scripts/construir.mjs';
+import { API_PRODUCCION, MINIAPP, construir, revisar } from '../miniapp/scripts/construir.mjs';
 import { REQUERIDOS } from '../miniapp/scripts/desempacar-assets.mjs';
 
 const ahora = Date.parse('2026-09-28T16:00:00Z');
@@ -388,5 +388,26 @@ test('build: sin imports rotos, sin assets inexistentes y sin facturas', () => {
     }
   } finally {
     rmSync(destino, { recursive: true, force: true });
+  }
+});
+
+test('build: local conserva demo y producción inyecta únicamente la API real', () => {
+  const local = mkdtempSync(join(tmpdir(), 'miniapp-local-'));
+  const prod = mkdtempSync(join(tmpdir(), 'miniapp-prod-'));
+  try {
+    const a = construir({ destino: local, apiUrl: '' });
+    const b = construir({ destino: prod, apiUrl: API_PRODUCCION });
+    const htmlLocal = readFileSync(join(local, 'index.html'), 'utf8');
+    const htmlProd = readFileSync(join(prod, 'index.html'), 'utf8');
+
+    assert.equal(a.apiReal, false);
+    assert.match(htmlLocal, /<meta name="monitor-api-url" content="">/);
+
+    assert.equal(b.apiReal, true);
+    assert.ok(htmlProd.includes(API_PRODUCCION));
+    assert.doesNotMatch(htmlProd, /<meta name="monitor-api-url" content="">/);
+  } finally {
+    rmSync(local, { recursive: true, force: true });
+    rmSync(prod, { recursive: true, force: true });
   }
 });
