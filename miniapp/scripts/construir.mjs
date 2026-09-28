@@ -37,13 +37,13 @@ export function revisar(raiz = MINIAPP) {
       }
       if (/openInvoice|sendInvoice|createInvoiceLink/.test(texto)) problemas.push(`${nombre}: abre facturas y las compras están apagadas`);
     }
-    for (const [ruta] of texto.matchAll(/assets\/[a-z0-9-]+\/[a-z0-9-]+\.(?:webp|png)/g)) {
+    for (const [ruta] of texto.matchAll(/assets\/[a-z0-9-]+\/[a-z0-9-]+\.(?:webp|png|svg)/g)) {
       if (!existsSync(join(raiz, 'public', ruta))) problemas.push(`${nombre}: asset inexistente ${ruta}`);
     }
-    // Plantilla de emblemas por juego: `assets/games/${j}-placeholder.webp`.
+    // Plantilla de emblemas por juego: `assets/games/${j}.svg`.
     if (texto.includes('assets/games/${')) {
       for (const j of ['cs2', 'dota2', 'lol', 'valorant']) {
-        if (!existsSync(join(raiz, 'public', 'assets', 'games', `${j}-placeholder.webp`))) problemas.push(`falta emblema de ${j}`);
+        if (!existsSync(join(raiz, 'public', 'assets', 'games', `${j}.svg`))) problemas.push(`falta emblema de ${j}`);
       }
     }
   }
