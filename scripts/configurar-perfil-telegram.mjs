@@ -87,10 +87,7 @@ for (const language_code of ['', 'es']) {
   }
 }
 
-const menu = await api('getChatMenuButton', {});
-if (menu.type !== 'commands') {
-  await api('setChatMenuButton', { menu_button: { type: 'commands' } });
-}
+// El botón `Abrir Monitor` de la Mini App se gestiona aparte; no modificarlo aquí.
 
 const avatarArg = process.argv.find((x) => x.startsWith('--avatar='));
 if (avatarArg) await subirAvatar(avatarArg.slice('--avatar='.length));
