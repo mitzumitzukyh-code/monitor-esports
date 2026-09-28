@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { configuracionStars } from '../salida/stars/config.mjs';
 import { clienteTelegram } from '../salida/stars/api.mjs';
 import { COMANDOS } from '../salida/stars/comandos.mjs';
+import { NOMBRE_BOT, DESCRIPCION_BOT, DESCRIPCION_CORTA_BOT } from '../salida/stars/perfil.mjs';
 
 const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const config = configuracionStars();
@@ -19,18 +20,9 @@ if (me.username !== 'monitor_esports_avisos_bot') {
   throw new Error('Las credenciales no corresponden al bot comercial');
 }
 
-const nombre = 'Monitor eSports';
-const descripcion = [
-  'Tu bot de predicciones y estadísticas de eSports.',
-  'CS2 · Dota 2 · LoL · Valorant',
-  '',
-  '🎁 FREE: 1 predicción diaria e historial actualizado.',
-  '👑 PRO: 250 Stars / 30 días · renovación automática.',
-  '🎯 Análisis individual: 50 Stars · pago único.',
-  '',
-  'Contexto, no solo predicciones. Soporte: @mitzukyhs.',
-].join('\n');
-const breve = 'Predicciones, estadísticas y resultados de CS2, Dota 2, LoL y Valorant. FREE, PRO y análisis por partido.';
+const nombre = NOMBRE_BOT;
+const descripcion = DESCRIPCION_BOT;
+const breve = DESCRIPCION_CORTA_BOT;
 
 for (const language_code of ['', 'es']) {
   await api('setMyName', { name: nombre, language_code });
