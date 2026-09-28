@@ -4,9 +4,8 @@
 // pruebas) el adaptador sigue funcionando y no hace nada: la app se tiene que
 // poder abrir y revisar sin el cliente de Telegram.
 //
-// Lo que NO hace, a propósito, en esta primera versión:
-//   - abrir facturas de Stars: las compras siguen apagadas en la Mini App.
-//   - mandar initData a ningún servidor: eso llega con el contrato de datos.
+// Las compras siguen apagadas. Para datos reales, el adaptador expone únicamente
+// el initData crudo; la identidad se valida SIEMPRE en el servidor.
 
 const COLOR_FONDO = '#05070A';
 const COLOR_PANEL = '#080A0E';
@@ -90,6 +89,12 @@ export function crearTelegram(win = globalThis.window) {
       return true;
     },
 
+    /** Cadena firmada que se manda al backend para validación. */
+    initData() {
+      return dentro && typeof app?.initData === 'string' ? app.initData : '';
+    },
+
+    // Sólo presentación local. Nunca usar initDataUnsafe para autorizar acceso.
     usuario() {
       const u = app?.initDataUnsafe?.user;
       return u ? { nombre: u.first_name ?? '', id: u.id } : null;

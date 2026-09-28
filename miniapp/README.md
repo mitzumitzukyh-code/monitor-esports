@@ -1,8 +1,6 @@
-# Mini App de Telegram — V1 (UI con datos de demo)
+# Mini App de Telegram — V1 + fuente real segura
 
-Primera pasada de la Mini App según `design/CLAUDE_MINIAPP_HANDOFF.md`.
-**Sólo interfaz.** No hay deploy, no está activada en BotFather, no abre
-facturas de Stars y no toca el bot ni el motor.
+Interfaz móvil de Monitor eSports. La UI V1 sigue pudiéndose revisar con datos de demo, y la rama de integración añade una fuente HTTP real con autenticación de Telegram. Las compras de Stars continúan apagadas y el motor no se modifica.
 
 ## Cómo verla
 
@@ -14,8 +12,7 @@ npm run miniapp:capturas   # design/capturas-miniapp-v1/ (necesita Playwright)
 node --test pruebas/miniapp.test.mjs
 ```
 
-Estados de demo: `?demo=free | pro | individual | vacio | error`, o desde
-**Más → Modo demostración**. En Windows sigue sirviendo
+Con `<meta name="monitor-api-url" content="">` vacío, la app usa la demo. Estados: `?demo=free | pro | individual | vacio | error`, o desde **Más → Modo demostración**. Cuando esa meta apunte al Edge Function real, `?demo=` y el panel de escenarios dejan de controlar la fuente. En Windows sigue sirviendo
 `design/unpack-miniapp-assets.ps1`; el script de Node da los mismos bytes.
 
 Detrás del proxy de este entorno, las capturas bajan las fuentes con
@@ -41,6 +38,7 @@ miniapp/
     estilos.css         tokens del diseño vigente, móvil primero
     datos/tipos.mjs     contrato de datos + validadores
     datos/demo.mjs      fuente de demostración (equipos ficticios)
+    datos/api.mjs       fuente HTTP real; envía initData crudo al backend
     vistas/             componentes, marco y las seis pantallas (funciones puras)
   scripts/              desempacar-assets, construir, servir, capturas
 ```
@@ -70,18 +68,33 @@ miniapp/
   y `analisis: null`; la vista no esconde nada que ya tenga.
 - **Logos de equipo:** monograma por ahora; los logos reales vienen de datos.
 
-## Lo que falta antes de conectar datos reales
+## Fuente real y seguridad
 
-1. Aprobación de la UI con estas capturas.
-2. Endpoint de lectura para la Mini App (Supabase Edge, junto a `esport-stars`)
-   que **valide `initData`** con el token del bot antes de responder: sin eso
-   cualquiera se hace pasar por un usuario PRO.
-3. Que ese endpoint aplique el acceso en el servidor con las mismas reglas del
-   bot (PRO vigente, FREE diaria asignada por `engagement('gratis')`, análisis
-   comprados) y devuelva exactamente la forma de `src/datos/tipos.mjs`.
-4. Nombres de equipo y logos desde `datos/juegos/bo3.mjs` (ya los resuelve el bot).
-5. Una `crearFuenteApi()` con la misma interfaz que `crearFuenteDemo()`;
-   las vistas no cambian.
-6. Hasta revisar el contrato, las compras siguen apagadas
-   (`compras_habilitadas: false`). Activarlas es otro paso con su propia
-   autorización, igual que el deploy y el botón de BotFather.
+El endpoint vive en `supabase/functions/esport-miniapp/` y es separado de
+`esport-stars`, que sigue siendo el receptor comercial.
+
+- El cliente manda **la cadena cruda `Telegram.WebApp.initData`** en
+  `X-Telegram-Init-Data`. `initDataUnsafe` nunca autoriza acceso.
+- El Edge Function verifica HMAC con `TELEGRAM_BOT_TOKEN`, rechaza
+  `auth_date` viejo (1 hora por defecto) y obtiene el `user.id` únicamente
+  de la carga firmada.
+- El backend decide PRO, FREE diario, compra individual y auditoría. Un partido
+  bloqueado sale con `prob_a: null` y `analisis: null`; no se manda un dato
+  premium para esconderlo luego en CSS.
+- El endpoint aplica el rate limit existente de Stars antes de consultar datos.
+- Los nombres de equipo se resuelven con bo3.gg; si esa fuente falla, la Mini
+  App mantiene el partido con un nombre de respaldo.
+- `catalogo.compras_habilitadas` permanece en `false`.
+
+### Activación (paso separado)
+
+1. Desplegar `esport-miniapp` en Supabase con verificación JWT del gateway
+   desactivada; la autenticación real la hace el HMAC de Telegram dentro de la
+   función.
+2. Confirmar que el proyecto tiene `TELEGRAM_BOT_TOKEN`,
+   `SUPABASE_URL` y una llave server-side de Supabase. Opcional:
+   `TELEGRAM_MINIAPP_MAX_AGE_SECONDS=3600`.
+3. Probar el endpoint dentro del cliente Telegram real.
+4. Recién entonces poner la URL del Edge Function en
+   `<meta name="monitor-api-url">` y publicar la Mini App.
+5. BotFather y compras Stars siguen siendo fases separadas.
