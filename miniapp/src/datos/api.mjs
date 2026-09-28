@@ -63,6 +63,51 @@ export function crearFuenteApi({ baseUrl, initData, fetchImpl = fetch } = {}) {
     }
   }
 
+  async function comprar({ producto, matchId = null, aceptarTerminos = false } = {}) {
+    const raw = rawInitData();
+    if (!raw) throw errorUsuario('Abre Monitor eSports desde Telegram para continuar.');
+    const url = new URL(baseUrl);
+    url.searchParams.set('recurso', 'compra');
+
+    let res;
+    try {
+      res = await fetchImpl(url, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'X-Telegram-Init-Data': raw,
+        },
+        body: JSON.stringify({
+          producto,
+          match_id: matchId,
+          aceptar_terminos: aceptarTerminos === true,
+        }),
+        signal: AbortSignal.timeout(7000),
+      });
+    } catch (e) {
+      throw errorUsuario(ERROR_CONEXION, e?.message);
+    }
+
+    let cuerpo = null;
+    try { cuerpo = await res.json(); } catch { /* cuerpo roto: error genérico */ }
+    if (res.status === 401) throw errorUsuario('Tu sesión de Telegram venció. Cierra y vuelve a abrir la Mini App.');
+    if (res.status === 429) throw errorUsuario('Demasiadas solicitudes. Espera un momento y vuelve a intentar.');
+    if (res.status === 409 && cuerpo?.error === 'pro_activo_o_pendiente') {
+      throw errorUsuario('Ya tienes PRO activo o una compra pendiente. Revisa tu estado en el bot.');
+    }
+    if (res.status === 409 && cuerpo?.error === 'ya_comprado') {
+      throw errorUsuario('Ya tienes acceso a este contenido.');
+    }
+    if (res.status === 409 && cuerpo?.error === 'compras_desactivadas') {
+      throw errorUsuario('Las compras están temporalmente desactivadas.');
+    }
+    if (!res.ok || !cuerpo || cuerpo.ok !== true || typeof cuerpo.data?.invoice_url !== 'string') {
+      throw errorUsuario(ERROR_CONEXION);
+    }
+    return cuerpo.data;
+  }
+
   return {
     demo: false,
     escenario: null,
@@ -72,5 +117,7 @@ export function crearFuenteApi({ baseUrl, initData, fetchImpl = fetch } = {}) {
     partidos: ({ juego = null, periodo = 'proximos' } = {}) => pedir('partidos', { juego, periodo }, 20_000),
     partido: (id) => pedir('partido', { id }, 20_000),
     historial: ({ juego = null } = {}) => pedir('historial', { juego }, 60_000),
+    comprar,
+    invalidar: () => cache.clear(),
   };
 }
