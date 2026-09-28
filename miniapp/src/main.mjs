@@ -1,6 +1,7 @@
 // Arranque de la Mini App en el navegador. La lógica de cada pantalla vive en
 // vistas/ (funciones puras, probadas en Node); aquí sólo se conecta todo al DOM.
 
+import { crearFuenteApi } from './datos/api.mjs';
 import { ESCENARIOS, crearFuenteDemo } from './datos/demo.mjs';
 import { esRaiz, leerRuta } from './rutas.mjs';
 import { crearTelegram } from './telegram.mjs';
@@ -29,8 +30,11 @@ function leerEscenario() {
   return 'free';
 }
 
-let escenario = leerEscenario();
-let fuente = crearFuenteDemo({ escenario });
+const apiUrl = document.querySelector('meta[name="monitor-api-url"]')?.content?.trim() ?? '';
+let escenario = apiUrl ? null : leerEscenario();
+let fuente = apiUrl
+  ? crearFuenteApi({ baseUrl: apiUrl, initData: () => tg.initData() })
+  : crearFuenteDemo({ escenario });
 let catalogo = null;
 let turno = 0;
 let primera = true;
@@ -83,10 +87,11 @@ document.addEventListener('click', (evento) => {
     contenido.focus();
   } else if (accion === 'reintentar') {
     mostrar();
-  } else if (accion === 'escenario') {
+  } else if (accion === 'escenario' && fuente.demo) {
     escenario = objetivo.dataset.valor;
     try { sessionStorage.setItem(CLAVE_ESCENARIO, escenario); } catch { /* opcional */ }
     fuente = crearFuenteDemo({ escenario });
+    catalogo = null;
     mostrar();
   } else if (accion === 'telegram') {
     evento.preventDefault();
