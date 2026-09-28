@@ -34,20 +34,20 @@ function estadoPlan(perfil) {
 
 function tarjetaDirecto(d) {
   const plataforma = d.plataforma === 'youtube' ? 'YouTube' : 'Twitch';
-  const titulo = \`\${d.equipo_a.nombre} vs \${d.equipo_b.nombre}\`;
+  const titulo = `${d.equipo_a.nombre} vs ${d.equipo_b.nombre}`;
   const externo = d.url
-    ? \`<a class="boton boton--secundario directo__fuente" href="\${esc(d.url)}" target="_blank" rel="noopener noreferrer">Abrir en \${plataforma}</a>\`
+    ? `<a class="boton boton--secundario directo__fuente" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">Abrir en ${plataforma}</a>`
     : '';
-  return \`<article class="directo juego--\${d.juego}">\` +
+  return `<article class="directo juego--${d.juego}">` +
     '<header class="directo__cabeza">' +
-      \`<span class="directo__vivo"><i></i> EN VIVO</span><span class="directo__juego">\${emblemaJuego(d.juego, 18)}\${esc(JUEGOS[d.juego])}</span>\` +
+      `<span class="directo__vivo"><i></i> EN VIVO</span><span class="directo__juego">${emblemaJuego(d.juego, 18)}${esc(JUEGOS[d.juego])}</span>` +
     '</header>' +
-    \`<h3 class="directo__titulo">\${avatarEquipo(d.equipo_a)}<span>\${esc(d.equipo_a.nombre)}</span><b>vs</b>\${avatarEquipo(d.equipo_b)}<span>\${esc(d.equipo_b.nombre)}</span></h3>\` +
-    \`<div class="directo__player"><iframe src="\${esc(d.embed_url)}" title="Directo: \${esc(titulo)}" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>\` +
+    `<h3 class="directo__titulo">${avatarEquipo(d.equipo_a)}<span>${esc(d.equipo_a.nombre)}</span><b>vs</b>${avatarEquipo(d.equipo_b)}<span>${esc(d.equipo_b.nombre)}</span></h3>` +
+    `<div class="directo__player"><iframe src="${esc(d.embed_url)}" title="Directo: ${esc(titulo)}" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>` +
     '<div class="directo__acciones">' +
-      \`<a class="boton boton--primario" href="\${hrefPartido(d.match_id)}">Ver predicción</a>\${externo}\` +
+      `<a class="boton boton--primario" href="${hrefPartido(d.match_id)}">Ver predicción</a>${externo}` +
     '</div>' +
-    \`<p class="directo__nota">Transmisión oficial · \${plataforma}</p>\` +
+    `<p class="directo__nota">Transmisión oficial · ${plataforma}</p>` +
   '</article>';
 }
 
@@ -73,7 +73,7 @@ export function pantallaInicio({ perfil, gratis, directos = [], proximos, recien
   const enVivo = directos.filter((d) => validarDirecto(d).length === 0).slice(0, 2);
   if (enVivo.length) {
     partes.push(seccion('🔴 En vivo ahora',
-      \`<div class="directos">\${enVivo.map(tarjetaDirecto).join('')}</div>\`,
+      `<div class="directos">${enVivo.map(tarjetaDirecto).join('')}</div>`,
       { bajada: enVivo.length === 2 ? 'Dos transmisiones oficiales disponibles' : 'Transmisión oficial disponible' }));
   }
 
