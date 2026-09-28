@@ -223,7 +223,7 @@ function twitchChannel(...urls) {
 }
 
 function streamSeguro(stream) {
-  if (!stream || stream.blocked || stream.official !== true) return null;
+  if (!stream || stream.blocked || ![true, 1].includes(stream.official)) return null;
   const raw = httpsUrl(stream.raw_url)?.toString() ?? null;
   const embedCrudo = httpsUrl(stream.embed_url)?.toString() ?? null;
   const plataforma = Number(stream.platform);
@@ -302,10 +302,7 @@ async function directosEnVivo(filas, { ahora = Date.now() } = {}) {
 
   const meta = await metadatosPartidasBo3(candidatas);
   const conCobertura = candidatas
-    .filter((row) => {
-      const m = meta.get(Number(row.match_id));
-      return m?.cobertura && (!m.status || m.status === 'live' || m.status === 'ongoing');
-    })
+    .filter((row) => meta.get(Number(row.match_id))?.cobertura)
     .slice(0, 6);
 
   if (!conCobertura.length) return [];
