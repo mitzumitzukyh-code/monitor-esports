@@ -13,3 +13,8 @@ salida/web/logos/
 supabase/.temp/
 work/
 .stars-backup-key
+
+# Mini App: build y capturas locales. Las capturas para revisión se guardan
+# en design/capturas-miniapp-v1/ con `npm run miniapp:capturas`.
+miniapp/dist/
+miniapp/capturas/
