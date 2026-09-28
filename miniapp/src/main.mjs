@@ -143,7 +143,10 @@ async function confirmarCompra(boton) {
 // monograma que está debajo queda visible en vez de mostrar un icono roto.
 document.addEventListener('error', (evento) => {
   const img = evento.target;
-  if (img instanceof HTMLImageElement && img.matches('img[data-logo-equipo]')) img.hidden = true;
+  if (img instanceof HTMLImageElement && img.matches('img[data-logo-equipo]')) {
+    img.hidden = true;
+    img.closest('.equipo__avatar')?.classList.remove('equipo__avatar--con-logo');
+  }
 }, true);
 
 document.addEventListener('click', async (evento) => {
