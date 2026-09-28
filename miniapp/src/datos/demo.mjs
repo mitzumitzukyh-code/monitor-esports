@@ -169,6 +169,7 @@ export function crearFuenteDemo({ escenario = 'free', retraso = 250, ahora = () 
       return {
         perfil,
         gratis: todos.find((p) => p.match_id === perfil.gratis_hoy) ?? null,
+        directos: [],
         proximos: abiertos(todos).slice(0, 4),
         recientes: cerrados(todos).slice(0, 6),
       };

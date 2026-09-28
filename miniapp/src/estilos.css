@@ -393,6 +393,52 @@ h1, h2, h3, p { margin: 0; }
 .bloqueo__texto { color: var(--tinta-media); font-size: 14px; max-width: 32ch; }
 .bloqueo__opciones { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 6px; }
 
+
+/* ── Directos en vivo ──────────────────────────────────────────────────── */
+.directos { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.directo {
+  overflow: hidden; border-radius: 18px; border: 1px solid var(--borde-fuerte);
+  background: linear-gradient(180deg, rgba(255,38,56,.05), transparent 32%), var(--tarjeta);
+}
+.directo__cabeza {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 13px 14px 6px;
+}
+.directo__vivo {
+  display: inline-flex; align-items: center; gap: 7px;
+  color: #fff; font-size: 11px; font-weight: 900; letter-spacing: .08em;
+}
+.directo__vivo i {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--acento);
+  box-shadow: 0 0 0 4px rgba(255,38,56,.13);
+  animation: pulso-vivo 1.8s ease-in-out infinite;
+}
+.directo__juego {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--tinta-suave); font-size: 12px; font-weight: 700;
+}
+.directo__titulo {
+  display: grid; grid-template-columns: 30px minmax(0,1fr) auto 30px minmax(0,1fr);
+  align-items: center; gap: 7px; padding: 4px 14px 12px; font-size: 13px; font-weight: 800;
+}
+.directo__titulo > span:not(.equipo__avatar) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.directo__titulo b { color: var(--tinta-apagada); font-size: 11px; text-transform: uppercase; }
+.directo__titulo .equipo__avatar { width: 30px; height: 30px; }
+.directo__player { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; }
+.directo__player iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
+.directo__acciones {
+  display: grid; grid-template-columns: 1fr; gap: 8px; padding: 12px 14px 0;
+}
+.directo__acciones .boton { min-height: 44px; font-size: 13px; }
+.directo__nota { padding: 9px 14px 13px; color: var(--tinta-apagada); font-size: 11px; text-align: center; }
+@keyframes pulso-vivo {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .58; transform: scale(.82); }
+}
+@media (min-width: 560px) {
+  .directos { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+
 /* ── Botones, promo, filas ─────────────────────────────────────────────── */
 .boton {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;

@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CATALOGO_DEMO, ESCENARIOS, conAcceso, crearFuenteDemo, partidosDemo, perfilDemo } from '../miniapp/src/datos/demo.mjs';
-import { validarPartido, validarPerfil } from '../miniapp/src/datos/tipos.mjs';
+import { validarDirecto, validarPartido, validarPerfil } from '../miniapp/src/datos/tipos.mjs';
 import { NAVEGACION, PANTALLAS, esRaiz, hrefPartido, leerRuta } from '../miniapp/src/rutas.mjs';
 import { crearTelegram } from '../miniapp/src/telegram.mjs';
 import { avatarEquipo, dialogoCompra, estadoCargando, estadoError, tarjetaPartido, tarjetaResultado } from '../miniapp/src/vistas/componentes.mjs';
@@ -82,6 +82,46 @@ test('los datos de demo cumplen el contrato en todos los estados', async () => {
     assert.deepEqual(validarPerfil(perfil), [], escenario);
     for (const p of partidosDemo(ahora)) assert.deepEqual(validarPartido(conAcceso(p, perfil)), [], `${escenario} ${p.match_id}`);
   }
+});
+
+test('directos: acepta sólo reproductores oficiales de YouTube/Twitch y renderiza máximo dos', () => {
+  const base = {
+    match_id: 9001,
+    juego: 'cs2',
+    equipo_a: { id: 1, nombre: 'Alpha' },
+    equipo_b: { id: 2, nombre: 'Beta' },
+    inicio_programado: new Date(ahora - 20 * 60_000).toISOString(),
+    plataforma: 'youtube',
+    embed_url: 'https://www.youtube-nocookie.com/embed/AbCdEf12345?rel=0&playsinline=1',
+    url: 'https://www.youtube.com/watch?v=AbCdEf12345',
+    idioma: 'es',
+    oficial: true,
+  };
+  assert.deepEqual(validarDirecto(base), []);
+  assert.match(validarDirecto({ ...base, oficial: false }).join(), /no oficial/);
+  assert.match(validarDirecto({ ...base, embed_url: 'https://evil.example/embed/x' }).join(), /host de reproductor/);
+
+  const directos = [
+    base,
+    {
+      ...base, match_id: 9002, juego: 'dota2', equipo_a: { id: 3, nombre: 'Gamma' }, equipo_b: { id: 4, nombre: 'Delta' },
+      plataforma: 'twitch', embed_url: 'https://player.twitch.tv/?channel=oficial&parent=monitor-esports.vercel.app&autoplay=false',
+      url: 'https://www.twitch.tv/oficial',
+    },
+    { ...base, match_id: 9003 },
+  ];
+  const html = PANTALLA.inicio({
+    perfil: perfilDemo('free', ahora),
+    gratis: null,
+    directos,
+    proximos: [],
+    recientes: [],
+  }, ctx('free', leerRuta('#/inicio')));
+  assert.equal((html.match(/class="directo juego--/g) ?? []).length, 2);
+  assert.match(html, /🔴 En vivo ahora/);
+  assert.match(html, /youtube-nocookie\.com\/embed/);
+  assert.match(html, /player\.twitch\.tv/);
+  assert.match(html, /Ver predicción/);
 });
 
 test('el contrato rechaza un partido bloqueado que trae la probabilidad', () => {
