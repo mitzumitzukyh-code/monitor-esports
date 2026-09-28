@@ -4,7 +4,7 @@
 import { JUEGOS } from '../datos/tipos.mjs';
 import { ESCENARIOS } from '../datos/demo.mjs';
 import { dia, esc, formatoSerieLargo, pct, ZONA_PUBLICA } from '../formato.mjs';
-import { PERIODOS, hrefHistorial, hrefPartidos } from '../rutas.mjs';
+import { PERIODOS, hrefHistorial, hrefPartido, hrefPartidos } from '../rutas.mjs';
 import {
   ASSETS, acertado, avatarEquipo, barraProbabilidad, cuando, emblemaJuego, fondo, enlaceVerTodo, estadoVacio, favorito, filtrosJuego,
   heroe, icono, insignia, seccion, tarjetaPartido, tarjetaResultado,
@@ -12,7 +12,7 @@ import {
 
 export const VERSION = 'v1 · UI';
 export const LEMA = 'Predicciones y estadísticas para entender cada partido.';
-export const LEMA_PRO = 'Contexto, no solo predicciones.';
+export const LEMA_PRO = 'Más contexto para entender cada partido.';
 
 const fechaLarga = (iso) => new Date(iso).toLocaleDateString('es', { timeZone: 'Etc/GMT+4', dateStyle: 'long' });
 
@@ -34,18 +34,27 @@ function estadoPlan(perfil) {
 
 // ── Inicio ───────────────────────────────────────────────────────────────
 export function pantallaInicio({ perfil, gratis, proximos, recientes }, { ahora, catalogo }) {
+  const ctaFree = gratis ? hrefPartido(gratis.match_id) : hrefPartidos();
   const partes = [heroe({
     imagen: ASSETS.heroInicio,
     titulo: `<img class="heroe__logo" src="${ASSETS.logo}" width="400" height="125" alt="Monitor eSports">`,
     bajada: esc(LEMA),
-    extra: estadoPlan(perfil),
+    extra: estadoPlan(perfil) +
+      '<p class="heroe__promesa">1 predicción gratis al día · historial visible · análisis PRO completo</p>' +
+      '<div class="heroe__confianza" aria-label="Transparencia del servicio">' +
+        '<span>Datos reales</span><span>Fallos visibles</span><span>Sin promesas de ganancias</span>' +
+      '</div>' +
+      '<div class="heroe__acciones">' +
+        `<a class="boton boton--primario" href="${ctaFree}">${gratis ? 'Ver predicción FREE' : 'Ver partidos'}</a>` +
+        '<a class="boton boton--secundario" href="#/pro">Ver PRO</a>' +
+      '</div>',
     clase: 'heroe--inicio',
   })];
 
   if (perfil.plan === 'free') {
     partes.push(seccion('Tu predicción FREE de hoy', gratis
       ? tarjetaPartido(gratis, { ahora })
-      : '<p class="aviso">Hoy no hay una predicción FREE disponible todavía. Revisa más tarde.</p>'));
+      : '<p class="aviso">Tu predicción FREE de hoy aún no está lista. Revisa más tarde.</p>'));
   }
 
   partes.push(seccion('Próximos partidos', proximos.length
@@ -61,7 +70,7 @@ export function pantallaInicio({ perfil, gratis, proximos, recientes }, { ahora,
 
   if (perfil.plan === 'free') {
     partes.push(`<a class="promo" href="#/pro"><span class="promo__texto"><strong>${esc(LEMA_PRO)}</strong>` +
-      `<span>PRO: informes completos de cada partido · <span class="mono">${catalogo.pro_stars}</span> Stars / ${catalogo.pro_dias} días</span></span>` +
+      `<span>Desbloquea informes completos con PRO o elige un análisis individual cuando las compras estén activas · <span class="mono">${catalogo.pro_stars}</span> Stars / ${catalogo.pro_dias} días</span></span>` +
       `${icono('flecha')}</a>`);
   }
   return partes.join('');
@@ -214,17 +223,18 @@ export function pantallaPro({ perfil }, { catalogo }) {
     : '';
   return heroe({
     imagen: ASSETS.heroPro, titulo: 'Monitor eSports <span class="dorado">PRO</span>',
-    bajada: esc(LEMA_PRO), extra: actual, clase: 'heroe--pro',
+    bajada: 'Probabilidades completas, alertas y contexto en un solo lugar.', extra: actual, clase: 'heroe--pro',
   }) +
     `<article class="plan-tarjeta plan-tarjeta--pro"><header><h2>PRO</h2><p class="precio"><span class="mono">${catalogo.pro_stars}</span> Stars / ${catalogo.pro_dias} días</p></header>` +
-    lista(['Informes completos', 'Alertas previas', 'Mis partidos y favoritos', 'Resultados agrupados', 'Resumen diario', 'Alertas si cambia la predicción']) +
+    lista(['Probabilidades completas de cada partido', 'Alertas antes del inicio', 'Mis partidos y favoritos', 'Resultados e historial agrupado', 'Resumen diario', 'Avisos si cambia la predicción']) +
     `<button class="boton boton--pro" type="button" data-accion="comprar" data-producto="pro" ${inactivo}>` +
     `${perfil.plan === 'pro' ? 'PRO activo' : 'Activar PRO'}</button></article>` +
     `<article class="plan-tarjeta"><header><h2>Análisis individual</h2><p class="precio"><span class="mono">${catalogo.analisis_stars}</span> Stars</p></header>` +
+    '<p class="plan-tarjeta__intro">Compra solo el partido que te interesa.</p>' +
     lista(['Informe completo por partido', 'Probabilidades, contexto y estadísticas clave', 'Pago único, sin renovación']) +
     `<a class="boton boton--secundario" href="${hrefPartidos()}">Elegir partido</a></article>` +
     `<article class="plan-tarjeta"><header><h2>FREE</h2><p class="precio">Gratis</p></header>` +
-    lista(['1 predicción diaria', 'Resultados e historial actualizado']) + '</article>' +
+    lista(['1 predicción diaria', 'Historial y resultados visibles']) + '</article>' +
     (compras ? '' : '<p class="nota nota--centro">Las compras desde la Mini App todavía no están activas.</p>') +
     '<p class="nota nota--centro">Son estimaciones, sin resultados ni ganancias garantizadas. PRO dura 30 días; ' +
     'puedes cancelar la renovación y conservar el período pagado.</p>';
@@ -243,10 +253,10 @@ export function pantallaMas(_datos, { catalogo, demo, escenario }) {
       fila({ icono: 'bot', titulo: 'Abrir el bot', texto: 'Comandos, avisos y compras', accion: 'telegram', url: `https://t.me/${catalogo.bot}` }) +
       '</div>'),
     seccion('Cómo calculamos', '<div class="panel texto">' +
-      '<p>Los porcentajes salen de un modelo de rating (Elo / Glicko-2) calculado con partidas profesionales reales. ' +
+      '<p>Los porcentajes salen de un modelo estadístico de rating (Elo / Glicko-2) calculado con partidas profesionales reales. ' +
       'Ningún modelo de lenguaje estima probabilidades.</p>' +
-      '<p>Cada predicción se guarda antes del partido y se califica contra el resultado real. Los fallos se publican igual que los aciertos.</p>' +
-      `<p>Horarios en ${ZONA_PUBLICA}. Son estimaciones, sin resultados ni ganancias garantizadas.</p></div>`),
+      '<p>Cada predicción se guarda antes del partido y después se compara con el resultado real. Los fallos se publican igual que los aciertos.</p>' +
+      `<p>Horarios en ${ZONA_PUBLICA}. No son apuestas seguras ni ganancias garantizadas.</p></div>`),
   ];
   if (demo) {
     partes.push(seccion('Modo demostración', '<div class="panel">' +
