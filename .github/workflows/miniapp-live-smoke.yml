@@ -24,8 +24,8 @@ jobs:
       - name: Probar autenticación y redacción reales
         shell: bash
         run: |
-          node <<'NODE'
-          const { createHmac } = require('node:crypto');
+          node --input-type=module <<'NODE'
+          import { createHmac } from 'node:crypto';
 
           const token = process.env.TELEGRAM_BOT_TOKEN;
           const base = process.env.MINIAPP_API_URL;
