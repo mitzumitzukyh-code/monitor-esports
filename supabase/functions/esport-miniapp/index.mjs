@@ -1,3 +1,4 @@
+import { accesoDe, estadoDe, forma, h2h, politicaAcceso } from './acceso.mjs';
 import { validarInitData } from './telegram-init.mjs';
 
 const JUEGOS = new Set(['cs2', 'dota2', 'lol', 'valorant']);
@@ -53,42 +54,6 @@ function diaUtcMenos4(ms) {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) + 4 * 3600_000;
 }
 
-function accesoDe(row, perfil, ahora = Date.now()) {
-  if (row.resultado_real === 'ganaA' || row.resultado_real === 'ganaB') return 'auditoria';
-  if (perfil.plan === 'pro') return 'pro';
-  if (perfil.analisis_comprados.includes(Number(row.match_id))) return 'individual';
-  if (perfil.gratis_hoy === Number(row.match_id)) return 'gratis';
-  return 'bloqueado';
-}
-
-function estadoDe(row, ahora = Date.now()) {
-  if (row.resultado_real === 'ganaA' || row.resultado_real === 'ganaB') return 'finalizado';
-  return Date.parse(row.inicio_programado) <= ahora ? 'en_vivo' : 'proximo';
-}
-
-function gano(fila, teamId) {
-  if (fila.resultado_real !== 'ganaA' && fila.resultado_real !== 'ganaB') return null;
-  return (fila.resultado_real === 'ganaA') === (Number(fila.equipo_a) === Number(teamId));
-}
-
-function forma(filas, teamId) {
-  const orden = [...filas].sort((a, b) => Date.parse(b.inicio_programado) - Date.parse(a.inicio_programado)).slice(0, 8);
-  const resultados = orden.map((f) => gano(f, teamId)).filter((v) => v != null);
-  return {
-    victorias: resultados.filter(Boolean).length,
-    total: resultados.length,
-    ultimas: resultados.slice(0, 5).map((v) => v ? 'G' : 'P'),
-  };
-}
-
-function h2h(filas, a, b) {
-  const entre = filas.filter((f) => {
-    const x = Number(f.equipo_a), y = Number(f.equipo_b);
-    return (x === a && y === b) || (x === b && y === a);
-  });
-  return { series: entre.length, ganadasA: entre.filter((f) => gano(f, a)).length };
-}
-
 async function historialAnalisis(row) {
   const juego = encodeURIComponent(row.juego);
   const antes = encodeURIComponent(row.inicio_programado);
@@ -142,8 +107,9 @@ async function normalizarFilas(filas, perfil, { incluirAnalisisId = null, ahora 
   const equipos = await resolverEquipos(filas);
   const salida = [];
   for (const row of filas) {
-    const acceso = accesoDe(row, perfil, ahora);
-    const puedeAnalisis = ['pro', 'individual'].includes(acceso) && Number(row.match_id) === incluirAnalisisId;
+    const politica = politicaAcceso(row, perfil);
+    const acceso = politica.acceso;
+    const puedeAnalisis = politica.analisisPermitido && Number(row.match_id) === incluirAnalisisId;
     const analisis = puedeAnalisis ? await historialAnalisis(row) : null;
     salida.push({
       match_id: Number(row.match_id),
@@ -153,7 +119,7 @@ async function normalizarFilas(filas, perfil, { incluirAnalisisId = null, ahora 
       inicio_programado: row.inicio_programado,
       formato: row.formato || 'bo3',
       estado: estadoDe(row, ahora),
-      prob_a: acceso === 'bloqueado' ? null : Number(row.prob_a),
+      prob_a: politica.prob_a,
       acceso,
       analisis,
       ...(row.resultado_real ? { resultado_real: row.resultado_real } : {}),
