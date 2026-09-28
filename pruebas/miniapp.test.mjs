@@ -290,13 +290,15 @@ test('tarjeta de partido: escapa nombres de terceros y usa el emblema del juego'
   assert.match(html, /EN VIVO/, 'la primera fila de la demo ya empezó');
 });
 
-test('logos de equipo: pinta HTTPS real y cae a monograma si no es segura', () => {
+test('logos de equipo: logo real oculta iniciales y el fallback queda disponible si falla', () => {
   const real = avatarEquipo({ id: 7, nombre: 'Team Aurora', logo: 'https://cdn.example.com/team.webp' });
+  assert.match(real, /equipo__avatar equipo__avatar--con-logo/);
   assert.match(real, /equipo__logo/);
   assert.match(real, /https:\/\/cdn\.example\.com\/team\.webp/);
-  assert.match(real, /TA/);
+  assert.match(real, /TA/, 'el monograma permanece en DOM como fallback');
 
   const inseguro = avatarEquipo({ id: 8, nombre: 'Bad URL', logo: 'javascript:alert(1)' });
+  assert.doesNotMatch(inseguro, /equipo__avatar--con-logo/);
   assert.doesNotMatch(inseguro, /<img class="equipo__logo"/);
   assert.match(inseguro, /BU/);
 });
