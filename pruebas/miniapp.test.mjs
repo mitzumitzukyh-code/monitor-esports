@@ -7,7 +7,7 @@ import { CATALOGO_DEMO, ESCENARIOS, conAcceso, crearFuenteDemo, partidosDemo, pe
 import { validarPartido, validarPerfil } from '../miniapp/src/datos/tipos.mjs';
 import { NAVEGACION, PANTALLAS, esRaiz, hrefPartido, leerRuta } from '../miniapp/src/rutas.mjs';
 import { crearTelegram } from '../miniapp/src/telegram.mjs';
-import { avatarEquipo, estadoError, tarjetaPartido, tarjetaResultado } from '../miniapp/src/vistas/componentes.mjs';
+import { avatarEquipo, estadoCargando, estadoError, tarjetaPartido, tarjetaResultado } from '../miniapp/src/vistas/componentes.mjs';
 import { barraNavegacion } from '../miniapp/src/vistas/marco.mjs';
 import { PANTALLA, cargarPantalla, filaForma } from '../miniapp/src/vistas/pantallas.mjs';
 import { API_PRODUCCION, MINIAPP, construir, revisar } from '../miniapp/scripts/construir.mjs';
@@ -149,7 +149,7 @@ test('FREE: la predicción del día muestra la barra y ofrece PRO para el análi
   assert.match(html, />64%</);
   assert.match(html, />36%</);
   assert.doesNotMatch(html, /seccion__titulo">Forma reciente/);
-  assert.match(html, /Contexto, no solo predicciones\./);
+  assert.match(html, /Más contexto para entender cada partido\./);
   assert.match(html, /Cifra de demostración: no sale del modelo/, 'la demo no se hace pasar por el motor');
   const real = PANTALLA.detalle({ partido: (await fuente('free').partido(1102)).partido }, { ...ctx('free'), demo: false });
   assert.match(real, /Estimación del modelo de rating con partidas reales/);
@@ -182,6 +182,11 @@ test('inicio cambia según el plan: FREE ve su predicción del día, PRO ve su v
   assert.match(free, /Tu predicción FREE de hoy/);
   assert.match(free, /1 predicción diaria/);
   assert.match(free, /Predicciones y estadísticas para entender cada partido\./);
+  assert.match(free, /1 predicción gratis al día · historial visible · análisis PRO completo/);
+  assert.match(free, /Datos reales/);
+  assert.match(free, /Fallos visibles/);
+  assert.match(free, /Ver predicción FREE|Ver partidos/);
+  assert.match(free, /Ver PRO/);
   const pro = (await pintar('#/inicio', 'pro')).html;
   assert.doesNotMatch(pro, /Tu predicción FREE de hoy/);
   assert.match(pro, /Activo hasta/);
@@ -192,6 +197,8 @@ test('la pantalla PRO usa los precios aprobados y no activa compras', async () =
   assert.match(html, /250<\/span> Stars \/ 30 días/);
   assert.match(html, /50<\/span> Stars/);
   assert.match(html, /1 predicción diaria/);
+  assert.match(html, /Compra solo el partido que te interesa\./);
+  assert.match(html, /Probabilidades completas de cada partido/);
   assert.match(html, /Las compras desde la Mini App todavía no están activas\./);
   assert.match(html, /data-producto="pro" disabled/);
 });
@@ -313,6 +320,12 @@ test('historial: aciertos y fallos con el mismo componente y el conteo completo'
 
 // ── Estados vacío / error ────────────────────────────────────────────────
 
+test('estado de carga usa skeletons para evitar una pantalla vacía', () => {
+  const html = estadoCargando();
+  assert.match(html, /Cargando partidos/);
+  assert.equal((html.match(/class="skeleton-card"/g) ?? []).length, 2);
+});
+
 test('estados vacío y error usan su arte y no filtran mensajes internos', async () => {
   const vacio = (await pintar('#/partidos', 'vacio')).html;
   assert.match(vacio, /assets\/states\/empty-matches\.webp/);
@@ -330,6 +343,7 @@ test('modo demo: Más ofrece los cinco estados y la cabecera avisa que es demo',
   for (const clave of Object.keys(ESCENARIOS)) assert.match(html, new RegExp(`data-valor="${clave}"`));
   assert.match(html, /https:\/\/t\.me\/mitzukyhs/);
   assert.match(html, /Ningún modelo de lenguaje estima probabilidades\./);
+  assert.match(html, /No son apuestas seguras ni ganancias garantizadas\./);
 });
 
 // ── Adaptador de Telegram ────────────────────────────────────────────────
