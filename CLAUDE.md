@@ -88,6 +88,9 @@ motor/          elo.mjs, series.mjs — AGNÓSTICOS del juego
 juez/           backtest.mjs, notas.mjs, tabla.mjs, calibrar.mjs
 salida/         discord.mjs, formato.mjs
 assets/         marca: favicon, iconos PWA, manifest, tarjetas sociales
+miniapp/        Mini App de Telegram (V1: sólo UI con datos de demo, sin
+                deploy ni compras). Ver miniapp/README.md
+design/         handoff y paquete de assets de la Mini App, capturas
 pruebas/        una prueba por cada función del motor
 ```
 

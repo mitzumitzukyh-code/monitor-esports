@@ -7,7 +7,11 @@
     "test:stars-db": "node --test scripts/pruebas-stars-db.mjs",
     "telegram": "node --env-file=.env salida/stars/webhook.mjs",
     "telegram:configurar": "node --env-file=.env scripts/configurar-stars.mjs",
-    "benchmark:market": "node juez/benchmark-mercado.mjs"
+    "benchmark:market": "node juez/benchmark-mercado.mjs",
+    "miniapp:assets": "node miniapp/scripts/desempacar-assets.mjs",
+    "miniapp:build": "node miniapp/scripts/construir.mjs",
+    "miniapp:dev": "node miniapp/scripts/servir.mjs",
+    "miniapp:capturas": "node miniapp/scripts/capturas.mjs design/capturas-miniapp-v1"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8"
