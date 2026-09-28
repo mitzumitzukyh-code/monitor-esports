@@ -7,7 +7,7 @@ import { CATALOGO_DEMO, ESCENARIOS, conAcceso, crearFuenteDemo, partidosDemo, pe
 import { validarPartido, validarPerfil } from '../miniapp/src/datos/tipos.mjs';
 import { NAVEGACION, PANTALLAS, esRaiz, hrefPartido, leerRuta } from '../miniapp/src/rutas.mjs';
 import { crearTelegram } from '../miniapp/src/telegram.mjs';
-import { estadoError, tarjetaPartido, tarjetaResultado } from '../miniapp/src/vistas/componentes.mjs';
+import { avatarEquipo, estadoError, tarjetaPartido, tarjetaResultado } from '../miniapp/src/vistas/componentes.mjs';
 import { barraNavegacion } from '../miniapp/src/vistas/marco.mjs';
 import { PANTALLA, cargarPantalla, filaForma } from '../miniapp/src/vistas/pantallas.mjs';
 import { API_PRODUCCION, MINIAPP, construir, revisar } from '../miniapp/scripts/construir.mjs';
@@ -257,8 +257,34 @@ test('tarjeta de partido: escapa nombres de terceros y usa el emblema del juego'
   const html = tarjetaPartido(p, { ahora });
   assert.doesNotMatch(html, /<img src=x/);
   assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
-  assert.match(html, /assets\/games\/cs2-placeholder\.webp/);
+  assert.match(html, /assets\/games\/cs2\.svg/);
   assert.match(html, /EN VIVO/, 'la primera fila de la demo ya empezó');
+});
+
+test('logos de equipo: pinta HTTPS real y cae a monograma si no es segura', () => {
+  const real = avatarEquipo({ id: 7, nombre: 'Team Aurora', logo: 'https://cdn.example.com/team.webp' });
+  assert.match(real, /equipo__logo/);
+  assert.match(real, /https:\/\/cdn\.example\.com\/team\.webp/);
+  assert.match(real, /TA/);
+
+  const inseguro = avatarEquipo({ id: 8, nombre: 'Bad URL', logo: 'javascript:alert(1)' });
+  assert.doesNotMatch(inseguro, /<img class="equipo__logo"/);
+  assert.match(inseguro, /BU/);
+});
+
+test('contrato de partido acepta logo HTTPS y rechaza logo no seguro', () => {
+  const [base] = partidosDemo(ahora);
+  const valido = conAcceso({
+    ...base,
+    equipo_a: { ...base.equipo_a, logo: 'https://cdn.example.com/a.webp' },
+  }, perfilDemo('pro', ahora));
+  assert.deepEqual(validarPartido(valido), []);
+
+  const roto = {
+    ...valido,
+    equipo_b: { ...valido.equipo_b, logo: 'http://inseguro.test/b.webp' },
+  };
+  assert.ok(validarPartido(roto).some((e) => e.includes('equipo_b.logo inválido')));
 });
 
 test('tarjeta bloqueada muestra el candado PRO en vez de una cifra', () => {
