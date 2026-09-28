@@ -96,14 +96,35 @@ export function pantallaPartidos({ partidos }, { ahora, ruta }) {
 }
 
 // ── Detalle de partido ───────────────────────────────────────────────────
+/**
+ * Una fila de "Forma reciente". El resumen sale de las últimas 5 (`ultimas`),
+ * no de victorias/total. Si `total` cubre más series que las últimas 5, se
+ * muestra aparte como conteo de esa ventana: no es una racha (el dato no
+ * dice si fueron seguidas) y el diseño no publica rachas.
+ */
+export function filaForma(equipo, f) {
+  const cronologico = [...f.ultimas].reverse(); // `ultimas` viene de la más reciente a la más vieja
+  const v = f.ultimas.filter((x) => x === 'G').length;
+  const d = f.ultimas.length - v;
+  const resumen = f.ultimas.length
+    ? `<span class="forma__resumen mono"><span class="forma__v">${v}V</span><span class="forma__sep">·</span><span class="forma__d">${d}D</span></span>`
+    : '<span class="forma__resumen forma__resumen--vacio">Sin datos</span>';
+  const etiqueta = `Últimas ${f.ultimas.length} series, de la más antigua a la más reciente: ` +
+    cronologico.map((x) => (x === 'G' ? 'victoria' : 'derrota')).join(', ');
+  const serie = f.ultimas.length
+    ? `<span class="forma__serie" role="img" aria-label="${etiqueta}" title="De la más antigua a la más reciente">` +
+      cronologico.map((x) => `<span class="forma__marca forma__marca--${x === 'G' ? 'v' : 'd'}"></span>`).join('') + '</span>'
+    : '';
+  const extra = f.total > f.ultimas.length
+    ? `<span class="forma__extra">Últimas <span class="mono">${f.total}</span>: <span class="mono">${f.victorias}V · ${f.total - f.victorias}D</span></span>`
+    : '';
+  return `<div class="forma__fila"><span class="forma__equipo">${esc(equipo.nombre)}</span>${resumen}${serie}${extra}</div>`;
+}
+
 function panelForma(p) {
   const { formaA, formaB, h2h } = p.analisis;
-  const fila = (equipo, f) => `<div class="forma__fila"><span class="forma__equipo">${esc(equipo.nombre)}</span>` +
-    `<span class="forma__cifra mono">${f.total ? `${f.victorias}/${f.total}` : '—'}</span>` +
-    `<span class="forma__ultimas" aria-label="Últimos resultados: ${f.ultimas.map((x) => (x === 'G' ? 'ganó' : 'perdió')).join(', ')}">` +
-    f.ultimas.map((x) => `<span class="punto punto--${x === 'G' ? 'g' : 'p'}">${x}</span>`).join('') + '</span></div>';
-  return seccion('Forma reciente', `<div class="panel">${fila(p.equipo_a, formaA)}${fila(p.equipo_b, formaB)}` +
-    '<p class="nota">Series ganadas de las últimas jugadas · G ganó, P perdió (de la más reciente a la más vieja).</p></div>') +
+  return seccion('Forma reciente', `<div class="panel forma">${filaForma(p.equipo_a, formaA)}${filaForma(p.equipo_b, formaB)}</div>`,
+    { bajada: 'Últimas 5 series' }) +
     seccion('Enfrentamientos previos · H2H', `<div class="panel">${h2h.series
       ? `<p class="h2h"><span>${esc(p.equipo_a.nombre)}</span><span class="mono">${h2h.ganadasA}–${h2h.series - h2h.ganadasA}</span><span>${esc(p.equipo_b.nombre)}</span></p>` +
         `<p class="nota"><span class="mono">${h2h.series}</span> series registradas.</p>`

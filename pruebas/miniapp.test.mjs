@@ -9,7 +9,7 @@ import { NAVEGACION, PANTALLAS, esRaiz, hrefPartido, leerRuta } from '../miniapp
 import { crearTelegram } from '../miniapp/src/telegram.mjs';
 import { estadoError, tarjetaPartido, tarjetaResultado } from '../miniapp/src/vistas/componentes.mjs';
 import { barraNavegacion } from '../miniapp/src/vistas/marco.mjs';
-import { PANTALLA, cargarPantalla } from '../miniapp/src/vistas/pantallas.mjs';
+import { PANTALLA, cargarPantalla, filaForma } from '../miniapp/src/vistas/pantallas.mjs';
 import { MINIAPP, construir, revisar } from '../miniapp/scripts/construir.mjs';
 import { REQUERIDOS } from '../miniapp/scripts/desempacar-assets.mjs';
 
@@ -194,6 +194,59 @@ test('la pantalla PRO usa los precios aprobados y no activa compras', async () =
   assert.match(html, /1 predicción diaria/);
   assert.match(html, /Las compras desde la Mini App todavía no están activas\./);
   assert.match(html, /data-producto="pro" disabled/);
+});
+
+// ── Forma reciente ───────────────────────────────────────────────────────
+
+const marcas = (html) => [...html.matchAll(/forma__marca--([vd])/g)].map((m) => m[1]).join('');
+
+test('forma: el resumen sale de las últimas 5, no de victorias/total', () => {
+  const html = filaForma({ nombre: 'Obsidian Five' }, { victorias: 8, total: 8, ultimas: ['G', 'G', 'G', 'G', 'G'] });
+  assert.match(html, /forma__v">5V</);
+  assert.match(html, /forma__d">0D</);
+  assert.equal(marcas(html), 'vvvvv');
+  // Lo que el total agrega va aparte, como conteo de esa ventana.
+  assert.match(html, /Últimas <span class="mono">8<\/span>: <span class="mono">8V · 0D<\/span>/);
+  assert.doesNotMatch(html, /8\/8|6\/6/, 'sin la fracción suelta');
+});
+
+test('forma: las marcas van de la más antigua a la más reciente', () => {
+  // `ultimas` viene de la más reciente a la más vieja.
+  const html = filaForma({ nombre: 'Moonfall' }, { victorias: 3, total: 8, ultimas: ['G', 'P', 'G', 'P', 'P'] });
+  assert.match(html, /forma__v">2V</);
+  assert.match(html, /forma__d">3D</);
+  assert.equal(marcas(html), 'ddvdv');
+  assert.match(html, /aria-label="Últimas 5 series, de la más antigua a la más reciente: derrota, derrota, victoria, derrota, victoria"/);
+});
+
+test('forma: sin información extra no se agrega texto secundario', () => {
+  const html = filaForma({ nombre: 'Arc Lions' }, { victorias: 4, total: 5, ultimas: ['G', 'G', 'P', 'G', 'G'] });
+  assert.doesNotMatch(html, /forma__extra/);
+});
+
+test('forma: sin series muestra "Sin datos" y ninguna marca', () => {
+  const html = filaForma({ nombre: 'Northwind' }, { victorias: 0, total: 0, ultimas: [] });
+  assert.match(html, /Sin datos/);
+  assert.doesNotMatch(html, /forma__serie|forma__extra/);
+});
+
+test('forma: escapa el nombre del equipo', () => {
+  assert.match(filaForma({ nombre: '<b>X</b>' }, { victorias: 0, total: 0, ultimas: [] }), /&lt;b&gt;X&lt;\/b&gt;/);
+});
+
+test('detalle: Forma reciente con subtítulo, sin rachas ni la leyenda G/P', async () => {
+  const { html } = await pintar('#/partido/1106', 'pro');
+  assert.match(html, /seccion__titulo">Forma reciente<\/h2><p class="seccion__bajada">Últimas 5 series<\/p>/);
+  assert.equal((html.match(/class="forma__fila"/g) ?? []).length, 2);
+  assert.doesNotMatch(html, /racha/i);
+  assert.doesNotMatch(html, /G ganó|P perdió|class="punto/);
+  assert.match(html, /seccion__titulo">Enfrentamientos previos · H2H/);
+});
+
+test('seccion sin bajada deja el marcado de siempre', async () => {
+  const { html } = await pintar('#/inicio');
+  assert.doesNotMatch(html, /seccion__bajada/);
+  assert.match(html, /<header class="seccion__cabeza"><h2 class="seccion__titulo">Próximos partidos<\/h2>/);
 });
 
 // ── Tarjetas ─────────────────────────────────────────────────────────────

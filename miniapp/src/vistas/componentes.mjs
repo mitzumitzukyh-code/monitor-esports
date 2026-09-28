@@ -176,10 +176,13 @@ export function filtrosJuego(activo, href) {
     Object.entries(JUEGOS).map(([j, n]) => chip(j, n)).join('') + '</nav>';
 }
 
-export function seccion(titulo, contenido, { enlace = '', idTitulo = '' } = {}) {
+export function seccion(titulo, contenido, { enlace = '', idTitulo = '', bajada = '' } = {}) {
   const id = idTitulo ? ` id="${idTitulo}"` : '';
+  const h2 = `<h2 class="seccion__titulo"${id}>${esc(titulo)}</h2>`;
+  // Sin bajada el marcado queda igual que siempre.
+  const titular = bajada ? `<div>${h2}<p class="seccion__bajada">${esc(bajada)}</p></div>` : h2;
   return `<section class="seccion"${idTitulo ? ` aria-labelledby="${idTitulo}"` : ''}>` +
-    `<header class="seccion__cabeza"><h2 class="seccion__titulo"${id}>${esc(titulo)}</h2>${enlace}</header>${contenido}</section>`;
+    `<header class="seccion__cabeza">${titular}${enlace}</header>${contenido}</section>`;
 }
 
 export function enlaceVerTodo(href, texto = 'Ver todo') {
