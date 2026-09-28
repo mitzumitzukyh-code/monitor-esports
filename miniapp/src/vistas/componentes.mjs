@@ -17,7 +17,7 @@ export const ASSETS = Object.freeze({
   vacioPartidos: 'assets/states/empty-matches.webp',
   vacioHistorial: 'assets/states/empty-history.webp',
   error: 'assets/states/error-state.webp',
-  juego: (j) => `assets/games/${j}-placeholder.webp`,
+  juego: (j) => `assets/games/${j}.svg`,
 });
 
 // Iconos de trazo, 24×24. SVG en línea: nada que descargar.
@@ -56,10 +56,28 @@ export function emblemaJuego(juego, tamano = 24) {
   return `<img class="emblema" src="${ASSETS.juego(juego)}" width="${tamano}" height="${tamano}" alt="" loading="lazy" decoding="async">`;
 }
 
-/** Monograma del equipo. Los logos reales llegarán de la capa de datos. */
+/** Monograma del equipo: fallback si no hay logo o el CDN falla. */
 export function monograma(nombre) {
   const letras = String(nombre).trim().split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase();
   return `<span class="monograma" aria-hidden="true">${esc(letras)}</span>`;
+}
+
+function logoHttps(url) {
+  if (typeof url !== 'string') return null;
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' ? u.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Logo real del equipo encima del monograma; si falla, el fallback queda visible. */
+export function avatarEquipo(equipo) {
+  const logo = logoHttps(equipo?.logo);
+  return '<span class="equipo__avatar">' + monograma(equipo?.nombre ?? '') +
+    (logo ? `<img class="equipo__logo" src="${esc(logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-logo-equipo>` : '') +
+    '</span>';
 }
 
 /** Favorito según la misma convención del bot: prob_a >= 0.5 es el equipo A. */
@@ -103,8 +121,8 @@ export function tarjetaPartido(p, { ahora = Date.now() } = {}) {
     `<span class="tarjeta__juego">${esc(JUEGOS[p.juego])}</span>` +
     `<span class="tarjeta__formato mono">${esc(formatoSerie(p.formato))}</span>${cuandoPartido(p, ahora)}</span>` +
     '<span class="tarjeta__cuerpo"><span class="tarjeta__equipos">' +
-    `<span class="equipo">${monograma(p.equipo_a.nombre)}<span class="equipo__nombre">${esc(p.equipo_a.nombre)}</span></span>` +
-    `<span class="equipo">${monograma(p.equipo_b.nombre)}<span class="equipo__nombre">${esc(p.equipo_b.nombre)}</span></span>` +
+    `<span class="equipo">${avatarEquipo(p.equipo_a)}<span class="equipo__nombre">${esc(p.equipo_a.nombre)}</span></span>` +
+    `<span class="equipo">${avatarEquipo(p.equipo_b)}<span class="equipo__nombre">${esc(p.equipo_b.nombre)}</span></span>` +
     `</span>${ladoTarjeta(p)}</span></a>`;
 }
 
@@ -113,7 +131,7 @@ export function tarjetaResultado(p, { ahora = Date.now() } = {}) {
   const ganoA = p.resultado_real === 'ganaA';
   const f = favorito(p);
   const ok = acertado(p);
-  const equipo = (e, gano) => `<span class="equipo${gano ? ' equipo--ganador' : ''}">${monograma(e.nombre)}` +
+  const equipo = (e, gano) => `<span class="equipo${gano ? ' equipo--ganador' : ''}">${avatarEquipo(e)}` +
     `<span class="equipo__nombre">${esc(e.nombre)}</span>${gano ? '<span class="equipo__marca">Ganó</span>' : ''}</span>`;
   return `<a class="tarjeta tarjeta--resultado juego--${p.juego}" href="${hrefPartido(p.match_id)}" data-partido="${p.match_id}">` +
     `<span class="tarjeta__cabeza">${emblemaJuego(p.juego, 20)}<span class="tarjeta__juego">${esc(JUEGOS[p.juego])}</span>` +
