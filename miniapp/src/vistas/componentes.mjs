@@ -190,6 +190,35 @@ export function estadoCargando() {
     '</div></div>';
 }
 
+export function dialogoCompra(producto, catalogo) {
+  const esPro = producto === 'pro';
+  const match = !esPro && /^partido:\d+$/.test(producto ?? '') ? Number(producto.split(':')[1]) : null;
+  if (!esPro && !Number.isSafeInteger(match)) return '';
+  const amount = esPro ? Number(catalogo?.pro_stars) : Number(catalogo?.analisis_stars);
+  if (!Number.isSafeInteger(amount) || amount <= 0) return '';
+  const recurrente = esPro && catalogo?.pro_recurrente !== false;
+  const titulo = esPro ? 'Activar Monitor eSports PRO' : `Comprar análisis #${match}`;
+  const precio = esPro
+    ? `${amount} Stars / 30 días${recurrente ? ' · renovación automática' : ' · pago único'}`
+    : `${amount} Stars · pago único`;
+  const productoApi = esPro ? 'pro' : 'partido';
+  return '<dialog class="compra-dialogo" data-compra-dialogo>' +
+    '<div class="compra-dialogo__cuerpo">' +
+      '<span class="insignia insignia--pro">Stars</span>' +
+      `<h2 class="compra-dialogo__titulo">${esc(titulo)}</h2>` +
+      `<p class="compra-dialogo__precio mono">${esc(precio)}</p>` +
+      '<p class="compra-dialogo__texto">Compras acceso a análisis, predicciones y estadísticas. Son estimaciones, sin resultados ni ganancias garantizadas.</p>' +
+      (recurrente ? '<p class="compra-dialogo__texto">Telegram cobrará automáticamente cada 30 días mientras la suscripción esté activa y tengas Stars. Puedes cancelar la renovación y conservar el período pagado.</p>' : '') +
+      (!esPro ? '<p class="compra-dialogo__texto">El análisis individual da acceso únicamente a este partido y no se renueva.</p>' : '') +
+      '<p class="compra-dialogo__texto">Ante cobros duplicados o problemas de acceso, contacta soporte con tu recibo.</p>' +
+      '<p class="compra-dialogo__texto">Guardamos tu ID de Telegram, consentimiento, órdenes y recibos para gestionar compras. Telegram no atiende disputas de estas compras.</p>' +
+      '<div class="compra-dialogo__acciones">' +
+        '<button class="boton boton--secundario" type="button" data-accion="cerrar-compra">Cancelar</button>' +
+        `<button class="boton boton--pro" type="button" data-accion="confirmar-compra" data-producto="${productoApi}"${match ? ` data-match-id="${match}"` : ''}>Acepto los términos · Continuar</button>` +
+      '</div>' +
+    '</div></dialog>';
+}
+
 /** Chips de juego. `href(juego)` arma el enlace de cada filtro. */
 export function filtrosJuego(activo, href) {
   const chip = (juego, texto) => `<a class="chip${activo === juego ? ' chip--activo' : ''}" href="${href(juego)}"` +

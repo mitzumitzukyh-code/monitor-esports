@@ -408,6 +408,21 @@ h1, h2, h3, p { margin: 0; }
 .boton--pro:hover { background: linear-gradient(135deg, #F7E0AA, #E9C27A 45%, #D3A04A); }
 .boton:disabled { opacity: .45; cursor: not-allowed; }
 
+.compra-dialogo {
+  width: min(420px, calc(100% - 28px)); max-height: min(82vh, 620px);
+  margin: auto; padding: 0; border: 1px solid var(--borde-fuerte); border-radius: 20px;
+  background: var(--panel); color: var(--tinta); box-shadow: 0 24px 80px rgba(0,0,0,.62);
+}
+.compra-dialogo::backdrop { background: rgba(0,0,0,.72); backdrop-filter: blur(2px); }
+.compra-dialogo__cuerpo { display: flex; flex-direction: column; gap: 12px; padding: 20px; }
+.compra-dialogo__cuerpo > .insignia { align-self: flex-start; margin-left: 0; }
+.compra-dialogo__titulo { font-size: 20px; font-weight: 800; line-height: 1.2; }
+.compra-dialogo__precio { color: var(--oro); font-size: 15px; font-weight: 800; }
+.compra-dialogo__texto { color: var(--tinta-media); font-size: 13px; line-height: 1.5; }
+.compra-dialogo__acciones { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 4px; }
+.compra-dialogo__acciones .boton { width: 100%; }
+.compra-dialogo[aria-busy="true"] .boton { pointer-events: none; opacity: .58; }
+
 .promo {
   display: flex; align-items: center; gap: 12px; padding: 16px;
   border-radius: var(--radio); border: 1px solid rgba(227, 184, 102, .3);

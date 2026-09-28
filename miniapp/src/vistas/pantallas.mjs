@@ -216,7 +216,7 @@ export function pantallaHistorial({ partidos }, { ahora, ruta }) {
 // ── PRO ──────────────────────────────────────────────────────────────────
 export function pantallaPro({ perfil }, { catalogo }) {
   const compras = catalogo.compras_habilitadas;
-  const inactivo = compras ? '' : 'disabled aria-disabled="true"';
+  const inactivo = compras && perfil.plan !== 'pro' ? '' : 'disabled aria-disabled="true"';
   const lista = (items) => `<ul class="beneficios">${items.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>`;
   const actual = perfil.plan === 'pro'
     ? `<p class="plan plan--centro">${insignia('pro')}<span>Tu PRO está activo hasta <strong>${esc(fechaLarga(perfil.pro_hasta))}</strong></span></p>`

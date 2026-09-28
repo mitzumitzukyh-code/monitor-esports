@@ -5,7 +5,7 @@ import { crearFuenteApi } from './datos/api.mjs';
 import { ESCENARIOS, crearFuenteDemo } from './datos/demo.mjs';
 import { esRaiz, leerRuta } from './rutas.mjs';
 import { crearTelegram } from './telegram.mjs';
-import { estadoCargando, estadoError } from './vistas/componentes.mjs';
+import { dialogoCompra, estadoCargando, estadoError } from './vistas/componentes.mjs';
 import { barraNavegacion, cabecera } from './vistas/marco.mjs';
 import { PANTALLA, cargarPantalla } from './vistas/pantallas.mjs';
 
@@ -78,6 +78,67 @@ function volver() {
   else location.hash = '#/partidos';
 }
 
+function cerrarCompra() {
+  const dialogo = document.querySelector('[data-compra-dialogo]');
+  if (!dialogo) return;
+  try { if (dialogo.open) dialogo.close(); } catch { /* navegador antiguo */ }
+  dialogo.remove();
+}
+
+function abrirCompra(producto) {
+  if (!catalogo?.compras_habilitadas || typeof fuente?.comprar !== 'function') {
+    tg.alerta('Las compras están temporalmente desactivadas.');
+    return;
+  }
+  cerrarCompra();
+  const html = dialogoCompra(producto, catalogo);
+  if (!html) {
+    tg.alerta('No pudimos preparar esta compra.');
+    return;
+  }
+  document.body.insertAdjacentHTML('beforeend', html);
+  const dialogo = document.querySelector('[data-compra-dialogo]');
+  if (typeof dialogo?.showModal === 'function') dialogo.showModal();
+  else dialogo?.setAttribute('open', '');
+}
+
+async function confirmarCompra(boton) {
+  const dialogo = boton.closest('[data-compra-dialogo]');
+  if (!dialogo || dialogo.getAttribute('aria-busy') === 'true') return;
+  const producto = boton.dataset.producto;
+  const matchId = boton.dataset.matchId ? Number(boton.dataset.matchId) : null;
+  dialogo.setAttribute('aria-busy', 'true');
+  const textoOriginal = boton.textContent;
+  boton.textContent = 'Preparando factura…';
+  boton.disabled = true;
+  try {
+    const compra = await fuente.comprar({ producto, matchId, aceptarTerminos: true });
+    cerrarCompra();
+    const abierta = tg.abrirFactura(compra.invoice_url, (estado) => {
+      if (estado === 'paid') {
+        fuente.invalidar?.();
+        tg.alerta('Pago recibido. Estamos activando tu acceso.');
+        setTimeout(() => mostrar(), 1000);
+      } else if (estado === 'pending') {
+        fuente.invalidar?.();
+        tg.alerta('El pago sigue procesándose. Actualizaremos tu acceso cuando Telegram lo confirme.');
+        setTimeout(() => mostrar(), 1500);
+      } else if (estado === 'failed') {
+        tg.alerta('Telegram no pudo completar el pago. No se activó ningún acceso.');
+      }
+    });
+    if (!abierta) throw new Error('Factura inválida');
+  } catch (error) {
+    console.error(error);
+    if (document.body.contains(dialogo)) {
+      dialogo.removeAttribute('aria-busy');
+      boton.disabled = false;
+      boton.textContent = textoOriginal;
+    }
+    tg.alerta(error?.mensajeUsuario || 'No pudimos iniciar la compra. Inténtalo otra vez.');
+  }
+}
+
 // El logo del equipo viene de un CDN externo. Si falta o falla, el
 // monograma que está debajo queda visible en vez de mostrar un icono roto.
 document.addEventListener('error', (evento) => {
@@ -85,7 +146,7 @@ document.addEventListener('error', (evento) => {
   if (img instanceof HTMLImageElement && img.matches('img[data-logo-equipo]')) img.hidden = true;
 }, true);
 
-document.addEventListener('click', (evento) => {
+document.addEventListener('click', async (evento) => {
   const objetivo = evento.target.closest('[data-accion], .nav__item, .chip, .segmento__opcion');
   if (!objetivo) return;
   tg.vibrar();
@@ -104,9 +165,14 @@ document.addEventListener('click', (evento) => {
     evento.preventDefault();
     tg.abrirTelegram(objetivo.dataset.url);
   } else if (accion === 'comprar') {
-    // Compras apagadas en la V1: los botones salen deshabilitados y, aunque
-    // alguien los habilite desde el inspector, aquí no se abre ninguna factura.
     evento.preventDefault();
+    abrirCompra(objetivo.dataset.producto);
+  } else if (accion === 'cerrar-compra') {
+    evento.preventDefault();
+    cerrarCompra();
+  } else if (accion === 'confirmar-compra') {
+    evento.preventDefault();
+    await confirmarCompra(objetivo);
   }
 });
 

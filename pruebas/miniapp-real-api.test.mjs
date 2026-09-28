@@ -7,6 +7,7 @@ import { crearFuenteApi } from '../miniapp/src/datos/api.mjs';
 import { crearTelegram } from '../miniapp/src/telegram.mjs';
 import { accesoDe, forma, h2h, politicaAcceso } from '../supabase/functions/esport-miniapp/acceso.mjs';
 import { calcularHashInitData, validarInitData } from '../supabase/functions/esport-miniapp/telegram-init.mjs';
+import { PERIODO_PRO, VERSION_TERMINOS, configuracionCompra, facturaTelegram } from '../supabase/functions/esport-miniapp/compra.mjs';
 
 const TOKEN = '123456789:AAabcdefghijklmnopqrstuvxyzABCDEFG';
 const AHORA = Date.parse('2026-09-28T12:00:00Z');
@@ -154,6 +155,80 @@ test('fuente API cachea lecturas cortas y deduplica llamadas simultáneas', asyn
 
   await fuente.partidos({ juego: 'lol', periodo: 'proximos' });
   assert.equal(llamadas, 1, 'la lectura inmediata sale del cache');
+});
+
+test('checkout Stars: factura PRO usa XTR, un precio y suscripción de 30 días', () => {
+  const f = facturaTelegram({
+    producto: 'pro', amount: 250, payload: 'espro:abc', recurrente: true,
+  });
+  assert.equal(f.currency, 'XTR');
+  assert.deepEqual(f.prices, [{ label: 'PRO 30 días', amount: 250 }]);
+  assert.equal(f.subscription_period, PERIODO_PRO);
+  assert.equal(Object.hasOwn(f, 'provider_token'), false, 'Stars no envía provider_token');
+  assert.equal(VERSION_TERMINOS, '2026-09-26-v3');
+});
+
+test('checkout Stars: factura individual no renueva y valida partido', () => {
+  const f = facturaTelegram({
+    producto: 'partido', amount: 50, payload: 'espro:def', matchId: 42, recurrente: false,
+  });
+  assert.equal(f.currency, 'XTR');
+  assert.equal(f.subscription_period, undefined);
+  assert.match(f.title, /42/);
+  assert.throws(() => facturaTelegram({ producto: 'partido', amount: 50, payload: 'x', matchId: 0 }), /partido/);
+});
+
+test('configuración de compra sólo se habilita con precios válidos y flag explícito', () => {
+  const env = new Map([
+    ['TELEGRAM_STARS_ENABLED', 'true'],
+    ['TELEGRAM_PRO_STARS', '250'],
+    ['TELEGRAM_MATCH_STARS', '50'],
+    ['TELEGRAM_PRO_RECURRING', 'true'],
+  ]);
+  assert.deepEqual(configuracionCompra((k) => env.get(k) ?? ''), {
+    habilitado: true, pro: 250, partido: 50, recurrente: true,
+  });
+  env.set('TELEGRAM_PRO_STARS', '0');
+  assert.equal(configuracionCompra((k) => env.get(k) ?? '').habilitado, false);
+});
+
+test('fuente API crea checkout sólo por POST firmado y devuelve invoice_url', async () => {
+  const vistas = [];
+  const fuente = crearFuenteApi({
+    baseUrl: 'https://example.supabase.co/functions/v1/esport-miniapp',
+    initData: () => 'auth_date=1&hash=x',
+    fetchImpl: async (url, opciones) => {
+      vistas.push({ url: url.toString(), opciones });
+      return new Response(JSON.stringify({
+        ok: true,
+        data: { invoice_url: 'https://t.me/$invoice_segura', producto: 'pro', amount: 250, recurrente: true },
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    },
+  });
+  const compra = await fuente.comprar({ producto: 'pro', aceptarTerminos: true });
+  assert.equal(compra.invoice_url, 'https://t.me/$invoice_segura');
+  assert.match(vistas[0].url, /recurso=compra/);
+  assert.equal(vistas[0].opciones.method, 'POST');
+  assert.equal(vistas[0].opciones.headers['X-Telegram-Init-Data'], 'auth_date=1&hash=x');
+  const body = JSON.parse(vistas[0].opciones.body);
+  assert.deepEqual(body, { producto: 'pro', match_id: null, aceptar_terminos: true });
+});
+
+test('fuente API traduce órdenes duplicadas y compras apagadas a mensajes de usuario', async () => {
+  for (const [error, patron] of [
+    ['pro_activo_o_pendiente', /PRO activo o una compra pendiente/],
+    ['ya_comprado', /Ya tienes acceso/],
+    ['compras_desactivadas', /temporalmente desactivadas/],
+  ]) {
+    const fuente = crearFuenteApi({
+      baseUrl: 'https://example.test/api',
+      initData: 'x',
+      fetchImpl: async () => new Response(JSON.stringify({ ok: false, error }), {
+        status: 409, headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+    await assert.rejects(fuente.comprar({ producto: 'pro', aceptarTerminos: true }), (e) => patron.test(e.mensajeUsuario));
+  }
 });
 
 test('fuente API falla cerrado si no hay initData o el servidor rechaza la sesión', async () => {
