@@ -7,7 +7,7 @@ import { CATALOGO_DEMO, ESCENARIOS, conAcceso, crearFuenteDemo, partidosDemo, pe
 import { validarPartido, validarPerfil } from '../miniapp/src/datos/tipos.mjs';
 import { NAVEGACION, PANTALLAS, esRaiz, hrefPartido, leerRuta } from '../miniapp/src/rutas.mjs';
 import { crearTelegram } from '../miniapp/src/telegram.mjs';
-import { avatarEquipo, estadoCargando, estadoError, tarjetaPartido, tarjetaResultado } from '../miniapp/src/vistas/componentes.mjs';
+import { avatarEquipo, dialogoCompra, estadoCargando, estadoError, tarjetaPartido, tarjetaResultado } from '../miniapp/src/vistas/componentes.mjs';
 import { barraNavegacion } from '../miniapp/src/vistas/marco.mjs';
 import { PANTALLA, cargarPantalla, filaForma } from '../miniapp/src/vistas/pantallas.mjs';
 import { API_PRODUCCION, MINIAPP, construir, revisar } from '../miniapp/scripts/construir.mjs';
@@ -201,6 +201,28 @@ test('la pantalla PRO usa los precios aprobados y no activa compras', async () =
   assert.match(html, /Probabilidades completas de cada partido/);
   assert.match(html, /Las compras desde la Mini App todavía no están activas\./);
   assert.match(html, /data-producto="pro" disabled/);
+});
+
+test('checkout: el diálogo PRO muestra precio, renovación y consentimiento explícito', () => {
+  const html = dialogoCompra('pro', {
+    pro_stars: 250, analisis_stars: 50, pro_recurrente: true, compras_habilitadas: true,
+  });
+  assert.match(html, /Activar Monitor eSports PRO/);
+  assert.match(html, /250 Stars \/ 30 días · renovación automática/);
+  assert.match(html, /Acepto los términos · Continuar/);
+  assert.match(html, /data-producto="pro"/);
+  assert.match(html, /sin resultados ni ganancias garantizadas/);
+});
+
+test('checkout: el diálogo individual queda ligado al partido y no renueva', () => {
+  const html = dialogoCompra('partido:1105', {
+    pro_stars: 250, analisis_stars: 50, pro_recurrente: true, compras_habilitadas: true,
+  });
+  assert.match(html, /Comprar análisis #1105/);
+  assert.match(html, /50 Stars · pago único/);
+  assert.match(html, /data-producto="partido" data-match-id="1105"/);
+  assert.match(html, /únicamente a este partido/);
+  assert.equal(dialogoCompra('partido:x', { analisis_stars: 50 }), '');
 });
 
 // ── Forma reciente ───────────────────────────────────────────────────────
@@ -401,6 +423,26 @@ test('dentro de Telegram: ready, expand, colores, insets y botón Atrás', () =>
   assert.deepEqual(llamadas.map((l) => l[0]), ['onClick', 'show', 'offClick', 'hide']);
   tg.abrirTelegram('https://t.me/monitor_esports_avisos_bot');
   assert.deepEqual(llamadas.at(-1), ['link', 'https://t.me/monitor_esports_avisos_bot']);
+});
+
+test('Telegram abre factura nativa y reporta el estado de cierre', () => {
+  const estados = [];
+  const llamadas = [];
+  const raiz = { dataset: {}, style: { setProperty() {} } };
+  const app = {
+    platform: 'android',
+    isVersionAtLeast: (v) => parseFloat(v) <= 8.0,
+    ready() {}, expand() {},
+    openInvoice: (url, cb) => { llamadas.push(url); cb('paid'); },
+    showAlert: (texto) => llamadas.push(texto),
+  };
+  const tg = crearTelegram({ document: { documentElement: raiz }, Telegram: { WebApp: app } });
+  assert.equal(tg.abrirFactura('https://t.me/$factura_segura', (estado) => estados.push(estado)), true);
+  assert.deepEqual(estados, ['paid']);
+  assert.equal(llamadas[0], 'https://t.me/$factura_segura');
+  assert.equal(tg.abrirFactura('https://evil.example/invoice/x'), false);
+  tg.alerta('Pago recibido');
+  assert.equal(llamadas.at(-1), 'Pago recibido');
 });
 
 test('insets inválidos de Telegram no llegan al CSS', () => {
