@@ -1,12 +1,13 @@
 import { accesoDe, estadoDe, forma, h2h, politicaAcceso } from './acceso.mjs';
 import { validarInitData } from './telegram-init.mjs';
+import { VERSION_TERMINOS, configuracionCompra, facturaTelegram } from './compra.mjs';
 
 const JUEGOS = new Set(['cs2', 'dota2', 'lol', 'valorant']);
 const DISCIPLINAS = { cs2: 1, valorant: 2, lol: 3, dota2: 4 };
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'content-type,x-telegram-init-data',
-  'Access-Control-Allow-Methods': 'GET,OPTIONS',
+  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
 };
 const json = (data, status = 200, extra = {}) => new Response(JSON.stringify(data), {
   status,
@@ -47,6 +48,75 @@ async function rpc(nombre, body) {
   return pedirJson(`${supabaseUrl()}/rest/v1/rpc/${nombre}`, {
     method: 'POST', headers: dbHeaders(), body: JSON.stringify(body),
   });
+}
+
+async function telegramApi(metodo, datos) {
+  const token = Deno.env.get('TELEGRAM_BOT_TOKEN') ?? '';
+  if (!token) throw new Error('Falta TELEGRAM_BOT_TOKEN');
+  const res = await fetch(`https://api.telegram.org/bot${token}/${metodo}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(datos),
+    signal: AbortSignal.timeout(6000),
+  });
+  const cuerpo = await res.json().catch(() => null);
+  if (!res.ok || cuerpo?.ok !== true) throw new Error(`Telegram ${metodo}: ${res.status}`);
+  return cuerpo.result;
+}
+
+async function crearCompra(userId, solicitud) {
+  const config = configuracionCompra();
+  if (!config.habilitado) return { status: 409, error: 'compras_desactivadas' };
+
+  const producto = solicitud?.producto;
+  const matchId = producto === 'partido' ? Number(solicitud?.match_id) : null;
+  if (!['pro', 'partido'].includes(producto)) return { status: 400, error: 'producto' };
+  if (producto === 'partido' && (!Number.isSafeInteger(matchId) || matchId <= 0)) {
+    return { status: 400, error: 'partido' };
+  }
+  if (solicitud?.aceptar_terminos !== true) return { status: 400, error: 'terminos' };
+
+  await rpc('eslo_stars', {
+    p_accion: 'terminos',
+    p_datos: { user_id: userId, version: VERSION_TERMINOS },
+  });
+
+  const payload = `espro:${crypto.randomUUID()}`;
+  const amount = producto === 'pro' ? config.pro : config.partido;
+  const recurrente = producto === 'pro' && config.recurrente;
+  const creada = await rpc('eslo_stars', {
+    p_accion: 'crear',
+    p_datos: {
+      user_id: userId,
+      payload,
+      producto,
+      match_id: matchId,
+      amount,
+      recurrente,
+      terminos_version: VERSION_TERMINOS,
+    },
+  });
+  if (creada?.error) {
+    const status = ['pro_activo_o_pendiente', 'ya_comprado'].includes(creada.error) ? 409 : 400;
+    return { status, error: creada.error };
+  }
+
+  const factura = facturaTelegram({ producto, amount, payload, matchId, recurrente });
+  try {
+    const invoiceUrl = await telegramApi('createInvoiceLink', factura);
+    return {
+      status: 200,
+      data: {
+        invoice_url: invoiceUrl,
+        producto,
+        amount,
+        recurrente,
+      },
+    };
+  } catch (e) {
+    await rpc('eslo_stars', { p_accion: 'fallo_factura', p_datos: { user_id: userId, payload } }).catch(() => {});
+    throw e;
+  }
 }
 
 function diaUtcMenos4(ms) {
@@ -183,7 +253,7 @@ async function cerradas({ juego = null, limite = 50 } = {}) {
 
 async function atender(req) {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-  if (req.method !== 'GET') return json({ ok: false, error: 'metodo' }, 405);
+  if (!['GET', 'POST'].includes(req.method)) return json({ ok: false, error: 'metodo' }, 405);
 
   const token = Deno.env.get('TELEGRAM_BOT_TOKEN') ?? '';
   if (!token) throw new Error('Falta TELEGRAM_BOT_TOKEN');
@@ -206,15 +276,32 @@ async function atender(req) {
   const url = new URL(req.url);
   const recurso = url.searchParams.get('recurso') ?? '';
 
+  if (req.method === 'POST') {
+    if (recurso !== 'compra') return json({ ok: false, error: 'recurso' }, 400);
+    if (Number(req.headers.get('content-length')) > 4096) return json({ ok: false, error: 'cuerpo' }, 413);
+    const cuerpo = await req.json().catch(() => null);
+    if (!cuerpo || typeof cuerpo !== 'object' || Array.isArray(cuerpo)) {
+      return json({ ok: false, error: 'cuerpo' }, 400);
+    }
+    const compra = await crearCompra(sesion.user.id, cuerpo);
+    if (compra.status !== 200) return json({ ok: false, error: compra.error }, compra.status);
+    return json({ ok: true, data: compra.data });
+  }
+
   // El catálogo no necesita tocar perfil, pagos ni asignar la FREE diaria.
-  if (recurso === 'catalogo') return json({ ok: true, data: {
-    pro_stars: Number(Deno.env.get('TELEGRAM_PRO_STARS') ?? 250),
-    pro_dias: 30,
-    analisis_stars: Number(Deno.env.get('TELEGRAM_MATCH_STARS') ?? 50),
-    compras_habilitadas: false,
-    soporte: (Deno.env.get('TELEGRAM_PAY_SUPPORT') ?? '@mitzukyhs').replace(/^@/, '@'),
-    bot: 'monitor_esports_avisos_bot',
-  } });
+  if (recurso === 'catalogo') {
+    const compra = configuracionCompra();
+    return json({ ok: true, data: {
+      pro_stars: compra.pro ?? 250,
+      pro_dias: 30,
+      analisis_stars: compra.partido ?? 50,
+      compras_habilitadas: compra.habilitado,
+      pro_recurrente: compra.recurrente,
+      terminos_version: VERSION_TERMINOS,
+      soporte: (Deno.env.get('TELEGRAM_PAY_SUPPORT') ?? '@mitzukyhs').replace(/^@/, '@'),
+      bot: 'monitor_esports_avisos_bot',
+    } });
+  }
 
   const perfil = await perfilDe(sesion.user.id);
   if (recurso === 'perfil') return json({ ok: true, data: perfil });
