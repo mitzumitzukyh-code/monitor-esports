@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { crearFuenteApi } from '../miniapp/src/datos/api.mjs';
 import { crearTelegram } from '../miniapp/src/telegram.mjs';
 import { accesoDe, forma, h2h, politicaAcceso } from '../supabase/functions/esport-miniapp/acceso.mjs';
@@ -142,4 +144,10 @@ test('adaptador Telegram expone initData exacto sólo dentro del cliente', () =>
 
   const fuera = crearTelegram({ document: { documentElement: raiz } });
   assert.equal(fuera.initData(), '');
+});
+
+test('Edge Function real tiene sintaxis JavaScript válida antes de desplegar', () => {
+  const ruta = fileURLToPath(new URL('../supabase/functions/esport-miniapp/index.mjs', import.meta.url));
+  const r = spawnSync(process.execPath, ['--check', ruta], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr || r.stdout);
 });
