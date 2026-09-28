@@ -1,7 +1,7 @@
 // Las seis pantallas de la V1. Cada una recibe lo que entregó la fuente y un
 // contexto { ahora, catalogo, demo, escenario, ruta } y devuelve HTML.
 
-import { JUEGOS } from '../datos/tipos.mjs';
+import { JUEGOS, validarDirecto } from '../datos/tipos.mjs';
 import { ESCENARIOS } from '../datos/demo.mjs';
 import { dia, esc, formatoSerieLargo, pct, ZONA_PUBLICA } from '../formato.mjs';
 import { PERIODOS, hrefHistorial, hrefPartido, hrefPartidos } from '../rutas.mjs';
@@ -32,8 +32,27 @@ function estadoPlan(perfil) {
     : `<p class="plan">${insignia('free')}<span>1 predicción diaria</span></p>`;
 }
 
+function tarjetaDirecto(d) {
+  const plataforma = d.plataforma === 'youtube' ? 'YouTube' : 'Twitch';
+  const titulo = \`\${d.equipo_a.nombre} vs \${d.equipo_b.nombre}\`;
+  const externo = d.url
+    ? \`<a class="boton boton--secundario directo__fuente" href="\${esc(d.url)}" target="_blank" rel="noopener noreferrer">Abrir en \${plataforma}</a>\`
+    : '';
+  return \`<article class="directo juego--\${d.juego}">\` +
+    '<header class="directo__cabeza">' +
+      \`<span class="directo__vivo"><i></i> EN VIVO</span><span class="directo__juego">\${emblemaJuego(d.juego, 18)}\${esc(JUEGOS[d.juego])}</span>\` +
+    '</header>' +
+    \`<h3 class="directo__titulo">\${avatarEquipo(d.equipo_a)}<span>\${esc(d.equipo_a.nombre)}</span><b>vs</b>\${avatarEquipo(d.equipo_b)}<span>\${esc(d.equipo_b.nombre)}</span></h3>\` +
+    \`<div class="directo__player"><iframe src="\${esc(d.embed_url)}" title="Directo: \${esc(titulo)}" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>\` +
+    '<div class="directo__acciones">' +
+      \`<a class="boton boton--primario" href="\${hrefPartido(d.match_id)}">Ver predicción</a>\${externo}\` +
+    '</div>' +
+    \`<p class="directo__nota">Transmisión oficial · \${plataforma}</p>\` +
+  '</article>';
+}
+
 // ── Inicio ───────────────────────────────────────────────────────────────
-export function pantallaInicio({ perfil, gratis, proximos, recientes }, { ahora, catalogo }) {
+export function pantallaInicio({ perfil, gratis, directos = [], proximos, recientes }, { ahora, catalogo }) {
   const ctaFree = gratis ? hrefPartido(gratis.match_id) : hrefPartidos();
   const partes = [heroe({
     imagen: ASSETS.heroInicio,
@@ -50,6 +69,13 @@ export function pantallaInicio({ perfil, gratis, proximos, recientes }, { ahora,
       '</div>',
     clase: 'heroe--inicio',
   })];
+
+  const enVivo = directos.filter((d) => validarDirecto(d).length === 0).slice(0, 2);
+  if (enVivo.length) {
+    partes.push(seccion('🔴 En vivo ahora',
+      \`<div class="directos">\${enVivo.map(tarjetaDirecto).join('')}</div>\`,
+      { bajada: enVivo.length === 2 ? 'Dos transmisiones oficiales disponibles' : 'Transmisión oficial disponible' }));
+  }
 
   if (perfil.plan === 'free') {
     partes.push(seccion('Tu predicción FREE de hoy', gratis
