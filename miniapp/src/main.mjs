@@ -78,6 +78,13 @@ function volver() {
   else location.hash = '#/partidos';
 }
 
+// El logo del equipo viene de un CDN externo. Si falta o falla, el
+// monograma que está debajo queda visible en vez de mostrar un icono roto.
+document.addEventListener('error', (evento) => {
+  const img = evento.target;
+  if (img instanceof HTMLImageElement && img.matches('img[data-logo-equipo]')) img.hidden = true;
+}, true);
+
 document.addEventListener('click', (evento) => {
   const objetivo = evento.target.closest('[data-accion], .nav__item, .chip, .segmento__opcion');
   if (!objetivo) return;
