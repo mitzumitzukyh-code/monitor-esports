@@ -242,18 +242,27 @@ h1, h2, h3, p { margin: 0; }
 .cifra { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
 .cifra--grande { font-size: 30px; }
 
-.emblema { border-radius: 50%; flex: none; object-fit: cover; }
+.emblema { flex: none; object-fit: contain; padding: 1px; }
 
 .equipo { display: flex; align-items: center; gap: 10px; min-width: 0; font-weight: 700; }
 .equipo__nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .equipo--ganador .equipo__nombre { color: var(--tinta); }
 .tarjeta--resultado .equipo:not(.equipo--ganador) { color: var(--tinta-suave); font-weight: 600; }
 .equipo__marca { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--tinta-apagada); }
+.equipo__avatar {
+  position: relative; display: grid; place-items: center; flex: none;
+  width: 28px; height: 28px;
+}
 .monograma {
   display: grid; place-items: center; flex: none;
   width: 28px; height: 28px; border-radius: 8px;
   background: var(--interior); border: 1px solid var(--borde-medio);
   font: 800 11px/1 var(--sans); color: var(--tinta-media); letter-spacing: .02em;
+}
+.equipo__avatar .monograma { position: absolute; inset: 0; width: 100%; height: 100%; }
+.equipo__logo {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: contain; border-radius: 7px; background: transparent;
 }
 
 /* ── Chips y segmento ──────────────────────────────────────────────────── */
@@ -322,7 +331,9 @@ h1, h2, h3, p { margin: 0; }
 .ficha__competicion::before { content: '·'; margin-right: 8px; }
 .ficha__equipos { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; width: 100%; margin-top: 6px; }
 .equipo--grande { flex-direction: column; gap: 8px; font-size: 16px; font-weight: 800; line-height: 1.2; text-align: center; }
-.equipo--grande .monograma { width: 52px; height: 52px; border-radius: 14px; font-size: 17px; }
+.equipo--grande .equipo__avatar { width: 52px; height: 52px; }
+.equipo--grande .monograma { width: 100%; height: 100%; border-radius: 14px; font-size: 17px; }
+.equipo--grande .equipo__logo { border-radius: 12px; }
 .ficha__vs { font: 700 13px var(--mono); color: var(--tinta-apagada); text-transform: uppercase; }
 .ficha__cuando { font-size: 13px; color: var(--tinta-media); display: flex; gap: 6px; align-items: center; }
 .ficha__formato { font-size: 12px; color: var(--tinta-suave); }
