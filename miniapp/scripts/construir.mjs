@@ -7,7 +7,7 @@
 // que el build no salga roto:
 //   - todo import relativo de src/ apunta a un archivo que existe;
 //   - todo "assets/..." que se usa en src/ o index.html existe en public/;
-//   - ningún archivo de src/ abre facturas (compras apagadas en la V1).
+//   - el cliente nunca crea facturas: sólo puede abrir una URL emitida por el backend.
 
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
@@ -35,7 +35,7 @@ export function revisar(raiz = MINIAPP) {
       for (const [, ruta] of texto.matchAll(/(?:import|export)\s[^'"]*?from\s+'(\.[^']+)'/g)) {
         if (!existsSync(resolve(dirname(archivo), ruta))) problemas.push(`${nombre}: import roto ${ruta}`);
       }
-      if (/openInvoice|sendInvoice|createInvoiceLink/.test(texto)) problemas.push(`${nombre}: abre facturas y las compras están apagadas`);
+      if (/sendInvoice|createInvoiceLink/.test(texto)) problemas.push(`${nombre}: el cliente no puede crear facturas`);
     }
     for (const [ruta] of texto.matchAll(/assets\/[a-z0-9-]+\/[a-z0-9-]+\.(?:webp|png|svg)/g)) {
       if (!existsSync(join(raiz, 'public', ruta))) problemas.push(`${nombre}: asset inexistente ${ruta}`);
