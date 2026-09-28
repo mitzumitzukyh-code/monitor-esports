@@ -179,7 +179,20 @@ export function validarDirecto(d) {
       e.push('directo: embed_url inválido');
     }
   }
-  if (d.url != null && !urlHttps(d.url)) e.push('directo: url inválida');
+  if (d.url != null) {
+    if (!urlHttps(d.url)) e.push('directo: url inválida');
+    else {
+      try {
+        const host = new URL(d.url).hostname;
+        const permitido = d.plataforma === 'youtube'
+          ? ['youtube.com', 'www.youtube.com', 'youtu.be'].includes(host)
+          : ['twitch.tv', 'www.twitch.tv'].includes(host);
+        if (!permitido) e.push('directo: host de fuente no permitido');
+      } catch {
+        e.push('directo: url inválida');
+      }
+    }
+  }
   if (d.oficial !== true) e.push('directo: transmisión no oficial');
   return e;
 }
