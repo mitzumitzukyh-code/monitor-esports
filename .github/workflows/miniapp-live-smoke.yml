@@ -5,6 +5,10 @@ on:
     branches: [ops/miniapp-live-smoke]
     paths:
       - '.github/workflows/miniapp-live-smoke.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/miniapp-live-smoke.yml'
 
 permissions:
   contents: read
