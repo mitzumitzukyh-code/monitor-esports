@@ -50,7 +50,7 @@
  * @property {EstadoPartido} estado
  * @property {number | null} prob_a       null si el usuario no tiene acceso
  * @property {Acceso} acceso
- * @property {Analisis | null} analisis   null si no tiene acceso
+ * @property {Analisis | null} analisis   sólo con acceso 'pro' o 'individual'
  * @property {Resultado} [resultado_real] sólo en finalizados
  */
 
@@ -115,6 +115,11 @@ export function validarPartido(p) {
     if (p.analisis != null) e.push(`${id}: bloqueado pero trae análisis`);
   } else if (p.prob_a != null && !(Number.isFinite(p.prob_a) && p.prob_a >= 0 && p.prob_a <= 1)) {
     e.push(`${id}: prob_a fuera de [0, 1]`);
+  }
+  // La FREE del día y la auditoría de un cerrado dan la probabilidad, no el
+  // informe completo. Una fuente que mande análisis ahí expone de más.
+  if ((p.acceso === 'gratis' || p.acceso === 'auditoria') && p.analisis != null) {
+    e.push(`${id}: acceso ${p.acceso} no incluye análisis`);
   }
   if (p.analisis) {
     e.push(...validarForma(p.analisis.formaA, `${id} formaA`), ...validarForma(p.analisis.formaB, `${id} formaB`));

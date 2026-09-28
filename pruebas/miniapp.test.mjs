@@ -94,6 +94,31 @@ test('el contrato rechaza un partido bloqueado que trae la probabilidad', () => 
   assert.match(validarPartido({ ...p, acceso: 'pro', analisis: { ...p.analisis, formaA: forma } }).join(), /no cuadra/);
 });
 
+test('el contrato rechaza análisis en la predicción FREE y en la auditoría de un cerrado', () => {
+  const todos = partidosDemo(ahora);
+  const abierto = todos.find((p) => p.estado !== 'finalizado');
+  const cerrado = todos.find((p) => p.estado === 'finalizado');
+  assert.ok(abierto.analisis && cerrado.analisis, 'la fila base trae análisis');
+  assert.match(validarPartido({ ...abierto, acceso: 'gratis' }).join(), /acceso gratis no incluye análisis/);
+  assert.match(validarPartido({ ...cerrado, acceso: 'auditoria' }).join(), /acceso auditoria no incluye análisis/);
+  assert.deepEqual(validarPartido({ ...abierto, acceso: 'gratis', analisis: null }), []);
+  assert.deepEqual(validarPartido({ ...cerrado, acceso: 'auditoria', analisis: null }), []);
+  // Con análisis siguen válidos los accesos que sí lo incluyen.
+  assert.deepEqual(validarPartido({ ...abierto, acceso: 'pro' }), []);
+  assert.deepEqual(validarPartido({ ...abierto, acceso: 'individual' }), []);
+});
+
+test('la fuente de demo nunca entrega análisis con acceso gratis o auditoria', async () => {
+  for (const escenario of ['free', 'pro', 'individual']) {
+    const f = fuente(escenario);
+    const lista = [...(await f.partidos()).partidos, ...(await f.historial()).partidos];
+    for (const p of lista.filter((x) => x.acceso === 'gratis' || x.acceso === 'auditoria')) {
+      assert.equal(p.analisis, null, `${escenario} ${p.match_id} ${p.acceso}`);
+      assert.deepEqual(validarPartido(p), []);
+    }
+  }
+});
+
 // ── FREE / PRO / análisis individual ─────────────────────────────────────
 
 test('FREE: sólo la predicción del día trae probabilidad; el resto llega en null', async () => {
