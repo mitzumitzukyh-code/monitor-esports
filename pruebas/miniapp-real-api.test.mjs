@@ -131,6 +131,31 @@ test('fuente API manda initData crudo y conserva la interfaz de la demo', async 
   assert.equal(vistas[0].opciones.headers['X-Telegram-Init-Data'], 'auth_date=1&hash=x');
 });
 
+test('fuente API cachea lecturas cortas y deduplica llamadas simultáneas', async () => {
+  let llamadas = 0;
+  const fetchImpl = async () => {
+    llamadas++;
+    await new Promise((r) => setTimeout(r, 5));
+    return new Response(JSON.stringify({ ok: true, data: { perfil: free, partidos: [] } }), {
+      status: 200, headers: { 'Content-Type': 'application/json' },
+    });
+  };
+  const fuente = crearFuenteApi({
+    baseUrl: 'https://example.test/api',
+    initData: 'auth_date=1&hash=x',
+    fetchImpl,
+  });
+
+  await Promise.all([
+    fuente.partidos({ juego: 'lol', periodo: 'proximos' }),
+    fuente.partidos({ juego: 'lol', periodo: 'proximos' }),
+  ]);
+  assert.equal(llamadas, 1, 'dos cargas iguales simultáneas comparten la misma solicitud');
+
+  await fuente.partidos({ juego: 'lol', periodo: 'proximos' });
+  assert.equal(llamadas, 1, 'la lectura inmediata sale del cache');
+});
+
 test('fuente API falla cerrado si no hay initData o el servidor rechaza la sesión', async () => {
   const sinTelegram = crearFuenteApi({ baseUrl: 'https://example.test/api', initData: '' });
   await assert.rejects(sinTelegram.perfil(), (e) => /desde Telegram/.test(e.mensajeUsuario));
