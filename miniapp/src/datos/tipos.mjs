@@ -56,6 +56,20 @@
  */
 
 /**
+ * @typedef {object} Directo
+ * @property {number} match_id
+ * @property {Juego} juego
+ * @property {Equipo} equipo_a
+ * @property {Equipo} equipo_b
+ * @property {string} inicio_programado
+ * @property {'youtube'|'twitch'} plataforma
+ * @property {string} embed_url      reproductor HTTPS permitido
+ * @property {string | null} url     enlace oficial opcional
+ * @property {string | null} idioma
+ * @property {true} oficial
+ */
+
+/**
  * @typedef {object} Perfil
  * @property {'free' | 'pro'} plan
  * @property {string | null} pro_hasta         ISO, sólo con PRO
@@ -138,6 +152,35 @@ export function validarPartido(p) {
   }
   if (p.estado !== 'finalizado' && p.resultado_real != null) e.push(`${id}: resultado antes de terminar`);
   if (p.acceso === 'auditoria' && p.estado !== 'finalizado') e.push(`${id}: auditoría de un partido abierto`);
+  return e;
+}
+
+/** @returns {string[]} */
+export function validarDirecto(d) {
+  const e = [];
+  if (!d || typeof d !== 'object') return ['directo: no es un objeto'];
+  if (!entero(d.match_id)) e.push('directo: match_id inválido');
+  if (!Object.hasOwn(JUEGOS, d.juego ?? '')) e.push('directo: juego desconocido');
+  for (const lado of ['equipo_a', 'equipo_b']) {
+    if (!entero(d[lado]?.id) || !texto(d[lado]?.nombre)) e.push(\`directo: \${lado} inválido\`);
+    if (d[lado]?.logo != null && !urlHttps(d[lado].logo)) e.push(\`directo: \${lado}.logo inválido\`);
+  }
+  if (!fecha(d.inicio_programado)) e.push('directo: inicio_programado inválido');
+  if (!['youtube', 'twitch'].includes(d.plataforma)) e.push('directo: plataforma inválida');
+  if (!urlHttps(d.embed_url)) e.push('directo: embed_url inválido');
+  else {
+    try {
+      const host = new URL(d.embed_url).hostname;
+      const permitido = d.plataforma === 'youtube'
+        ? host === 'www.youtube-nocookie.com'
+        : host === 'player.twitch.tv';
+      if (!permitido) e.push('directo: host de reproductor no permitido');
+    } catch {
+      e.push('directo: embed_url inválido');
+    }
+  }
+  if (d.url != null && !urlHttps(d.url)) e.push('directo: url inválida');
+  if (d.oficial !== true) e.push('directo: transmisión no oficial');
   return e;
 }
 
