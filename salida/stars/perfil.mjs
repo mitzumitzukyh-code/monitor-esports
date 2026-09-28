@@ -1,12 +1,15 @@
 export const NOMBRE_BOT = 'Monitor eSports';
 
 export const DESCRIPCION_CORTA_BOT =
-  'Predicciones y estadísticas de CS2, Dota 2, LoL y Valorant. FREE diario, PRO mensual y análisis individuales.';
+  'Predicciones, probabilidades e historial real de CS2, Dota 2, LoL y Valorant.';
 
 export const DESCRIPCION_BOT =
-  'Predicciones, probabilidades y resultados para entender cada partido de eSports.\n' +
+  'Tu centro de análisis de eSports.\n' +
   'CS2 · Dota 2 · LoL · Valorant\n\n' +
-  '🎁 FREE diario · 👑 PRO mensual · 🎯 análisis individuales.\n' +
+  '🎁 FREE · Predicción diaria\n' +
+  '👑 PRO · Probabilidades, alertas y análisis completos\n' +
+  '🎯 Análisis individual · Elige solo el partido que te interesa\n\n' +
+  '📊 Resultados reales, aciertos y fallos visibles.\n' +
   'Contexto, no solo predicciones.';
 
 export function validarPerfilTelegram() {
