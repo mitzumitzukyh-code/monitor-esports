@@ -9,11 +9,12 @@
 //   - todo "assets/..." que se usa en src/ o index.html existe en public/;
 //   - ningún archivo de src/ abre facturas (compras apagadas en la V1).
 
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const MINIAPP = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+export const API_PRODUCCION = 'https://ysqstdgjmugdlyahkhou.supabase.co/functions/v1/esport-miniapp';
 
 function archivos(dir) {
   return readdirSync(dir).flatMap((f) => {
@@ -52,7 +53,7 @@ export function revisar(raiz = MINIAPP) {
   return problemas;
 }
 
-export function construir({ raiz = MINIAPP, destino = join(MINIAPP, 'dist') } = {}) {
+export function construir({ raiz = MINIAPP, destino = join(MINIAPP, 'dist'), apiUrl = null } = {}) {
   const problemas = revisar(raiz);
   if (problemas.length) throw new Error(`Build detenido:\n  - ${problemas.join('\n  - ')}`);
   rmSync(destino, { recursive: true, force: true });
@@ -60,13 +61,25 @@ export function construir({ raiz = MINIAPP, destino = join(MINIAPP, 'dist') } = 
   cpSync(join(raiz, 'index.html'), join(destino, 'index.html'));
   cpSync(join(raiz, 'src'), join(destino, 'src'), { recursive: true });
   cpSync(join(raiz, 'public'), destino, { recursive: true });
-  return { destino, archivos: archivos(destino).length };
+
+  // La fuente queda en demo en local y previews. Sólo el build de producción
+  // de Vercel activa la API real, salvo override explícito para pruebas.
+  const api = apiUrl ?? (process.env.MINIAPP_API_URL || (process.env.VERCEL_ENV === 'production' ? API_PRODUCCION : ''));
+  if (api) {
+    if (!/^https:\/\//.test(api)) throw new Error('MINIAPP_API_URL debe ser HTTPS');
+    const index = join(destino, 'index.html');
+    const html = readFileSync(index, 'utf8');
+    const buscado = '<meta name="monitor-api-url" content="">';
+    if (!html.includes(buscado)) throw new Error('No se encontró el gate monitor-api-url en index.html');
+    writeFileSync(index, html.replace(buscado, `<meta name="monitor-api-url" content="${api}">`));
+  }
+  return { destino, archivos: archivos(destino).length, apiReal: Boolean(api) };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
-    const { destino, archivos: n } = construir();
-    console.log(`OK: Mini App construida en ${relative(process.cwd(), destino) || '.'} (${n} archivos)`);
+    const { destino, archivos: n, apiReal } = construir();
+    console.log(`OK: Mini App construida en ${relative(process.cwd(), destino) || '.'} (${n} archivos, ${apiReal ? 'API real' : 'demo'})`);
   } catch (e) {
     console.error(e.message);
     process.exit(1);
