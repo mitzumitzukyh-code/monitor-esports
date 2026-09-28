@@ -22,6 +22,7 @@
  * @typedef {object} Equipo
  * @property {number} id
  * @property {string} nombre
+ * @property {string | null} [logo]  URL HTTPS del logo real del equipo
  */
 
 /**
@@ -81,6 +82,7 @@ const FORMATOS = ['bo1', 'bo2', 'bo3', 'bo5'];
 const entero = (v) => Number.isSafeInteger(v) && v > 0;
 const texto = (v) => typeof v === 'string' && v.trim().length > 0;
 const fecha = (v) => typeof v === 'string' && Number.isFinite(Date.parse(v));
+const urlHttps = (v) => typeof v === 'string' && /^https:\/\/[^\s]+$/i.test(v);
 
 function validarForma(f, donde) {
   const errores = [];
@@ -104,6 +106,7 @@ export function validarPartido(p) {
   if (!Object.hasOwn(JUEGOS, p.juego ?? '')) e.push(`${id}: juego desconocido`);
   for (const lado of ['equipo_a', 'equipo_b']) {
     if (!entero(p[lado]?.id) || !texto(p[lado]?.nombre)) e.push(`${id}: ${lado} inválido`);
+    if (p[lado]?.logo != null && !urlHttps(p[lado].logo)) e.push(`${id}: ${lado}.logo inválido`);
   }
   if (p.equipo_a?.id === p.equipo_b?.id) e.push(`${id}: un equipo contra sí mismo`);
   if (!fecha(p.inicio_programado)) e.push(`${id}: inicio_programado inválido`);

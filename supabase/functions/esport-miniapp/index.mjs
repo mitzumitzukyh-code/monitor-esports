@@ -95,7 +95,10 @@ async function resolverEquipos(filas) {
       if (!res.ok) return;
       const data = await res.json();
       for (const t of data.results ?? []) {
-        if (t?.id && t?.name) mapa.set(`${juego}:${t.id}`, { id: Number(t.id), nombre: t.name, logo: t.image_url ?? null });
+        if (t?.id && t?.name) {
+          const logo = typeof t.image_url === 'string' && /^https:\/\//i.test(t.image_url) ? t.image_url : null;
+          mapa.set(`${juego}:${t.id}`, { id: Number(t.id), nombre: t.name, logo });
+        }
       }
     } catch { /* los IDs siguen siendo una salida válida si bo3.gg falla */ }
   }));
