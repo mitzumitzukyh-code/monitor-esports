@@ -184,12 +184,12 @@ async function atender(req) {
 
   const token = Deno.env.get('TELEGRAM_BOT_TOKEN') ?? '';
   if (!token) throw new Error('Falta TELEGRAM_BOT_TOKEN');
-  const maxAge = Number(Deno.env.get('TELEGRAM_MINIAPP_MAX_AGE_SECONDS') ?? 300);
+  const maxAge = Number(Deno.env.get('TELEGRAM_MINIAPP_MAX_AGE_SECONDS') ?? 3600);
   let sesion;
   try {
     sesion = await validarInitData(req.headers.get('x-telegram-init-data') ?? '', {
       botToken: token,
-      maxAgeSeconds: Number.isSafeInteger(maxAge) ? maxAge : 300,
+      maxAgeSeconds: Number.isSafeInteger(maxAge) ? maxAge : 3600,
     });
   } catch {
     return json({ ok: false, error: 'telegram_auth' }, 401);
