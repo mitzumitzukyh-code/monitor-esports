@@ -233,7 +233,7 @@ function streamSeguro(stream) {
     if (!id) return null;
     return {
       plataforma: 'youtube',
-      embed_url: \`https://www.youtube-nocookie.com/embed/\${id}?rel=0&playsinline=1\`,
+      embed_url: `https://www.youtube-nocookie.com/embed/${id}?rel=0&playsinline=1`,
       url: raw,
       idioma: typeof stream.language === 'string' ? stream.language : null,
       espectadores: Number.isFinite(Number(stream.viewers_number)) ? Number(stream.viewers_number) : 0,
@@ -246,7 +246,7 @@ function streamSeguro(stream) {
     if (!canal) return null;
     return {
       plataforma: 'twitch',
-      embed_url: \`https://player.twitch.tv/?channel=\${encodeURIComponent(canal)}&parent=\${HOST_MINIAPP}&autoplay=false\`,
+      embed_url: `https://player.twitch.tv/?channel=${encodeURIComponent(canal)}&parent=${HOST_MINIAPP}&autoplay=false`,
       url: raw,
       idioma: typeof stream.language === 'string' ? stream.language : null,
       espectadores: Number.isFinite(Number(stream.viewers_number)) ? Number(stream.viewers_number) : 0,
@@ -273,8 +273,8 @@ async function metadatosPartidasBo3(filas) {
       const unicos = [...new Set(ids)].filter((id) => Number.isSafeInteger(id) && id > 0).slice(0, 50);
       if (!unicos.length) return;
       const url = BO3_BASE + '/matches?page[limit]=50' +
-        \`&filter[matches.discipline_id][eq]=\${disciplina}\` +
-        \`&filter[matches.id][in]=\${unicos.join(',')}\`;
+        `&filter[matches.discipline_id][eq]=${disciplina}` +
+        `&filter[matches.id][in]=${unicos.join(',')}`;
       const data = await pedirJson(url, { signal: AbortSignal.timeout(2500) });
       for (const m of data?.results ?? []) {
         if (m?.id && m?.slug) mapa.set(Number(m.id), {
@@ -310,7 +310,7 @@ async function directosEnVivo(filas, { ahora = Date.now() } = {}) {
   const encontrados = await Promise.all(conCobertura.map(async (row) => {
     const m = meta.get(Number(row.match_id));
     try {
-      const detalle = await pedirJson(\`\${BO3_BASE}/matches/\${encodeURIComponent(m.slug)}\`, {
+      const detalle = await pedirJson(`${BO3_BASE}/matches/${encodeURIComponent(m.slug)}`, {
         signal: AbortSignal.timeout(2500),
       });
       const streams = (detalle?.streams ?? [])
