@@ -6,10 +6,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/generar-avatar-telegram.py'
-      - 'salida/stars/perfil.mjs'
       - 'salida/stars/comandos.mjs'
-      - 'scripts/configurar-perfil-telegram.mjs'
-      - '.github/workflows/telegram-perfil-comercial.yml'
 
 permissions:
   contents: read

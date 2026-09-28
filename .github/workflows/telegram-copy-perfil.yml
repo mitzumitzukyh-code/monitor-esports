@@ -1,0 +1,31 @@
+name: Copy perfil Telegram
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'salida/stars/perfil.mjs'
+      - 'scripts/actualizar-copy-perfil-telegram.mjs'
+      - '.github/workflows/telegram-copy-perfil.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: telegram-copy-perfil
+  cancel-in-progress: false
+
+jobs:
+  actualizar-copy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Actualizar descripción y bio sin tocar Mini App
+        run: node scripts/actualizar-copy-perfil-telegram.mjs
