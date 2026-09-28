@@ -76,7 +76,7 @@ El endpoint vive en `supabase/functions/esport-miniapp/` y es separado de
 - El cliente manda **la cadena cruda `Telegram.WebApp.initData`** en
   `X-Telegram-Init-Data`. `initDataUnsafe` nunca autoriza acceso.
 - El Edge Function verifica HMAC con `TELEGRAM_BOT_TOKEN`, rechaza
-  `auth_date` viejo (300 s por defecto) y obtiene el `user.id` únicamente
+  `auth_date` viejo (1 hora por defecto) y obtiene el `user.id` únicamente
   de la carga firmada.
 - El backend decide PRO, FREE diario, compra individual y auditoría. Un partido
   bloqueado sale con `prob_a: null` y `analisis: null`; no se manda un dato
@@ -93,7 +93,7 @@ El endpoint vive en `supabase/functions/esport-miniapp/` y es separado de
    función.
 2. Confirmar que el proyecto tiene `TELEGRAM_BOT_TOKEN`,
    `SUPABASE_URL` y una llave server-side de Supabase. Opcional:
-   `TELEGRAM_MINIAPP_MAX_AGE_SECONDS=300`.
+   `TELEGRAM_MINIAPP_MAX_AGE_SECONDS=3600`.
 3. Probar el endpoint dentro del cliente Telegram real.
 4. Recién entonces poner la URL del Edge Function en
    `<meta name="monitor-api-url">` y publicar la Mini App.
