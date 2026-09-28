@@ -1,0 +1,86 @@
+name: Mini App live smoke
+
+on:
+  push:
+    branches: [ops/miniapp-live-smoke]
+    paths:
+      - '.github/workflows/miniapp-live-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      MINIAPP_API_URL: https://ysqstdgjmugdlyahkhou.supabase.co/functions/v1/esport-miniapp
+      MINIAPP_SMOKE_USER_ID: '9000000000000001'
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Probar autenticación y redacción reales
+        shell: bash
+        run: |
+          node <<'NODE'
+          const { createHmac } = require('node:crypto');
+
+          const token = process.env.TELEGRAM_BOT_TOKEN;
+          const base = process.env.MINIAPP_API_URL;
+          const userId = Number(process.env.MINIAPP_SMOKE_USER_ID);
+          if (!token || !base || !Number.isSafeInteger(userId)) throw new Error('Falta configuración de smoke');
+
+          function initData() {
+            const authDate = Math.floor(Date.now() / 1000);
+            const user = JSON.stringify({ id: userId, first_name: 'MiniAppSmoke' });
+            const pares = [
+              ['auth_date', String(authDate)],
+              ['query_id', 'miniapp-live-smoke'],
+              ['user', user],
+            ];
+            const dataCheck = [...pares].sort(([a],[b]) => a.localeCompare(b))
+              .map(([k,v]) => `${k}=${v}`).join('\n');
+            const secret = createHmac('sha256', 'WebAppData').update(token).digest();
+            const hash = createHmac('sha256', secret).update(dataCheck).digest('hex');
+            return new URLSearchParams([...pares, ['hash', hash]]).toString();
+          }
+
+          async function pedir(recurso, init = null) {
+            const url = new URL(base);
+            url.searchParams.set('recurso', recurso);
+            const headers = init ? { 'X-Telegram-Init-Data': init } : {};
+            const res = await fetch(url, { headers, signal: AbortSignal.timeout(12000) });
+            const body = await res.json().catch(() => null);
+            return { res, body };
+          }
+
+          const sinAuth = await pedir('catalogo');
+          if (sinAuth.res.status !== 401 || sinAuth.body?.error !== 'telegram_auth') {
+            throw new Error(`fail-closed roto: HTTP ${sinAuth.res.status}`);
+          }
+
+          const firmado = initData();
+          const catalogo = await pedir('catalogo', firmado);
+          if (catalogo.res.status !== 200 || catalogo.body?.ok !== true) {
+            throw new Error(`catálogo autenticado falló: HTTP ${catalogo.res.status}`);
+          }
+          if (catalogo.body.data?.compras_habilitadas !== false) throw new Error('compras no están apagadas');
+
+          const partidos = await pedir('partidos', firmado);
+          if (partidos.res.status !== 200 || partidos.body?.ok !== true || !Array.isArray(partidos.body.data?.partidos)) {
+            throw new Error(`partidos reales fallaron: HTTP ${partidos.res.status}`);
+          }
+          const lista = partidos.body.data.partidos;
+          if (!lista.length) throw new Error('no llegaron partidos reales');
+
+          const visibles = lista.filter((p) => p.prob_a != null);
+          const bloqueados = lista.filter((p) => p.acceso === 'bloqueado');
+          if (visibles.length > 1) throw new Error(`FREE filtró ${visibles.length} probabilidades`);
+          if (bloqueados.some((p) => p.prob_a != null || p.analisis != null)) {
+            throw new Error('contenido premium filtrado en un partido bloqueado');
+          }
+
+          console.log(`SMOKE OK: ${lista.length} partidos reales; ${visibles.length} FREE visible; ${bloqueados.length} redactados`);
+          NODE
