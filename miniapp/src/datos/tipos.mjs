@@ -162,8 +162,8 @@ export function validarDirecto(d) {
   if (!entero(d.match_id)) e.push('directo: match_id inválido');
   if (!Object.hasOwn(JUEGOS, d.juego ?? '')) e.push('directo: juego desconocido');
   for (const lado of ['equipo_a', 'equipo_b']) {
-    if (!entero(d[lado]?.id) || !texto(d[lado]?.nombre)) e.push(\`directo: \${lado} inválido\`);
-    if (d[lado]?.logo != null && !urlHttps(d[lado].logo)) e.push(\`directo: \${lado}.logo inválido\`);
+    if (!entero(d[lado]?.id) || !texto(d[lado]?.nombre)) e.push(`directo: ${lado} inválido`);
+    if (d[lado]?.logo != null && !urlHttps(d[lado].logo)) e.push(`directo: ${lado}.logo inválido`);
   }
   if (!fecha(d.inicio_programado)) e.push('directo: inicio_programado inválido');
   if (!['youtube', 'twitch'].includes(d.plataforma)) e.push('directo: plataforma inválida');
