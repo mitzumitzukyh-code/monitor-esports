@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { crearBotStars } from '../salida/stars/bot.mjs';
-import { configuracionStars, VERSION_TERMINOS } from '../salida/stars/config.mjs';
+import { CANAL_VENTAS_PREDETERMINADO, configuracionStars, VERSION_TERMINOS } from '../salida/stars/config.mjs';
 import { crearServidorStars } from '../salida/stars/webhook.mjs';
 import { clienteTelegram } from '../salida/stars/api.mjs';
 
@@ -86,8 +86,77 @@ test('IDs manipulados no consultan ni crean órdenes', async () => {
   const f=fixture(); await f.bot.procesar(mensaje('/analisis 20&select=*'));
   assert.equal(f.lecturas(),0); assert.match(f.llamadas[0].datos.text,/Usa \/analisis ID/);
 });
+
+test('canal de ventas recibe alta PRO, renovación, análisis y refund sin duplicar pagos', async () => {
+  const casos = [
+    {
+      pago: { currency:'XTR', total_amount:250, invoice_payload:'pro1', telegram_payment_charge_id:'c1', is_recurring:true, is_first_recurring:true, subscription_expiration_date:1793032000 },
+      respuesta: { ok:true, producto:'pro', expira_en:'2026-10-26T12:00:00Z' },
+      patron: /Nueva suscripción PRO/,
+    },
+    {
+      pago: { currency:'XTR', total_amount:250, invoice_payload:'pro2', telegram_payment_charge_id:'c2', is_recurring:true, is_first_recurring:false, subscription_expiration_date:1795624000 },
+      respuesta: { ok:true, producto:'pro', expira_en:'2026-11-25T12:00:00Z' },
+      patron: /Renovación PRO/,
+    },
+    {
+      pago: { currency:'XTR', total_amount:50, invoice_payload:'m20', telegram_payment_charge_id:'c3' },
+      respuesta: { ok:true, producto:'partido', match_id:20 },
+      patron: /Nuevo análisis individual/,
+    },
+  ];
+  for (const c of casos) {
+    const llamadas = [];
+    const almacen = { accion: async (a) => a === 'pago' ? c.respuesta : ({ok:true}) };
+    const api = async (metodo, datos) => { llamadas.push({metodo,datos}); };
+    const bot = crearBotStars({ config:{...config,ventasChatId:CANAL_VENTAS_PREDETERMINADO}, almacen, api });
+    await bot.procesar(mensaje('', { from:{id:10,username:'cliente_demo'}, successful_payment:c.pago }));
+    const aviso = llamadas.find(x => x.metodo === 'sendMessage' && x.datos.chat_id === CANAL_VENTAS_PREDETERMINADO);
+    assert.ok(aviso); assert.match(aviso.datos.text, c.patron); assert.match(aviso.datos.text, /@cliente_demo/);
+  }
+
+  const llamadas = [];
+  const almacen = { accion: async (a) => a === 'reembolso' ? ({ok:true,reembolsado:true}) : ({ok:true}) };
+  const api = async (metodo, datos) => { llamadas.push({metodo,datos}); };
+  const bot = crearBotStars({ config:{...config,ventasChatId:CANAL_VENTAS_PREDETERMINADO}, almacen, api });
+  await bot.procesar(mensaje('', { refunded_payment:{currency:'XTR',total_amount:250,invoice_payload:'x',telegram_payment_charge_id:'cr'} }));
+  assert.match(llamadas.find(x => x.datos?.chat_id === CANAL_VENTAS_PREDETERMINADO).datos.text, /Reembolso registrado/);
+});
+
+test('fallo del canal de ventas no bloquea la confirmación del cliente', async () => {
+  const almacen = { accion: async (a) => a === 'pago'
+    ? ({ok:true,producto:'partido',match_id:20})
+    : ({ok:true}) };
+  const llamadas = [];
+  const api = async (metodo, datos) => {
+    llamadas.push({metodo,datos});
+    if (datos?.chat_id === CANAL_VENTAS_PREDETERMINADO) throw Error('canal caído');
+  };
+  const bot = crearBotStars({ config:{...config,ventasChatId:CANAL_VENTAS_PREDETERMINADO}, almacen, api });
+  await bot.procesar(mensaje('', { successful_payment:{currency:'XTR',total_amount:50,invoice_payload:'m20',telegram_payment_charge_id:'c'} }));
+  assert.ok(llamadas.some(x => x.datos?.chat_id === 10 && /Análisis activado/.test(x.datos.text)));
+});
+
+test('cancelar PRO avisa al canal privado de ventas', async () => {
+  const llamadas = [];
+  const almacen = { accion: async (a) => {
+    if (a === 'estado') return { suscripciones:[{payload:'p',cargo:'c',cancelada:false}] };
+    if (a === 'cancelar') return {ok:true};
+    if (a === 'usuario') return {ok:true};
+    return {ok:true};
+  }, comprasIndividuales: async () => [] };
+  const api = async (metodo, datos) => { llamadas.push({metodo,datos}); return true; };
+  const bot = crearBotStars({ config:{...config,ventasChatId:CANAL_VENTAS_PREDETERMINADO}, almacen, api });
+  await bot.procesar(mensaje('/cancelar', { from:{id:10,username:'cliente_demo'} }));
+  const aviso = llamadas.find(x => x.metodo === 'sendMessage' && x.datos.chat_id === CANAL_VENTAS_PREDETERMINADO);
+  assert.match(aviso.datos.text, /Renovación PRO cancelada/);
+});
+
 test('configuración deshabilitada por defecto y precios válidos obligatorios al activar', () => {
   assert.equal(configuracionStars({}).habilitado,false);
+  assert.equal(configuracionStars({}).ventasChatId,CANAL_VENTAS_PREDETERMINADO);
+  assert.equal(configuracionStars({TELEGRAM_SALES_CHAT_ID:'-1001234567890'}).ventasChatId,-1001234567890);
+  assert.throws(()=>configuracionStars({TELEGRAM_SALES_CHAT_ID:'123'}));
   assert.throws(()=>configuracionStars({TELEGRAM_STARS_ENABLED:'true'}));
   assert.throws(()=>configuracionStars({TELEGRAM_STARS_ENABLED:'true',TELEGRAM_PAY_SUPPORT:'@s',TELEGRAM_PRO_STARS:'10001'}));
 });
