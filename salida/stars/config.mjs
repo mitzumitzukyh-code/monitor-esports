@@ -1,5 +1,6 @@
 export const PERIODO_PRO = 2592000; // Único período recurrente admitido por Telegram.
 export const VERSION_TERMINOS = '2026-09-26-v3';
+export const CANAL_VENTAS_PREDETERMINADO = -1004302360369;
 
 export function configuracionStars(env = process.env) {
   const habilitado = env.TELEGRAM_STARS_ENABLED === 'true';
@@ -20,6 +21,10 @@ export function configuracionStars(env = process.env) {
   }
   const puerto = Number(env.TELEGRAM_WEBHOOK_PORT ?? 8787);
   if (!Number.isInteger(puerto) || puerto < 1 || puerto > 65535) throw new Error('TELEGRAM_WEBHOOK_PORT debe ser un puerto válido');
+  const ventasChatId = Number(env.TELEGRAM_SALES_CHAT_ID ?? CANAL_VENTAS_PREDETERMINADO);
+  if (!Number.isSafeInteger(ventasChatId) || ventasChatId >= 0) {
+    throw new Error('TELEGRAM_SALES_CHAT_ID debe ser el ID negativo de un canal de Telegram');
+  }
   return {
     habilitado, soporte, pro: entero('TELEGRAM_PRO_STARS'),
     partido: env.TELEGRAM_MATCH_STARS ? entero('TELEGRAM_MATCH_STARS') : null,
@@ -29,5 +34,6 @@ export function configuracionStars(env = process.env) {
     token: env.TELEGRAM_BOT_TOKEN ?? '',
     host: env.TELEGRAM_WEBHOOK_HOST ?? '127.0.0.1',
     puerto,
+    ventasChatId,
   };
 }

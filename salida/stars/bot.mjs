@@ -31,6 +31,25 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
     chat_id: id, text, parse_mode: 'HTML', link_preview_options: { is_disabled: true },
     ...(reply_markup ? { reply_markup } : {}), ...(premium ? { protect_content: true } : {}),
   });
+  const ventasChatId = Number(config.ventasChatId);
+  const usuarioVenta = (user, id) => {
+    const username = typeof user?.username === 'string' && /^[A-Za-z0-9_]{5,32}$/.test(user.username)
+      ? `@${esc(user.username)} · ` : '';
+    return `${username}ID <code>${Number(id)}</code>`;
+  };
+  const avisarVenta = async (text) => {
+    if (!Number.isSafeInteger(ventasChatId) || ventasChatId >= 0) return;
+    try {
+      await api('sendMessage', {
+        chat_id: ventasChatId,
+        text,
+        parse_mode: 'HTML',
+        link_preview_options: { is_disabled: true },
+      });
+    } catch {
+      // Un fallo del canal administrativo nunca debe bloquear un pago ni el acceso del cliente.
+    }
+  };
   const menu = () => markup(
     [boton('🎁 Ver FREE', 'gratis'), boton('👑 Ver PRO', 'pro')],
     [boton('🎯 Comprar análisis', 'individual'), boton('📋 Ver partidos', 'partidos')],
@@ -302,6 +321,11 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
         payload: subscription.invoice_payload, state: subscription.state, update_id: update.update_id });
       if (r.error) await almacen.accion('incidencia', { user_id: subscription.user.id,
         update_id: update.update_id, motivo: r.error });
+      else if (!r.duplicado && subscription.state === 'failed') {
+        await avisarVenta('⚠️ <b>Renovación PRO fallida</b>\n' +
+          `👤 ${usuarioVenta(subscription.user, subscription.user.id)}\n` +
+          'Telegram no pudo completar la renovación automática.');
+      }
       return;
     }
     const q = update.pre_checkout_query;
@@ -344,8 +368,26 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
         return;
       }
       if (r.duplicado) return;
-      if (mensaje.refunded_payment || r.reembolsado) return decir(id, 'Reembolso registrado. El acceso de esa compra quedó retirado. Usa /estado.');
-      if (r.producto === 'partido') return decir(id, `Análisis activado. Usa /analisis ${r.match_id}.`, markup([boton('Abrir análisis', `analisis:${r.match_id}`)]));
+      if (mensaje.refunded_payment || r.reembolsado) {
+        await avisarVenta('↩️ <b>Reembolso registrado</b>\n' +
+          `👤 ${usuarioVenta(mensaje.from, id)}\n` +
+          `⭐ ${p.total_amount} Stars`);
+        return decir(id, 'Reembolso registrado. El acceso de esa compra quedó retirado. Usa /estado.');
+      }
+      if (r.producto === 'partido') {
+        await avisarVenta('🎯 <b>Nuevo análisis individual</b>\n' +
+          `👤 ${usuarioVenta(mensaje.from, id)}\n` +
+          `⭐ ${p.total_amount} Stars\n` +
+          `🎮 Partido #${r.match_id}`);
+        return decir(id, `Análisis activado. Usa /analisis ${r.match_id}.`, markup([boton('Abrir análisis', `analisis:${r.match_id}`)]));
+      }
+      const tituloPro = p.is_recurring === true
+        ? (p.is_first_recurring === true ? '💰 <b>Nueva suscripción PRO</b>' : '🔄 <b>Renovación PRO</b>')
+        : '💰 <b>Compra PRO</b>';
+      await avisarVenta(tituloPro + '\n' +
+        `👤 ${usuarioVenta(mensaje.from, id)}\n` +
+        `⭐ ${p.total_amount} Stars\n` +
+        `📅 Vigente hasta: ${esc(fecha(r.expira_en))}`);
       return decir(id, `PRO activado · período de 30 días. Vigente hasta ${fecha(r.expira_en)} (${zonaPublica(r.expira_en)}).`,
         markup([boton('Ver partidos','partidos'),boton('Mi estado','estado')]));
     }
@@ -448,6 +490,9 @@ export function crearBotStars({ config, almacen, api, nombres = async () => new 
           const r = await almacen.accion('cancelar', { user_id: id, payload: s.payload, telegram_payment_charge_id: s.cargo });
           if (!r.ok) throw Error('Cancelación pendiente de persistir');
         }
+        await avisarVenta('🛑 <b>Renovación PRO cancelada</b>\n' +
+          `👤 ${usuarioVenta(mensaje?.from ?? cb?.from, id)}\n` +
+          'El acceso PRO se conserva hasta el final del período pagado.');
         await decir(id, 'Renovación automática cancelada. Conservas PRO hasta el final del período pagado.');
         return verCuenta(id);
       }
