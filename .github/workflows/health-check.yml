@@ -15,6 +15,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/health-check.yml'
+      - 'auditoria/health-check.mjs'
 
 # MISMO grupo que Monitor TI2026. Así el watchdog/recovery y el ciclo normal
 # se serializan; nunca pueden predecir ni enviar a la vez.
@@ -35,6 +36,10 @@ jobs:
       DISCORD_WEBHOOK_ERRORES: ${{ secrets.DISCORD_WEBHOOK_ERRORES }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      # Debe reflejar los mismos opt-in del monitor principal: el laboratorio
+      # de Telegram sí publica predicciones; el canal público de Discord no.
+      TELEGRAM_LAB_PREDICTIONS_ENABLED: 'true'
+      PUBLIC_PREDICTIONS_ENABLED: 'false'
 
     steps:
       - uses: actions/checkout@v4

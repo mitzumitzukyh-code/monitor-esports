@@ -20,6 +20,12 @@ const calificadaMs = (p) => new Date(p.calificada_en ?? 0).getTime();
 const capturaMs = (c) => new Date(c.capturado_en).getTime();
 const tierAvisable = (p) => ['s', 'a'].includes(String(p.tier ?? '').toLowerCase());
 
+// El health check debe respetar exactamente los opt-in de los canales.
+// Discord público está apagado en producción; Telegram laboratorio sí está
+// habilitado. Sin esta guarda, un canal deshabilitado parece falsamente roto.
+const prediccionesDiscordHabilitadas = process.env.PUBLIC_PREDICTIONS_ENABLED === 'true';
+const prediccionesTelegramHabilitadas = process.env.TELEGRAM_LAB_PREDICTIONS_ENABLED === 'true';
+
 const futuras24h = predicciones.filter((p) => {
   const t = inicioMs(p);
   return !p.resultado_real && Number.isFinite(t) && t > ahora && t <= ahora + 24 * HORA;
@@ -53,8 +59,12 @@ for (const c of cuotas24h) {
 // una corrida que todavía está enviando mensajes.
 const antiguas30m = (p) => ahora - creadaMs(p) > 30 * 60 * 1000;
 const resultadosAntiguos30m = (p) => ahora - calificadaMs(p) > 30 * 60 * 1000;
-const pendientesDiscordPred = futuras24h.filter((p) => tierAvisable(p) && antiguas30m(p) && !p.avisado_prediccion_en);
-const pendientesTelegramPred = futuras24h.filter((p) => tierAvisable(p) && antiguas30m(p) && !p.avisado_telegram_prediccion_en);
+const pendientesDiscordPred = prediccionesDiscordHabilitadas
+  ? futuras24h.filter((p) => tierAvisable(p) && antiguas30m(p) && !p.avisado_prediccion_en)
+  : [];
+const pendientesTelegramPred = prediccionesTelegramHabilitadas
+  ? futuras24h.filter((p) => tierAvisable(p) && antiguas30m(p) && !p.avisado_telegram_prediccion_en)
+  : [];
 const calificadasRecientes = predicciones.filter((p) => p.resultado_real && calificadaMs(p) >= ahora - 24 * HORA);
 const pendientesDiscordRes = calificadasRecientes.filter((p) => tierAvisable(p) && resultadosAntiguos30m(p) && !p.avisado_resultado_en);
 const pendientesTelegramRes = calificadasRecientes.filter((p) => tierAvisable(p) && resultadosAntiguos30m(p) && !p.avisado_telegram_resultado_en);
@@ -105,6 +115,7 @@ console.log('# HEALTH CHECK · MONITOR ESPORTS');
 console.log(`predicciones=${predicciones.length} · futuras24h=${futuras24h.length}`);
 console.log(`cuotas24h=${cuotas24h.length} · cuotas2h=${cuotas2h.length} · cobertura=${futurasConCuota.length}/${futuras24h.length}`);
 console.log(`pendientes>24h=${vencidas24h.length} · pendientes6-48h=${vencidas6a48h.length}`);
+console.log(`canales predicción: discord=${prediccionesDiscordHabilitadas ? 'on' : 'off'} · telegram=${prediccionesTelegramHabilitadas ? 'on' : 'off'}`);
 console.log(`discord pendientes=${pendientesDiscordPred.length}+${pendientesDiscordRes.length} · telegram=${pendientesTelegramPred.length}+${pendientesTelegramRes.length}`);
 console.log(`matching ajeno=${cuotasEquiposAjenos} filas/${matchesEquiposAjenos.size} matches`);
 for (const a of avisos) console.log(`HEALTH_WARNING: ${a}`);
