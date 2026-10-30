@@ -413,6 +413,8 @@ test('modo demo: Más ofrece los cinco estados y la cabecera avisa que es demo',
   const { html } = await pintar('#/mas');
   for (const clave of Object.keys(ESCENARIOS)) assert.match(html, new RegExp(`data-valor="${clave}"`));
   assert.match(html, /https:\/\/t\.me\/mitzukyhs/);
+  assert.match(html, /https:\/\/monitor-esports\.vercel\.app\/privacy/);
+  assert.match(html, /https:\/\/monitor-esports\.vercel\.app\/terms/);
   assert.match(html, /Ningún modelo de lenguaje estima probabilidades\./);
   assert.match(html, /No son apuestas seguras ni ganancias garantizadas\./);
 });
@@ -439,6 +441,9 @@ test('fuera de Telegram el adaptador no rompe nada', () => {
   assert.equal(abiertos.length, 1);
   assert.equal(tg.abrirTelegram('javascript:alert(1)'), false, 'sólo enlaces t.me');
   assert.equal(tg.abrirTelegram('https://evil.example/t.me/x'), false);
+  assert.equal(tg.abrirEnlace('https://monitor-esports.vercel.app/privacy'), true);
+  assert.equal(abiertos.length, 2);
+  assert.equal(tg.abrirEnlace('https://evil.example/privacy'), false);
 });
 
 test('dentro de Telegram: ready, expand, colores, insets y botón Atrás', () => {
@@ -451,7 +456,7 @@ test('dentro de Telegram: ready, expand, colores, insets y botón Atrás', () =>
     contentSafeAreaInset: { top: 46, bottom: 0, left: 0, right: 0 },
     ready: anotar('ready'), expand: anotar('expand'), onEvent: anotar('onEvent'),
     setHeaderColor: anotar('header'), setBackgroundColor: anotar('fondo'), setBottomBarColor: anotar('barra'),
-    openTelegramLink: anotar('link'), HapticFeedback: { selectionChanged: anotar('haptic') },
+    openTelegramLink: anotar('link'), openLink: anotar('external'), HapticFeedback: { selectionChanged: anotar('haptic') },
     BackButton: { show: anotar('show'), hide: anotar('hide'), onClick: anotar('onClick'), offClick: anotar('offClick') },
   };
   const { win, estilos } = ventanaFalsa(app);
@@ -472,6 +477,8 @@ test('dentro de Telegram: ready, expand, colores, insets y botón Atrás', () =>
   assert.deepEqual(llamadas.map((l) => l[0]), ['onClick', 'show', 'offClick', 'hide']);
   tg.abrirTelegram('https://t.me/monitor_esports_avisos_bot');
   assert.deepEqual(llamadas.at(-1), ['link', 'https://t.me/monitor_esports_avisos_bot']);
+  tg.abrirEnlace('https://monitor-esports.vercel.app/terms');
+  assert.deepEqual(llamadas.at(-1), ['external', 'https://monitor-esports.vercel.app/terms']);
 });
 
 test('Telegram abre factura nativa y reporta el estado de cierre', () => {
@@ -514,7 +521,7 @@ test('build: sin imports rotos, sin assets inexistentes y sin facturas', () => {
   const destino = mkdtempSync(join(tmpdir(), 'miniapp-'));
   try {
     construir({ destino });
-    for (const f of ['index.html', 'src/main.mjs', 'src/estilos.css', 'assets/brand/logo-full.webp', 'assets/heroes/hero-home.webp']) {
+    for (const f of ['index.html', 'privacy.html', 'terms.html', 'src/main.mjs', 'src/estilos.css', 'assets/brand/logo-full.webp', 'assets/heroes/hero-home.webp']) {
       assert.ok(existsSync(join(destino, f)), f);
     }
   } finally {

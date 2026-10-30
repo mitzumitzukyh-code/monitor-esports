@@ -167,6 +167,9 @@ document.addEventListener('click', async (evento) => {
   } else if (accion === 'telegram') {
     evento.preventDefault();
     tg.abrirTelegram(objetivo.dataset.url);
+  } else if (accion === 'externo') {
+    evento.preventDefault();
+    tg.abrirEnlace(objetivo.dataset.url);
   } else if (accion === 'comprar') {
     evento.preventDefault();
     abrirCompra(objetivo.dataset.producto);

@@ -89,6 +89,17 @@ export function crearTelegram(win = globalThis.window) {
       return true;
     },
 
+
+    /** Abre páginas públicas propias fuera del WebView sin exponer navegación arbitraria. */
+    abrirEnlace(url) {
+      let destino;
+      try { destino = new URL(url); } catch { return false; }
+      if (destino.protocol !== 'https:' || destino.hostname !== 'monitor-esports.vercel.app') return false;
+      if (dentro && version('6.1') && typeof app.openLink === 'function') app.openLink(destino.toString());
+      else win?.open?.(destino.toString(), '_blank', 'noopener');
+      return true;
+    },
+
     /** Abre una factura de Telegram Stars. El enlace viene firmado por Bot API. */
     abrirFactura(url, alCerrar = () => {}) {
       if (!/^https:\/\/t\.me\/(?:\$|invoice\/)[A-Za-z0-9_-]+$/.test(url)) return false;

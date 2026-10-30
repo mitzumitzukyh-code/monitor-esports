@@ -1,6 +1,6 @@
 # Mini App de Telegram — V1 + fuente real segura
 
-Interfaz móvil de Monitor eSports. La UI V1 sigue pudiéndose revisar con datos de demo, y la rama de integración añade una fuente HTTP real con autenticación de Telegram. Las compras de Stars continúan apagadas y el motor no se modifica.
+Interfaz móvil de Monitor eSports. La UI V1 sigue pudiéndose revisar con datos de demo y producción usa una fuente HTTP real con autenticación de Telegram. Las compras con Stars están activas en producción y el motor de predicción permanece separado.
 
 ## Cómo verla
 
@@ -84,16 +84,12 @@ El endpoint vive en `supabase/functions/esport-miniapp/` y es separado de
 - El endpoint aplica el rate limit existente de Stars antes de consultar datos.
 - Los nombres de equipo se resuelven con bo3.gg; si esa fuente falla, la Mini
   App mantiene el partido con un nombre de respaldo.
-- `catalogo.compras_habilitadas` permanece en `false`.
+- En producción, `catalogo.compras_habilitadas` refleja la configuración real de Stars; el cliente nunca decide precios ni activa acceso por sí solo.
 
-### Activación (paso separado)
+### Estado de producción
 
-1. Desplegar `esport-miniapp` en Supabase con verificación JWT del gateway
-   desactivada; la autenticación real la hace el HMAC de Telegram dentro de la
-   función.
-2. Confirmar que el proyecto tiene `TELEGRAM_BOT_TOKEN`,
-   `SUPABASE_URL` y una llave server-side de Supabase. Opcional:
-   `TELEGRAM_MINIAPP_MAX_AGE_SECONDS=3600`.
-3. Probar el endpoint dentro del cliente Telegram real.
-4. El build de producción ya está preparado para inyectar la URL del Edge Function; local y previews conservan demo.
-5. BotFather y compras Stars siguen siendo fases separadas.
+1. `esport-miniapp` está desplegado en Supabase con autenticación HMAC de Telegram.
+2. El build de producción inyecta el endpoint real; local y previews pueden conservar demo.
+3. La compra PRO y el análisis individual se inician desde la Mini App mediante facturas de Telegram Stars creadas en servidor.
+4. La activación de acceso sigue dependiendo de la confirmación `successful_payment` del backend comercial.
+5. Para la publicación como Main Mini App, seguir `docs/CLAUDE_BOT_STORE_HANDOFF.md`.

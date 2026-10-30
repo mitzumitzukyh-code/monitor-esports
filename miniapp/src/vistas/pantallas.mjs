@@ -277,6 +277,8 @@ export function pantallaMas(_datos, { catalogo, demo, escenario }) {
     seccion('Ayuda', '<div class="filas">' +
       fila({ icono: 'soporte', titulo: 'Soporte', texto: `${catalogo.soporte} · compras, recibos y acceso`, accion: 'telegram', url: `https://t.me/${soporte}` }) +
       fila({ icono: 'bot', titulo: 'Abrir el bot', texto: 'Comandos, avisos y compras', accion: 'telegram', url: `https://t.me/${catalogo.bot}` }) +
+      fila({ icono: 'historial', titulo: 'Privacidad', texto: 'Qué datos usamos y para qué', accion: 'externo', url: 'https://monitor-esports.vercel.app/privacy' }) +
+      fila({ icono: 'pro', titulo: 'Términos', texto: 'Condiciones de uso y compras con Stars', accion: 'externo', url: 'https://monitor-esports.vercel.app/terms' }) +
       '</div>'),
     seccion('Cómo calculamos', '<div class="panel texto">' +
       '<p>Los porcentajes salen de un modelo estadístico de rating (Elo / Glicko-2) calculado con partidas profesionales reales. ' +
