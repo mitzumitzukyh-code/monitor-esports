@@ -1,5 +1,6 @@
 import { readFile, stat } from 'node:fs/promises';
 import { seleccionar } from '../datos/supabase.mjs';
+import { diagnosticarPendientes } from './estado-pendientes.mjs';
 
 const HORA = 3600 * 1000;
 const ahora = Date.now();
@@ -41,6 +42,11 @@ const vencidas6a48h = predicciones.filter((p) => {
 });
 const vencidas24h = predicciones.filter((p) => !p.resultado_real && ahora - inicioMs(p) > 24 * HORA);
 
+// No confundir 'inicio programado ya paso' con 'resultado final verificable'.
+// bo3.gg reprograma/cancela fixtures y puede sustituir equipos conservando ID.
+// La prediccion congelada NO se reescribe ni se marca como perdida por descarte.
+const diagnostico = await diagnosticarPendientes(vencidas6a48h, { ahora });
+
 const predPorId = new Map(predicciones.map((p) => [Number(p.match_id), p]));
 let cuotasEquiposAjenos = 0;
 const matchesEquiposAjenos = new Set();
@@ -80,8 +86,21 @@ if (futuras24h.length >= 5 && futurasConCuota.length === 0) {
 } else if (futuras24h.length >= 5 && futurasConCuota.length / futuras24h.length < 0.5) {
   avisos.push(`cobertura de cuotas baja: ${futurasConCuota.length}/${futuras24h.length} partidos próximos`);
 }
-if (vencidas6a48h.length > 20) {
-  errores.push(`${vencidas6a48h.length} predicciones de 6-48h siguen sin calificar`);
+// Solo exigir calificacion cuando el proveedor confirma un resultado valido
+// para EXACTAMENTE los equipos de la prediccion original.
+if (diagnostico.terminado_sin_calificar.length) {
+  errores.push(`${diagnostico.terminado_sin_calificar.length} resultados finales verificados de 6-48h sin calificar`);
+}
+if (vencidas6a48h.length >= 5 && diagnostico.no_encontrado.length === vencidas6a48h.length) {
+  errores.push(`bo3.gg no devolvio ninguno de los ${vencidas6a48h.length} fixtures vencidos; diagnostico no verificable`);
+} else if (diagnostico.no_encontrado.length) {
+  avisos.push(`${diagnostico.no_encontrado.length} fixtures no devueltos por el proveedor`);
+}
+if (diagnostico.fixture_cambiado.length || diagnostico.dato_ajeno.length) {
+  avisos.push(`${diagnostico.fixture_cambiado.length + diagnostico.dato_ajeno.length} fixtures cambiados/ajenos: predicciones congeladas en cuarentena logica`);
+}
+if (diagnostico.resultado_invalido.length) {
+  avisos.push(`${diagnostico.resultado_invalido.length} resultados sin datos validos para calificar`);
 }
 if (matchesEquiposAjenos.size > 0) {
   avisos.push(`${cuotasEquiposAjenos} cuotas con equipos ajenos en ${matchesEquiposAjenos.size} matches durante 24h`);
@@ -115,6 +134,13 @@ console.log('# HEALTH CHECK · MONITOR ESPORTS');
 console.log(`predicciones=${predicciones.length} · futuras24h=${futuras24h.length}`);
 console.log(`cuotas24h=${cuotas24h.length} · cuotas2h=${cuotas2h.length} · cobertura=${futurasConCuota.length}/${futuras24h.length}`);
 console.log(`pendientes>24h=${vencidas24h.length} · pendientes6-48h=${vencidas6a48h.length}`);
+console.log(`diagnostico6-48: finalizados_sin_calificar=${diagnostico.terminado_sin_calificar.length}` +
+  ` · fixture_cambiado=${diagnostico.fixture_cambiado.length}` +
+  ` · reprogramados=${diagnostico.reprogramado.length}` +
+  ` · sin_resultado=${diagnostico.sin_resultado_confirmado.length}` +
+  ` · resultado_invalido=${diagnostico.resultado_invalido.length}` +
+  ` · no_encontrados=${diagnostico.no_encontrado.length}` +
+  ` · ajenos=${diagnostico.dato_ajeno.length}`);
 console.log(`canales predicción: discord=${prediccionesDiscordHabilitadas ? 'on' : 'off'} · telegram=${prediccionesTelegramHabilitadas ? 'on' : 'off'}`);
 console.log(`discord pendientes=${pendientesDiscordPred.length}+${pendientesDiscordRes.length} · telegram=${pendientesTelegramPred.length}+${pendientesTelegramRes.length}`);
 console.log(`matching ajeno=${cuotasEquiposAjenos} filas/${matchesEquiposAjenos.size} matches`);
